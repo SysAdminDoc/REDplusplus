@@ -120,6 +120,7 @@ namespace RED.UI
             }
 
             SetAccessibleNames();
+            DarkTheme.Apply(this);
         }
 
         private void SetAccessibleNames()
@@ -300,8 +301,11 @@ namespace RED.UI
             }
 
             pnlColorDoNoTouch.ForeColor = TreeManager.ColorDoNotTouch;
+            pnlColorDoNoTouch.BackColor = DarkTheme.Base;
             pnlColorProtected.ForeColor = TreeManager.ColorProtected;
+            pnlColorProtected.BackColor = DarkTheme.Base;
             pnlColorToBeDeleted.ForeColor = TreeManager.ColortoBeDeleted;
+            pnlColorToBeDeleted.BackColor = DarkTheme.Base;
 
             #endregion Set and display folder status icons
         }
@@ -924,7 +928,7 @@ namespace RED.UI
         private void UiToolstripButton_Paint(object sender, PaintEventArgs e)
         {
             ToolStripItem item = (ToolStripItem)sender;
-            ControlPaint.DrawBorder(e.Graphics, new Rectangle(0, 0, item.Width, item.Height), Color.LightGray, ButtonBorderStyle.Solid);
+            ControlPaint.DrawBorder(e.Graphics, new Rectangle(0, 0, item.Width, item.Height), DarkTheme.Surface1, ButtonBorderStyle.Solid);
         }
 
         private void cbFastSearchMode_CheckedChanged(object sender, EventArgs e)

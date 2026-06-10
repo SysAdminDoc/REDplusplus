@@ -26,9 +26,9 @@ namespace RED
 	/// </summary>
 	public class TreeManager
 	{
-		public static Color ColorDoNotTouch { get { return Color.Gray; } }
-		public static Color ColorProtected { get { return Color.Blue; } }
-		public static Color ColortoBeDeleted { get { return Color.Red; } }
+		public static Color ColorDoNotTouch { get { return Color.FromArgb(166, 173, 200); } }
+		public static Color ColorProtected { get { return Color.FromArgb(137, 180, 250); } }
+		public static Color ColortoBeDeleted { get { return Color.FromArgb(243, 139, 168); } }
 
 		private TreeView treeView = null;
 		private TreeNode rootNode = null;
@@ -123,13 +123,13 @@ namespace RED
 		{
 			this.treeView.SuspendLayout();
 
-			this.treeView.BackColor = SystemColors.Control;
+			this.treeView.BackColor = RED.UI.DarkTheme.Surface0;
 			this.fastModeInfoLabel.Visible = true;
 		}
 
 		private void clearFastMode()
 		{
-			this.treeView.BackColor = SystemColors.Window;
+			this.treeView.BackColor = RED.UI.DarkTheme.Mantle;
 			this.fastModeInfoLabel.Visible = false;
 		}
 
