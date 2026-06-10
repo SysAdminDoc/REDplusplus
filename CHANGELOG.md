@@ -18,6 +18,9 @@
 - Add default NeverEmpty list: AUDIO_TS, VIDEO_TS, .git, .svn, .hg
 - Annotate tree nodes with status text for screen readers (Empty, Ignored, Protected)
 
+### Safety
+- Write JSON undo manifest (RED++.undo.json) after each deletion run recording paths, mode, and move targets
+
 ### Performance
 - Topmost-subtree single-pass deletion — parents processed before children; one recursive delete handles the whole empty subtree instead of individual leaf-by-leaf removal
 
