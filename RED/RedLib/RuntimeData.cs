@@ -52,6 +52,7 @@ namespace RED
 
 		public bool HideIgnoredDirectories { get; set; }
 		public bool RespectGitIgnore { get; set; }
+		public bool UseMftScan { get; set; }
 
 		public RedScanResultItemList ScanResults { get; private set; }
 

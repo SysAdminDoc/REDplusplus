@@ -25,6 +25,12 @@
 - Custom ToolStrip/ContextMenu renderer, UCMenuButton arrow glyph, DataGridView cell styles
 - Fast-mode TreeView background uses Catppuccin Surface0/Mantle
 
+### Features (MFT turbo scan)
+- Opt-in MFT turbo scan via FSCTL_ENUM_USN_DATA — scans entire NTFS volumes in seconds by reading the Master File Table directly
+- Requires admin elevation; auto-detects NTFS via GetVolumeInformation and falls back to standard scan on non-NTFS, network paths, or insufficient permissions
+- Respects all existing filters (ignore lists, never-empty, hidden/system, reparse points, OneDrive cloud placeholders)
+- New UseMftScan config option (default off)
+
 ### Features (multi-path)
 - Multi-path drag-and-drop: drop multiple folders onto RED++ to scan them sequentially with results under separate root nodes
 - TreeManager supports multi-root append mode for sequential scans
