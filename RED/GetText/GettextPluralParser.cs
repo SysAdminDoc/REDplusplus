@@ -46,9 +46,30 @@ namespace SecondLanguage
 	{
 		private string _pluralFormat;
 		private uint _position;
+		private int _depth;
+
+		// A well-formed Plural-Forms expression is short (the most complex real
+		// locale rules are ~120 chars). Caps turn a crafted catalog — e.g. deeply
+		// nested parentheses that would StackOverflow (uncatchable, kills the
+		// process) — into a catchable FormatException and English fallback.
+		private const int MaxExpressionLength = 1000;
+		private const int MaxRecursionDepth = 100;
 
 		private GettextPluralParser()
 		{
+		}
+
+		private void EnterRecursion()
+		{
+			if (++_depth > MaxRecursionDepth)
+			{
+				throw new FormatException("Plural-Forms expression nested too deeply.");
+			}
+		}
+
+		private void LeaveRecursion()
+		{
+			_depth--;
 		}
 
 		private void Advance(uint count = 1)
@@ -87,7 +108,9 @@ namespace SecondLanguage
 			if (Peek() == '(')
 			{
 				Advance();
+				EnterRecursion();
 				Func<ulong, ulong> value = MatchExpression();
+				LeaveRecursion();
 				Expect(Peek() == ')'); Advance();
 				return value;
 			}
@@ -265,10 +288,12 @@ namespace SecondLanguage
 			{
 				Advance();
 
+				EnterRecursion();
 				Func<ulong, ulong> condition = value;
 				Func<ulong, ulong> left = MatchTernary();
 				Expect(Peek() == ':'); Advance();
 				Func<ulong, ulong> right = MatchTernary();
+				LeaveRecursion();
 
 				value = x => condition(x) != 0 ? left(x) : right(x);
 			}
@@ -322,6 +347,11 @@ namespace SecondLanguage
 			if (pluralExpression == null)
 			{
 				throw new FormatException("No plural parameter.");
+			}
+
+			if (pluralExpression.Length > MaxExpressionLength)
+			{
+				throw new FormatException("Plural-Forms expression too long.");
 			}
 
 			GettextPluralParser builder = new GettextPluralParser() { _pluralFormat = pluralExpression };
