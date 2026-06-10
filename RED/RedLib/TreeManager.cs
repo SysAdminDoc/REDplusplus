@@ -294,7 +294,6 @@ namespace RED
 					bool containsTrash = (fileCount > 0);
 
 					iconKey = containsTrash ? "folder_trash_files" : "folder";
-					// TODO: use data from scan thread
 					if ((directory.Attributes & FileAttributes.Hidden) == FileAttributes.Hidden)
 					{
 						iconKey = containsTrash ? "folder_hidden_trash_files" : "folder_hidden";
@@ -310,13 +309,19 @@ namespace RED
 					if (containsTrash)
 					{
 						treeNode.ToolTipText += TXT.Translate("«ignored files: {0}»", fileCount);
-						treeNode.Text += "  " + treeNode.ToolTipText;
 					}
+					else
+					{
+						treeNode.ToolTipText = TXT.Translate("«Empty»");
+					}
+					treeNode.Text += "  " + treeNode.ToolTipText;
 					break;
 
 				case DirectorySearchStatusTypes.Ignore:
 					iconKey = "protected_icon";
 					treeNode.ForeColor = ColorProtected;
+					treeNode.ToolTipText = TXT.Translate("«Ignored»");
+					treeNode.Text += "  " + treeNode.ToolTipText;
 					break;
 
 				case DirectorySearchStatusTypes.NeverEmpty:
@@ -478,6 +483,11 @@ namespace RED
 					node.SelectedImageKey = "protected_icon";
 				}
 				node.ForeColor = ColorProtected;
+				string protectedLabel = "  " + TXT.Translate("«Protected»");
+				if (!node.Text.Contains(protectedLabel))
+				{
+					node.Text += protectedLabel;
+				}
 
 				// Recursively protect directories
 				if (node.Parent != this.rootNode)

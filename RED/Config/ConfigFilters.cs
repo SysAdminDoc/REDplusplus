@@ -61,6 +61,11 @@ namespace RED.Config
 			DirectoriesToIgnore.Add(@"+|N|System32");
 
 			DirectoriesNeverEmpty.Clear();
+			DirectoriesNeverEmpty.Add(@"+|N|AUDIO_TS");
+			DirectoriesNeverEmpty.Add(@"+|N|VIDEO_TS");
+			DirectoriesNeverEmpty.Add(@"+|N|.git");
+			DirectoriesNeverEmpty.Add(@"+|N|.svn");
+			DirectoriesNeverEmpty.Add(@"+|N|.hg");
 		}
 	}
 }

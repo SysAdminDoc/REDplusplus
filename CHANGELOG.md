@@ -15,6 +15,12 @@
 ### Features
 - Add Enter-to-scan keyboard shortcut in path field
 - Add Del-to-delete keyboard shortcut on selected tree node
+- Add default NeverEmpty list: AUDIO_TS, VIDEO_TS, .git, .svn, .hg
+- Annotate tree nodes with status text for screen readers (Empty, Ignored, Protected)
+
+### Documentation
+- Add competitive comparison table (vs TreeSize Pro, FolderSizes, Store apps)
+- Add UNC path, post-migration cleanup, and Task Scheduler examples to README
 
 ## 1.2.0 (2026-06-10)
 
