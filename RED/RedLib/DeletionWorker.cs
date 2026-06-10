@@ -26,6 +26,12 @@ namespace RED
 
 		private List<UndoManifestEntry> undoEntries = new List<UndoManifestEntry>();
 
+		// Survives error-continue cycles: after a deletion error the worker is re-run
+		// to resume at ListPos, and re-sorting or forgetting already-deleted parents
+		// would skip pending items or re-delete vanished ones.
+		private readonly System.Collections.Generic.HashSet<string> deletedParents =
+			new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
 		public DeletionWorker()
 		{
 			WorkerReportsProgress = true;
@@ -49,15 +55,20 @@ namespace RED
 			bool stopNow = false;
 			string errorMessage = string.Empty;
 			this.ErrorInfo = null;
-			var deletedParents = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-			this.Data.ScanResults.Items.Sort((a, b) => a.FullPath.Length.CompareTo(b.FullPath.Length));
+			if (this.ListPos == 0)
+			{
+				// Fresh run (not an error-continue resume): order parents before
+				// children so one recursive delete covers a wholly-empty subtree.
+				this.Data.ScanResults.Items.Sort((a, b) => a.FullPath.Length.CompareTo(b.FullPath.Length));
+			}
 
 			while (this.ListPos < this.Data.ScanResults.Count)
 			{
 				if (CancellationPending)
 				{
 					e.Cancel = true;
+					WriteUndoManifest();
 					return;
 				}
 
@@ -136,6 +147,8 @@ namespace RED
 
 					e.Cancel = true;
 					this.ErrorInfo = new DeletionErrorEventArgs(scanResult.FullPath, errorMessage);
+					// Record what was already deleted even though the run stopped early
+					WriteUndoManifest();
 					return;
 				}
 			}
@@ -150,9 +163,7 @@ namespace RED
 			if (undoEntries.Count == 0) return;
 			try
 			{
-				string manifestPath = Path.Combine(
-					Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath),
-					"RED++.undo.json");
+				string manifestPath = RuntimeData.GetWritableDataFilePath("RED++.undo.json");
 
 				var sb = new StringBuilder();
 				sb.AppendLine("{");
