@@ -355,9 +355,9 @@ namespace RED
 
 		private bool TryMftScan(DirectoryInfo startFolder, DoWorkEventArgs e)
 		{
-			if (!MftScanner.IsNtfsVolume(startFolder.FullName))
+			if (!MftScanner.IsSupportedVolume(startFolder.FullName))
 			{
-				this.RunData.AddLogMessage("MFT scan: not an NTFS volume, falling back to standard scan");
+				this.RunData.AddLogMessage("MFT scan: not an NTFS or ReFS volume, falling back to standard scan");
 				return false;
 			}
 
@@ -373,7 +373,7 @@ namespace RED
 				return false;
 			}
 
-			ulong? startFrn = scanner.FindFrnByPath(startFolder.FullName);
+			MftScanner.Frn? startFrn = scanner.FindFrnByPath(startFolder.FullName);
 			if (!startFrn.HasValue)
 			{
 				this.RunData.AddLogMessage("MFT scan: could not locate start folder in MFT, falling back to standard scan");

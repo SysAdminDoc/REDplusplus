@@ -13,6 +13,7 @@
 - Bidi/zero-width control characters (RLO and friends, MITRE T1036.002) in folder names render as visible \uXXXX escapes in the tree, logs, and headless output — a crafted name can no longer reorder the displayed path in confirmations or logs
 
 ### Performance
+- MFT turbo scan now supports ReFS / Dev Drive volumes (USN_RECORD_V3 / 128-bit file IDs via MFT_ENUM_DATA_V1 and FILE_ID_INFO), not just NTFS — file reference numbers widened to 128-bit throughout the scanner; NTFS uses the original 64-bit V0/V2 path unchanged. (ReFS path compiles and the NTFS path is regression-tested; end-to-end ReFS verification still requires an elevated session on a Dev Drive — see ROADMAP.)
 - All Recycle Bin deletions run through one batched IFileOperation shell transaction with per-item result reporting — 320 directories recycle in under a second (the legacy per-call VisualBasic path took minutes at that scale and could raise modal shell dialogs even in headless mode); headless runs force-silence all shell UI; Microsoft.VisualBasic dependency removed
 - Recycle-mode failures no longer stop the run mid-batch for an error prompt — every item is attempted, failures are logged and counted individually
 

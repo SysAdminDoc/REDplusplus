@@ -28,10 +28,31 @@ namespace RED
             out int lpBytesReturned, IntPtr lpOverlapped);
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool DeviceIoControl(
+            IntPtr hDevice, uint dwIoControlCode,
+            ref MFT_ENUM_DATA_V1 lpInBuffer, int nInBufferSize,
+            byte[] lpOutBuffer, int nOutBufferSize,
+            out int lpBytesReturned, IntPtr lpOverlapped);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool CloseHandle(IntPtr hObject);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool GetFileInformationByHandle(IntPtr hFile, out BY_HANDLE_FILE_INFORMATION info);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetFileInformationByHandleEx(
+            IntPtr hFile, int fileInformationClass, out FILE_ID_INFO info, uint dwBufferSize);
+
+        // FILE_ID_INFO (FileIdInfo = 18) carries the 128-bit FileId needed for ReFS.
+        [StructLayout(LayoutKind.Sequential)]
+        private struct FILE_ID_INFO
+        {
+            public ulong VolumeSerialNumber;
+            public ulong FileIdLow;
+            public ulong FileIdHigh;
+        }
+        private const int FileIdInfo = 18;
 
         // FILETIME fields must be 4-byte aligned (two DWORDs) — `long` would insert
         // padding after dwFileAttributes and corrupt the file-index fields we rely on
@@ -67,6 +88,18 @@ namespace RED
             public long HighUsn;
         }
 
+        // V1 input is required for ReFS; MinMajorVersion=2/MaxMajorVersion=3 lets the
+        // volume return V2 records on NTFS and V3 (128-bit FRNs) on ReFS.
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MFT_ENUM_DATA_V1
+        {
+            public ulong StartFileReferenceNumber;
+            public long LowUsn;
+            public long HighUsn;
+            public ushort MinMajorVersion;
+            public ushort MaxMajorVersion;
+        }
+
         private static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
         private const uint GENERIC_READ = 0x80000000;
         private const uint FILE_READ_ATTRIBUTES = 0x0080;
@@ -83,30 +116,52 @@ namespace RED
 
         #endregion
 
+        /// <summary>
+        /// A file reference number. NTFS (USN_RECORD_V2) uses 64 bits, stored in
+        /// <see cref="Low"/> with <see cref="High"/> = 0. ReFS / Dev Drive
+        /// (USN_RECORD_V3) uses a 128-bit FILE_ID_128, needing both halves.
+        /// </summary>
+        internal struct Frn : IEquatable<Frn>
+        {
+            public readonly ulong Low;
+            public readonly ulong High;
+
+            public Frn(ulong low, ulong high) { Low = low; High = high; }
+
+            public static Frn From64(ulong value) { return new Frn(value, 0); }
+
+            public bool Equals(Frn other) { return Low == other.Low && High == other.High; }
+            public override bool Equals(object obj) { return obj is Frn && Equals((Frn)obj); }
+            public override int GetHashCode() { return Low.GetHashCode() ^ (High.GetHashCode() * 397); }
+        }
+
         private struct MftEntry
         {
-            public ulong FileReferenceNumber;
-            public ulong ParentFileReferenceNumber;
+            public Frn FileReferenceNumber;
+            public Frn ParentFileReferenceNumber;
             public string FileName;
             public uint FileAttributes;
             public bool IsDirectory;
         }
 
-        private readonly Dictionary<ulong, MftEntry> entries = new Dictionary<ulong, MftEntry>();
-        private readonly Dictionary<ulong, List<ulong>> childrenOf = new Dictionary<ulong, List<ulong>>();
+        private readonly Dictionary<Frn, MftEntry> entries = new Dictionary<Frn, MftEntry>();
+        private readonly Dictionary<Frn, List<Frn>> childrenOf = new Dictionary<Frn, List<Frn>>();
 
-        // The real 64-bit file reference number of the volume root (includes the
-        // sequence number in the upper bits, so it is NOT the literal MFT index 5).
-        private ulong rootFrn;
+        // The real file reference number of the volume root (includes the sequence
+        // number in the upper bits, so it is NOT the literal MFT index 5).
+        private Frn rootFrn;
+
+        // ReFS / Dev Drive volumes need the 128-bit USN_RECORD_V3 path.
+        private bool isReFs;
 
         /// <summary>
         /// Resolves the true FRN of the volume root by opening it and reading its file index.
         /// USN records reference parents by full 64-bit FRN (with sequence bits), so a
         /// hardcoded constant would never match and every lookup would fail.
         /// </summary>
-        private static bool TryGetRootFrn(string volumeRoot, out ulong frn)
+        private static bool TryGetRootFrn(string volumeRoot, bool refs, out Frn frn)
         {
-            frn = 0;
+            frn = default(Frn);
             IntPtr hDir = CreateFileW(volumeRoot, FILE_READ_ATTRIBUTES,
                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                 IntPtr.Zero, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, IntPtr.Zero);
@@ -116,11 +171,22 @@ namespace RED
 
             try
             {
+                if (refs)
+                {
+                    // ReFS file IDs are 128-bit — nFileIndexHigh/Low from the legacy
+                    // call would be truncated, so use FILE_ID_INFO
+                    FILE_ID_INFO idInfo;
+                    if (!GetFileInformationByHandleEx(hDir, FileIdInfo, out idInfo, (uint)Marshal.SizeOf(typeof(FILE_ID_INFO))))
+                        return false;
+                    frn = new Frn(idInfo.FileIdLow, idInfo.FileIdHigh);
+                    return true;
+                }
+
                 BY_HANDLE_FILE_INFORMATION info;
                 if (!GetFileInformationByHandle(hDir, out info))
                     return false;
 
-                frn = ((ulong)info.nFileIndexHigh << 32) | info.nFileIndexLow;
+                frn = Frn.From64(((ulong)info.nFileIndexHigh << 32) | info.nFileIndexLow);
                 return true;
             }
             finally
@@ -129,29 +195,43 @@ namespace RED
             }
         }
 
-        internal static bool IsNtfsVolume(string path)
+        /// <summary>Returns NTFS / REFS / null for the volume hosting <paramref name="path"/>.</summary>
+        private static string GetFileSystemName(string path)
         {
             try
             {
                 string root = Path.GetPathRoot(path);
                 if (string.IsNullOrEmpty(root) || root.StartsWith(@"\\"))
-                    return false;
+                    return null;
 
                 var volName = new StringBuilder(256);
                 var fsName = new StringBuilder(256);
                 uint serial, maxLen, flags;
                 if (GetVolumeInformationW(root, volName, volName.Capacity, out serial, out maxLen, out flags, fsName, fsName.Capacity))
                 {
-                    return string.Equals(fsName.ToString(), "NTFS", StringComparison.OrdinalIgnoreCase);
+                    return fsName.ToString();
                 }
             }
             catch { }
-            return false;
+            return null;
+        }
+
+        /// <summary>
+        /// True if the MFT turbo scan can run here — NTFS or ReFS (Dev Drive).
+        /// FAT/exFAT/network volumes have no USN journal and fall back to the walk.
+        /// </summary>
+        internal static bool IsSupportedVolume(string path)
+        {
+            string fs = GetFileSystemName(path);
+            return string.Equals(fs, "NTFS", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fs, "ReFS", StringComparison.OrdinalIgnoreCase);
         }
 
         internal bool EnumerateMft(string volumeRoot, BackgroundWorker worker)
         {
-            if (!TryGetRootFrn(volumeRoot, out rootFrn))
+            isReFs = string.Equals(GetFileSystemName(volumeRoot), "ReFS", StringComparison.OrdinalIgnoreCase);
+
+            if (!TryGetRootFrn(volumeRoot, isReFs, out rootFrn))
                 return false;
 
             string volumePath = @"\\.\" + volumeRoot.TrimEnd('\\');
@@ -165,66 +245,49 @@ namespace RED
 
             try
             {
-                var enumData = new MFT_ENUM_DATA_V0
-                {
-                    StartFileReferenceNumber = 0,
-                    LowUsn = 0,
-                    HighUsn = long.MaxValue
-                };
-
                 byte[] buffer = new byte[128 * 1024];
-                int bytesReturned;
                 int recordCount = 0;
 
-                while (DeviceIoControl(hVolume, FSCTL_ENUM_USN_DATA,
-                    ref enumData, Marshal.SizeOf(enumData),
-                    buffer, buffer.Length, out bytesReturned, IntPtr.Zero))
+                if (isReFs)
                 {
-                    if (bytesReturned <= 8) break;
-                    if (worker != null && worker.CancellationPending) return false;
-
-                    enumData.StartFileReferenceNumber = BitConverter.ToUInt64(buffer, 0);
-
-                    int offset = 8;
-                    while (offset + 60 < bytesReturned)
+                    // V1 input, V3 (128-bit FRN) records
+                    var enumData = new MFT_ENUM_DATA_V1
                     {
-                        int recordLength = BitConverter.ToInt32(buffer, offset);
-                        if (recordLength <= 0) break;
-                        if (offset + recordLength > bytesReturned) break;
-
-                        ulong frn = BitConverter.ToUInt64(buffer, offset + 8);
-                        ulong parentFrn = BitConverter.ToUInt64(buffer, offset + 16);
-                        uint fileAttribs = BitConverter.ToUInt32(buffer, offset + 52);
-                        int nameLength = BitConverter.ToInt16(buffer, offset + 56);
-                        int nameOffset = BitConverter.ToInt16(buffer, offset + 58);
-
-                        if (nameLength > 0 && offset + nameOffset + nameLength <= bytesReturned)
-                        {
-                            string fileName = Encoding.Unicode.GetString(buffer, offset + nameOffset, nameLength);
-
-                            var entry = new MftEntry
-                            {
-                                FileReferenceNumber = frn,
-                                ParentFileReferenceNumber = parentFrn,
-                                FileName = fileName,
-                                FileAttributes = fileAttribs,
-                                IsDirectory = (fileAttribs & FILE_ATTRIBUTE_DIRECTORY) != 0
-                            };
-
-                            entries[frn] = entry;
-
-                            if (!childrenOf.ContainsKey(parentFrn))
-                                childrenOf[parentFrn] = new List<ulong>();
-                            childrenOf[parentFrn].Add(frn);
-                        }
-
-                        offset += recordLength;
-                        recordCount++;
+                        StartFileReferenceNumber = 0,
+                        LowUsn = 0,
+                        HighUsn = long.MaxValue,
+                        MinMajorVersion = 2,
+                        MaxMajorVersion = 3
+                    };
+                    int bytesReturned;
+                    while (DeviceIoControl(hVolume, FSCTL_ENUM_USN_DATA,
+                        ref enumData, Marshal.SizeOf(enumData),
+                        buffer, buffer.Length, out bytesReturned, IntPtr.Zero))
+                    {
+                        if (bytesReturned <= 8) break;
+                        if (worker != null && worker.CancellationPending) return false;
+                        enumData.StartFileReferenceNumber = BitConverter.ToUInt64(buffer, 0);
+                        ParseRecords(buffer, bytesReturned, ref recordCount, worker);
                     }
-
-                    if (recordCount % 100000 == 0 && worker != null)
+                }
+                else
+                {
+                    // V0 input, V2 (64-bit FRN) records — the original NTFS path
+                    var enumData = new MFT_ENUM_DATA_V0
                     {
-                        worker.ReportProgress(0, string.Format("MFT: {0:N0} records enumerated...", recordCount));
+                        StartFileReferenceNumber = 0,
+                        LowUsn = 0,
+                        HighUsn = long.MaxValue
+                    };
+                    int bytesReturned;
+                    while (DeviceIoControl(hVolume, FSCTL_ENUM_USN_DATA,
+                        ref enumData, Marshal.SizeOf(enumData),
+                        buffer, buffer.Length, out bytesReturned, IntPtr.Zero))
+                    {
+                        if (bytesReturned <= 8) break;
+                        if (worker != null && worker.CancellationPending) return false;
+                        enumData.StartFileReferenceNumber = BitConverter.ToUInt64(buffer, 0);
+                        ParseRecords(buffer, bytesReturned, ref recordCount, worker);
                     }
                 }
 
@@ -236,7 +299,76 @@ namespace RED
             }
         }
 
-        internal ulong? FindFrnByPath(string fullPath)
+        /// <summary>
+        /// Parses USN records from a returned buffer (skipping the leading 8-byte
+        /// next-FRN cursor). Handles both V2 (NTFS, 64-bit FRN) and V3 (ReFS,
+        /// 128-bit FRN) records, dispatched by each record's MajorVersion field.
+        /// </summary>
+        private void ParseRecords(byte[] buffer, int bytesReturned, ref int recordCount, BackgroundWorker worker)
+        {
+            int offset = 8;
+            while (offset + 60 < bytesReturned)
+            {
+                int recordLength = BitConverter.ToInt32(buffer, offset);
+                if (recordLength <= 0) break;
+                if (offset + recordLength > bytesReturned) break;
+
+                ushort majorVersion = BitConverter.ToUInt16(buffer, offset + 4);
+
+                Frn frn, parentFrn;
+                uint fileAttribs;
+                int nameLength, nameOffset;
+
+                if (majorVersion >= 3)
+                {
+                    // USN_RECORD_V3: 16-byte FILE_ID_128 fields
+                    frn = new Frn(BitConverter.ToUInt64(buffer, offset + 8), BitConverter.ToUInt64(buffer, offset + 16));
+                    parentFrn = new Frn(BitConverter.ToUInt64(buffer, offset + 24), BitConverter.ToUInt64(buffer, offset + 32));
+                    fileAttribs = BitConverter.ToUInt32(buffer, offset + 68);
+                    nameLength = BitConverter.ToInt16(buffer, offset + 72);
+                    nameOffset = BitConverter.ToInt16(buffer, offset + 74);
+                }
+                else
+                {
+                    // USN_RECORD_V2: 8-byte FRN fields
+                    frn = Frn.From64(BitConverter.ToUInt64(buffer, offset + 8));
+                    parentFrn = Frn.From64(BitConverter.ToUInt64(buffer, offset + 16));
+                    fileAttribs = BitConverter.ToUInt32(buffer, offset + 52);
+                    nameLength = BitConverter.ToInt16(buffer, offset + 56);
+                    nameOffset = BitConverter.ToInt16(buffer, offset + 58);
+                }
+
+                if (nameLength > 0 && offset + nameOffset + nameLength <= bytesReturned)
+                {
+                    string fileName = Encoding.Unicode.GetString(buffer, offset + nameOffset, nameLength);
+
+                    var entry = new MftEntry
+                    {
+                        FileReferenceNumber = frn,
+                        ParentFileReferenceNumber = parentFrn,
+                        FileName = fileName,
+                        FileAttributes = fileAttribs,
+                        IsDirectory = (fileAttribs & FILE_ATTRIBUTE_DIRECTORY) != 0
+                    };
+
+                    entries[frn] = entry;
+
+                    if (!childrenOf.ContainsKey(parentFrn))
+                        childrenOf[parentFrn] = new List<Frn>();
+                    childrenOf[parentFrn].Add(frn);
+                }
+
+                offset += recordLength;
+                recordCount++;
+            }
+
+            if (recordCount % 100000 == 0 && worker != null)
+            {
+                worker.ReportProgress(0, string.Format("MFT: {0:N0} records enumerated...", recordCount));
+            }
+        }
+
+        internal Frn? FindFrnByPath(string fullPath)
         {
             string root = Path.GetPathRoot(fullPath);
             string relative = fullPath.Substring(root.Length);
@@ -245,14 +377,14 @@ namespace RED
 
             string[] parts = relative.Split(new[] { Path.DirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
 
-            ulong currentFrn = rootFrn;
+            Frn currentFrn = rootFrn;
             foreach (string part in parts)
             {
                 if (!childrenOf.ContainsKey(currentFrn))
                     return null;
 
-                ulong? found = null;
-                foreach (ulong childFrn in childrenOf[currentFrn])
+                Frn? found = null;
+                foreach (Frn childFrn in childrenOf[currentFrn])
                 {
                     if (entries.ContainsKey(childFrn) &&
                         string.Equals(entries[childFrn].FileName, part, StringComparison.OrdinalIgnoreCase))
@@ -269,27 +401,27 @@ namespace RED
             return currentFrn;
         }
 
-        internal string ReconstructPath(ulong frn, string volumeRoot)
+        internal string ReconstructPath(Frn frn, string volumeRoot)
         {
             var parts = new List<string>();
-            ulong current = frn;
+            Frn current = frn;
             int maxDepth = 512;
 
-            while (current != rootFrn && maxDepth-- > 0)
+            while (!current.Equals(rootFrn) && maxDepth-- > 0)
             {
                 if (!entries.ContainsKey(current)) return null;
                 parts.Add(entries[current].FileName);
                 current = entries[current].ParentFileReferenceNumber;
             }
 
-            if (current != rootFrn) return null;
+            if (!current.Equals(rootFrn)) return null;
 
             parts.Reverse();
             return volumeRoot.TrimEnd('\\') + Path.DirectorySeparatorChar + string.Join(Path.DirectorySeparatorChar.ToString(), parts);
         }
 
         internal void FindEmptyDirectories(
-            ulong startFrn,
+            Frn startFrn,
             string volumeRoot,
             RuntimeData runData,
             BackgroundWorker worker,
@@ -300,10 +432,10 @@ namespace RED
             this.gitIgnore = (gitIgnoreParser != null && gitIgnoreParser.HasRules) ? gitIgnoreParser : null;
             this.gitIgnoreBasePath = startFolderPath;
 
-            var emptyDirs = new List<ulong>();
+            var emptyDirs = new List<Frn>();
             CheckSubtreeEmpty(startFrn, volumeRoot, runData, worker, ref folderCount, emptyDirs, 1);
 
-            foreach (ulong frn in emptyDirs)
+            foreach (Frn frn in emptyDirs)
             {
                 if (worker != null && worker.CancellationPending) return;
 
@@ -325,9 +457,9 @@ namespace RED
         private string gitIgnoreBasePath;
 
         private bool CheckSubtreeEmpty(
-            ulong frn, string volumeRoot, RuntimeData runData,
+            Frn frn, string volumeRoot, RuntimeData runData,
             BackgroundWorker worker, ref int folderCount,
-            List<ulong> emptyDirs, int depth)
+            List<Frn> emptyDirs, int depth)
         {
             if (worker != null && worker.CancellationPending) return false;
             if (runData.MaxDepth != -1 && depth > runData.MaxDepth) return false;
@@ -412,7 +544,7 @@ namespace RED
 
             if (childrenOf.ContainsKey(frn))
             {
-                foreach (ulong childFrn in childrenOf[frn])
+                foreach (Frn childFrn in childrenOf[frn])
                 {
                     if (!entries.ContainsKey(childFrn)) continue;
                     var child = entries[childFrn];
