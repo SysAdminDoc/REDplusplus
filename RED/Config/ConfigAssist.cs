@@ -19,6 +19,12 @@ namespace NotBob.Config
         private static int RedirectCount = 0;
         private static readonly int RedirectMax = 3;
 
+        /// <summary>
+        /// Headless (-silent) mode: never show dialogs — a modal prompt would hang a
+        /// scheduled task. With no config file, in-memory defaults are used read-only.
+        /// </summary>
+        internal static bool SilentMode = false;
+
         internal static void ConfigLoad(ref RedConfiguration config, string appName)
         {
             bool createConfig = false;
@@ -84,8 +90,11 @@ namespace NotBob.Config
                     RedConfiguration obj = new RedConfiguration();
                     obj.SetToDefaults();
                     config = obj;
-                    UiAssist.MsgBoxInfo(TXT.Translate("Settings have been set to their defaults"));
-                    if (string.IsNullOrWhiteSpace(filename))
+                    if (!SilentMode)
+                    {
+                        UiAssist.MsgBoxInfo(TXT.Translate("Settings have been set to their defaults"));
+                    }
+                    if (string.IsNullOrWhiteSpace(filename) || SilentMode)
                     {
                         config.IsReadOnly = true;
                     }
@@ -94,7 +103,22 @@ namespace NotBob.Config
             catch (Exception ex)
             {
                 string emsg = string.Format("{0}:{1}{2}", TXT.Translate("Error trying to read configuration file"), RedGetText.CrLf1, filename);
-                UiAssist.MsgBoxException(emsg, ex);
+                if (SilentMode)
+                {
+                    Console.Error.WriteLine(emsg + " - " + ex.Message);
+                }
+                else
+                {
+                    UiAssist.MsgBoxException(emsg, ex);
+                }
+
+                // A corrupt or unreadable config must not crash the app —
+                // fall back to read-only defaults
+                if (config == null)
+                {
+                    config = new RedConfiguration();
+                    config.SetToDefaults();
+                }
                 config.IsReadOnly = true;
             }
             finally
@@ -173,6 +197,11 @@ namespace NotBob.Config
                     if (File.Exists(cfgFile))
                     {
                         configFilename = cfgFile;
+                    }
+                    else if (SilentMode)
+                    {
+                        // Headless: never prompt — run with in-memory defaults
+                        configFilename = string.Empty;
                     }
                     else
                     {
