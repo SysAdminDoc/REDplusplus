@@ -32,6 +32,40 @@ namespace RED
         private const uint FILE_ATTRIBUTE_DIRECTORY = 0x10;
 
         /// <summary>
+        /// Prefixes an absolute path with \\?\ (or \\?\UNC\ for shares) so Win32
+        /// calls work past MAX_PATH even when the OS LongPathsEnabled policy is off
+        /// (the longPathAware manifest alone is not sufficient). Display strings
+        /// stay unprefixed — only P/Invoke arguments go through this.
+        /// </summary>
+        internal static string ToExtendedLengthPath(string path)
+        {
+            if (string.IsNullOrEmpty(path) || path.StartsWith(@"\\?\", StringComparison.Ordinal))
+            {
+                return path;
+            }
+            if (path.StartsWith(@"\\", StringComparison.Ordinal))
+            {
+                return @"\\?\UNC\" + path.Substring(2);
+            }
+            if (path.Length >= 2 && path[1] == ':')
+            {
+                return @"\\?\" + path;
+            }
+            return path; // relative — let the OS resolve it
+        }
+
+        /// <summary>
+        /// "dir\*" search pattern with extended-length prefix. The extended-length
+        /// form disables normalization, so the separator before * must be exact
+        /// (no doubling on drive roots like "C:\").
+        /// </summary>
+        private static string ToSearchPattern(string dirFullName)
+        {
+            string p = dirFullName.EndsWith(@"\", StringComparison.Ordinal) ? dirFullName : dirFullName + @"\";
+            return ToExtendedLengthPath(p + "*");
+        }
+
+        /// <summary>
         /// Fail closed: an enumeration failure (access denied, path too long, dir
         /// vanished) must throw so callers classify the directory as Error — never
         /// return an empty list, which would make an unreadable directory look
@@ -75,7 +109,7 @@ namespace RED
             WIN32_FIND_DATAW data;
 
             IntPtr handle = FindFirstFileExW(
-                dir.FullName + @"\*",
+                ToSearchPattern(dir.FullName),
                 FINDEX_INFO_LEVELS.FindExInfoBasic,
                 out data,
                 FINDEX_SEARCH_OPS.FindExSearchNameMatch,
@@ -111,7 +145,7 @@ namespace RED
             WIN32_FIND_DATAW data;
 
             IntPtr handle = FindFirstFileExW(
-                dir.FullName + @"\*",
+                ToSearchPattern(dir.FullName),
                 FINDEX_INFO_LEVELS.FindExInfoBasic,
                 out data,
                 FINDEX_SEARCH_OPS.FindExSearchNameMatch,
@@ -154,7 +188,7 @@ namespace RED
             WIN32_FIND_DATAW data;
 
             IntPtr handle = FindFirstFileExW(
-                dir.FullName + @"\*",
+                ToSearchPattern(dir.FullName),
                 FINDEX_INFO_LEVELS.FindExInfoBasic,
                 out data,
                 FINDEX_SEARCH_OPS.FindExSearchNameMatch,
