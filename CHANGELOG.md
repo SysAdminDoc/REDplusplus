@@ -25,6 +25,9 @@
 - Custom ToolStrip/ContextMenu renderer, UCMenuButton arrow glyph, DataGridView cell styles
 - Fast-mode TreeView background uses Catppuccin Surface0/Mantle
 
+### Performance (continued)
+- Replace Directory.GetFiles/GetDirectories with FindFirstFileExW + FindExInfoBasic + FIND_FIRST_EX_LARGE_FETCH P/Invoke enumerator — significantly faster scan on large directory trees
+
 ### Distribution
 - Add Scoop manifest (packaging/redplusplus.json) and winget manifest (packaging/winget/) for package-manager submissions
 
