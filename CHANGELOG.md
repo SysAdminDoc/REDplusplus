@@ -2,9 +2,19 @@
 
 ## 1.3.0 (2026-06-10)
 
+### Security
+- Harden SecureDeleteDirectory against junction/TOCTOU arbitrary-delete (CVE-2022-21658 class) — handle-based reparse verification and delete-by-handle for Direct mode
+
 ### Bug Fixes
 - Fix headless CLI exit code — was always 0; now returns 1 on scan/delete errors
 - Correct OS requirement to Windows 10 20H2+ (4.8.1 does not support Windows 7/8.1)
+- Stop classifying PathTooLongException as an infinite loop detection in scanner
+- Fix app.manifest dpiAware value casing (true/pm -> true/PM)
+- Dispose RED++.log StreamWriter on exit (RuntimeData now implements IDisposable)
+
+### Features
+- Add Enter-to-scan keyboard shortcut in path field
+- Add Del-to-delete keyboard shortcut on selected tree node
 
 ## 1.2.0 (2026-06-10)
 

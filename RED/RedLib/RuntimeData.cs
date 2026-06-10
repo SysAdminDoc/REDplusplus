@@ -6,9 +6,10 @@ using RED.Match;
 
 namespace RED
 {
-	public class RuntimeData
+	public class RuntimeData : IDisposable
 	{
 		private StreamWriter _logWriter;
+		private bool _disposed;
 
 		public RuntimeData()
 		{
@@ -68,5 +69,18 @@ namespace RED
             }
 			try { _logWriter?.WriteLine(); } catch { }
         }
+
+		public void Dispose()
+		{
+			if (_disposed) return;
+			_disposed = true;
+			try
+			{
+				_logWriter?.Flush();
+				_logWriter?.Dispose();
+			}
+			catch { }
+			_logWriter = null;
+		}
 	}
 }
