@@ -909,7 +909,7 @@ namespace RED.UI
 
         private void linkLabelProjectHomepage_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Process.Start("https://github.com/BookOfBeasts/Remove-Empty-Directories-Plus/");
+            Process.Start("https://github.com/SysAdminDoc/REDplusplus/");
         }
 
         private void linkLabelJonasJohnRed_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
@@ -919,12 +919,12 @@ namespace RED.UI
 
         private void linkLabelCheckForUpdates_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Process.Start("https://github.com/BookOfBeasts/Remove-Empty-Directories-Plus/releases/");
+            Process.Start("https://github.com/SysAdminDoc/REDplusplus/releases/");
         }
 
         private void linkLabelFeedback_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Process.Start("https://github.com/BookOfBeasts/Remove-Empty-Directories-Plus/issues/");
+            Process.Start("https://github.com/SysAdminDoc/REDplusplus/issues/");
         }
 
         private void btnHelp_Click(object sender, EventArgs e)

@@ -87,9 +87,9 @@ namespace RED
 
 		internal static class Red
 		{
-			internal static string Title => GT.Translate("Remove Empty Directories +");
-			internal static string CaptionError => GT.Translate("RED+ Error");
-			internal static string CaptionInfo => GT.Translate("RED+");
+			internal static string Title => GT.Translate("Remove Empty Directories ++");
+			internal static string CaptionError => GT.Translate("RED++ Error");
+			internal static string CaptionInfo => GT.Translate("RED++");
 		}
 
 		internal static class Words

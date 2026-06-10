@@ -1,4 +1,4 @@
-Remove Empty Directories Plus (RED+) is based on Jonas John's original Remove Empty Directories (RED)
+Remove Empty Directories ++ (RED++) is based on RED+ by Robert 'NotBob' Bookerby and Jonas John's original RED
 
 HINTS & FAQ:
 

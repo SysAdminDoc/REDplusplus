@@ -250,9 +250,9 @@ namespace RED
         private const string regKeyNameShell = @"Software\Classes\Directory\shell";
         private const string regKeyNameBgShl = @"Software\Classes\Directory\Background\shell";
 #if DEBUG
-        private const string regSubkeyRed = @"RED+DBUG";
+        private const string regSubkeyRed = @"RED++DBUG";
 #else
-        private const string regSubkeyRed = @"RED+";
+        private const string regSubkeyRed = @"RED++";
 #endif
         // HKCR Legacy Registry keys (used by orginal RED)
         private const string regLegacyKeyName = @"Folder\shell";
