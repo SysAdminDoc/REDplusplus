@@ -247,13 +247,21 @@ namespace RED
 		{
 			CurrentProcessStep = WorkflowSteps.Idle;
 
-			DeletionWorker.Dispose(); DeletionWorker = null;
+			if (DeletionWorker != null)
+			{
+				DeletionWorker.Dispose(); DeletionWorker = null;
+			}
 
 			OnAborted?.Invoke(this, new EventArgs());
 		}
 
 		internal void ContinueDeleteProcess()
 		{
+			if (DeletionWorker == null)
+			{
+				return;
+			}
+
 			CurrentProcessStep = WorkflowSteps.DeleteProcessRunning;
 			DeletionWorker.RunWorkerAsync();
 		}

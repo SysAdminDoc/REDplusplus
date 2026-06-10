@@ -59,13 +59,15 @@ namespace RED
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool CloseHandle(IntPtr hObject);
 
+        // FILETIME fields must be 4-byte aligned (two DWORDs) — `long` would insert
+        // padding after dwFileAttributes and shift every later field by 4 bytes
         [StructLayout(LayoutKind.Sequential)]
         private struct BY_HANDLE_FILE_INFORMATION
         {
             public uint dwFileAttributes;
-            public long ftCreationTime;
-            public long ftLastAccessTime;
-            public long ftLastWriteTime;
+            public System.Runtime.InteropServices.ComTypes.FILETIME ftCreationTime;
+            public System.Runtime.InteropServices.ComTypes.FILETIME ftLastAccessTime;
+            public System.Runtime.InteropServices.ComTypes.FILETIME ftLastWriteTime;
             public uint dwVolumeSerialNumber;
             public uint nFileSizeHigh;
             public uint nFileSizeLow;
@@ -172,9 +174,36 @@ namespace RED
                 throw new Exception(TXT.Translate("Could not delete directory because the path was empty"));
             }
 
-            //TODO: Add FileIOPermission code?
+            // Never recursively delete through a junction/symlink target
+            VerifyNotReparsePoint(path);
 
             FileSystem.DeleteDirectory(path, UIOption.AllDialogs, RecycleOption.SendToRecycleBin, UICancelOption.ThrowException);
+        }
+
+        /// <summary>
+        /// Walks the whole subtree and throws if any file or reparse point is found.
+        /// Called immediately before a recursive delete: the scan that classified the
+        /// subtree as empty may be minutes old, and content created since then must
+        /// abort the deletion instead of being silently destroyed.
+        /// </summary>
+        private static void VerifySubtreeHasNoFiles(string path)
+        {
+            var dir = new DirectoryInfo(path);
+            var listing = FastDirectoryEnumerator.GetFilesAndDirectories(dir);
+
+            if (listing.Files.Length > 0)
+            {
+                throw new Exception(TXT.Translate("Aborted deletion of the directory because it is no longer empty. This can happen if RED previously failed to delete an empty (trash) file: {0}", RedAssist.DQuote(path)));
+            }
+
+            foreach (DirectoryInfo sub in listing.Directories)
+            {
+                if ((sub.Attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
+                {
+                    throw new REDPermissionDeniedException(TXT.Translate("Refused to delete directory because it is a reparse point (junction, symlink, or mount point): {0}", RedAssist.DQuote(sub.FullName)));
+                }
+                VerifySubtreeHasNoFiles(sub.FullName);
+            }
         }
 
         public static bool IsDirLocked(string path)
@@ -239,17 +268,23 @@ namespace RED
                 var di = new DirectoryInfo(path);
                 if (di.Attributes.HasFlag(FileAttributes.ReadOnly))
                     di.Attributes &= ~FileAttributes.ReadOnly;
-                if (di.GetFiles().Length == 0 && di.GetDirectories().Length == 0)
+
+                var listing = FastDirectoryEnumerator.GetFilesAndDirectories(di);
+                if (listing.Files.Length > 0)
+                {
+                    throw new Exception(TXT.Translate("Aborted deletion of the directory because it is no longer empty. This can happen if RED previously failed to delete an empty (trash) file: {0}", RedAssist.DQuote(path)));
+                }
+
+                if (listing.Directories.Length == 0)
                 {
                     DirectDeleteByHandle(path);
                 }
-                else if (di.GetFiles().Length == 0)
-                {
-                    di.Delete(true);
-                }
                 else
                 {
-                    throw new Exception(TXT.Translate("Aborted deletion of the directory because it is no longer empty. This can happen if RED previously failed to delete an empty (trash) file: {0}", RedAssist.DQuote(path)));
+                    // Recursive delete of a wholly-empty subtree: re-verify every level
+                    // first — direct deletion is unrecoverable and the scan may be stale.
+                    VerifySubtreeHasNoFiles(path);
+                    di.Delete(true);
                 }
                 return;
             }
@@ -258,6 +293,8 @@ namespace RED
             {
                 if (string.IsNullOrWhiteSpace(MoveToFolderTarget))
                     throw new Exception(TXT.Translate("Move-to-folder target has not been set"));
+                if (PathContains(path, MoveToFolderTarget))
+                    throw new Exception(TXT.Translate("The move-to folder is inside a directory that is being moved: {0}", RedAssist.DQuote(MoveToFolderTarget)));
                 string relativePath = new DirectoryInfo(path).Name;
                 string destPath = Path.Combine(MoveToFolderTarget, relativePath);
                 int counter = 1;
@@ -265,14 +302,27 @@ namespace RED
                 {
                     destPath = Path.Combine(MoveToFolderTarget, relativePath + "_" + counter++);
                 }
-                Directory.Move(path, destPath);
+                try
+                {
+                    Directory.Move(path, destPath);
+                }
+                catch (IOException)
+                {
+                    // Directory.Move cannot cross volumes — replicate, then remove the source
+                    CopyDirectoryRecursive(path, destPath);
+                    Directory.Delete(path, true);
+                }
                 return;
             }
 
-            // Last security check before recycle-bin deletion — allow empty subdirectories
-            // (they are part of the same wholly-empty subtree being processed parent-first)
+            // Last security check before recycle-bin deletion — the subtree must still
+            // be free of files at every level (the scan may be stale)
             if (Directory.GetFiles(path).Length == 0)
             {
+                if (Directory.GetDirectories(path).Length > 0)
+                {
+                    VerifySubtreeHasNoFiles(path);
+                }
                 if (deleteMode == DeleteModes.RecycleBin || deleteMode == DeleteModes.RecycleBinShowErrors)
                 {
                     FileSystem.DeleteDirectory(path, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin, UICancelOption.ThrowException);
@@ -289,6 +339,31 @@ namespace RED
             else
             {
                 throw new Exception(TXT.Translate("Aborted deletion of the directory because it is no longer empty. This can happen if RED previously failed to delete an empty (trash) file: {0}", RedAssist.DQuote(path)));
+            }
+        }
+
+        private static bool PathContains(string parent, string candidate)
+        {
+            string p = Path.GetFullPath(parent).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            string c = Path.GetFullPath(candidate).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            return c.StartsWith(p, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void CopyDirectoryRecursive(string sourceDir, string destDir)
+        {
+            Directory.CreateDirectory(destDir);
+            var listing = FastDirectoryEnumerator.GetFilesAndDirectories(new DirectoryInfo(sourceDir));
+            foreach (FileInfo file in listing.Files)
+            {
+                file.CopyTo(Path.Combine(destDir, file.Name), overwrite: false);
+            }
+            foreach (DirectoryInfo sub in listing.Directories)
+            {
+                if ((sub.Attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
+                {
+                    throw new REDPermissionDeniedException(TXT.Translate("Refused to delete directory because it is a reparse point (junction, symlink, or mount point): {0}", RedAssist.DQuote(sub.FullName)));
+                }
+                CopyDirectoryRecursive(sub.FullName, Path.Combine(destDir, sub.Name));
             }
         }
 
