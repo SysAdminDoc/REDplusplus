@@ -31,7 +31,9 @@ namespace RED.Match
 					MatchText = matchText;
 					if (matchMethod == RedMatchMethodType.RegExName || matchMethod == RedMatchMethodType.RegExPath)
 					{
-						RegEx = new Regex(ExpandRegEx(matchText));
+						// All other match methods compare case-insensitively (names are
+						// lowercased before matching) — regex rules must behave the same
+						RegEx = new Regex(ExpandRegEx(matchText), RegexOptions.IgnoreCase);
 					}
 					MatchText = matchText.Trim();
 					MatchTextToCompare = MatchText.ToLowerInvariant();
