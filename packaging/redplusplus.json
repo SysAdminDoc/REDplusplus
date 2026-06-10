@@ -1,0 +1,21 @@
+{
+    "version": "1.3.0",
+    "description": "Find, display, and delete empty directories with filters, CLI mode, and reparse-point safety",
+    "homepage": "https://github.com/SysAdminDoc/REDplusplus",
+    "license": "LGPL-3.0-or-later",
+    "url": "https://github.com/SysAdminDoc/REDplusplus/releases/download/v1.3.0/RED++_v1.3.0.zip",
+    "hash": "",
+    "extract_dir": "",
+    "bin": "RED+.exe",
+    "shortcuts": [
+        ["RED+.exe", "RED++"]
+    ],
+    "persist": [
+        "RED++.cfg",
+        "language"
+    ],
+    "checkver": "github",
+    "autoupdate": {
+        "url": "https://github.com/SysAdminDoc/REDplusplus/releases/download/v$version/RED++_v$version.zip"
+    }
+}

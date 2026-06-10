@@ -25,6 +25,9 @@
 - Custom ToolStrip/ContextMenu renderer, UCMenuButton arrow glyph, DataGridView cell styles
 - Fast-mode TreeView background uses Catppuccin Surface0/Mantle
 
+### Distribution
+- Add Scoop manifest (packaging/redplusplus.json) and winget manifest (packaging/winget/) for package-manager submissions
+
 ### Features (continued)
 - Add .gitignore-aware scan filter — when enabled, directories matching .gitignore patterns are skipped during scan (first GUI empty-dir tool with this capability)
 - New GitIgnoreParser loads rules from ancestor .gitignore files up to the .git root
