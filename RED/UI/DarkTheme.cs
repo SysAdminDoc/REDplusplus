@@ -5,40 +5,142 @@ using System.Windows.Forms;
 
 namespace RED.UI
 {
+    internal enum ThemeMode { Dark = 0, Light = 1, System = 2 }
+
+    /// <summary>
+    /// Holds the named palette colors. Two instances exist (Catppuccin Mocha dark
+    /// and Latte light); <see cref="DarkTheme.Active"/> points at whichever the
+    /// resolved theme selects. All <c>DarkTheme.Base</c>-style references read
+    /// through properties so call sites need no change.
+    /// </summary>
+    internal sealed class ThemePalette
+    {
+        public Color Base, Mantle, Crust, Surface0, Surface1, Surface2, Overlay0;
+        public Color Text, Subtext0, Subtext1;
+        public Color Blue, Red, Green, Yellow, Lavender, Peach;
+        public bool IsDark;
+    }
+
     internal static class DarkTheme
     {
-        // Catppuccin Mocha palette
-        internal static readonly Color Base = Color.FromArgb(30, 30, 46);
-        internal static readonly Color Mantle = Color.FromArgb(24, 24, 37);
-        internal static readonly Color Crust = Color.FromArgb(17, 17, 27);
-        internal static readonly Color Surface0 = Color.FromArgb(49, 50, 68);
-        internal static readonly Color Surface1 = Color.FromArgb(69, 71, 90);
-        internal static readonly Color Surface2 = Color.FromArgb(88, 91, 112);
-        internal static readonly Color Overlay0 = Color.FromArgb(108, 112, 134);
-        internal static readonly Color Text = Color.FromArgb(205, 214, 244);
-        internal static readonly Color Subtext0 = Color.FromArgb(166, 173, 200);
-        internal static readonly Color Subtext1 = Color.FromArgb(186, 194, 222);
-        internal static readonly Color Blue = Color.FromArgb(137, 180, 250);
-        internal static readonly Color Red = Color.FromArgb(243, 139, 168);
-        internal static readonly Color Green = Color.FromArgb(166, 227, 161);
-        internal static readonly Color Yellow = Color.FromArgb(249, 226, 175);
-        internal static readonly Color Lavender = Color.FromArgb(180, 190, 254);
-        internal static readonly Color Peach = Color.FromArgb(250, 179, 135);
+        // Catppuccin Mocha (dark) — the default.
+        private static readonly ThemePalette Mocha = new ThemePalette
+        {
+            IsDark = true,
+            Base = Color.FromArgb(30, 30, 46),
+            Mantle = Color.FromArgb(24, 24, 37),
+            Crust = Color.FromArgb(17, 17, 27),
+            Surface0 = Color.FromArgb(49, 50, 68),
+            Surface1 = Color.FromArgb(69, 71, 90),
+            Surface2 = Color.FromArgb(88, 91, 112),
+            Overlay0 = Color.FromArgb(108, 112, 134),
+            Text = Color.FromArgb(205, 214, 244),
+            Subtext0 = Color.FromArgb(166, 173, 200),
+            Subtext1 = Color.FromArgb(186, 194, 222),
+            Blue = Color.FromArgb(137, 180, 250),
+            Red = Color.FromArgb(243, 139, 168),
+            Green = Color.FromArgb(166, 227, 161),
+            Yellow = Color.FromArgb(249, 226, 175),
+            Lavender = Color.FromArgb(180, 190, 254),
+            Peach = Color.FromArgb(250, 179, 135),
+        };
+
+        // Catppuccin Latte (light). "Surface" tones darken (not lighten) so borders
+        // and selection still read against the light Base.
+        private static readonly ThemePalette Latte = new ThemePalette
+        {
+            IsDark = false,
+            Base = Color.FromArgb(239, 241, 245),
+            Mantle = Color.FromArgb(230, 233, 239),
+            Crust = Color.FromArgb(220, 224, 232),
+            Surface0 = Color.FromArgb(204, 208, 218),
+            Surface1 = Color.FromArgb(188, 192, 204),
+            Surface2 = Color.FromArgb(172, 176, 190),
+            Overlay0 = Color.FromArgb(156, 160, 176),
+            Text = Color.FromArgb(76, 79, 105),
+            Subtext0 = Color.FromArgb(108, 111, 133),
+            Subtext1 = Color.FromArgb(92, 95, 119),
+            Blue = Color.FromArgb(30, 102, 245),
+            Red = Color.FromArgb(210, 15, 57),
+            Green = Color.FromArgb(64, 160, 43),
+            Yellow = Color.FromArgb(223, 142, 29),
+            Lavender = Color.FromArgb(114, 135, 253),
+            Peach = Color.FromArgb(254, 100, 11),
+        };
+
+        internal static ThemePalette Active = Mocha;
+
+        internal static Color Base => Active.Base;
+        internal static Color Mantle => Active.Mantle;
+        internal static Color Crust => Active.Crust;
+        internal static Color Surface0 => Active.Surface0;
+        internal static Color Surface1 => Active.Surface1;
+        internal static Color Surface2 => Active.Surface2;
+        internal static Color Overlay0 => Active.Overlay0;
+        internal static Color Text => Active.Text;
+        internal static Color Subtext0 => Active.Subtext0;
+        internal static Color Subtext1 => Active.Subtext1;
+        internal static Color Blue => Active.Blue;
+        internal static Color Red => Active.Red;
+        internal static Color Green => Active.Green;
+        internal static Color Yellow => Active.Yellow;
+        internal static Color Lavender => Active.Lavender;
+        internal static Color Peach => Active.Peach;
+
+        /// <summary>
+        /// Selects the active palette. System reads the Windows app-theme registry
+        /// value (AppsUseLightTheme); anything but an explicit 0 is treated as light.
+        /// </summary>
+        internal static void SetMode(ThemeMode mode)
+        {
+            bool light;
+            switch (mode)
+            {
+                case ThemeMode.Light:
+                    light = true;
+                    break;
+                case ThemeMode.System:
+                    light = SystemUsesLightTheme();
+                    break;
+                default:
+                    light = false;
+                    break;
+            }
+            Active = light ? Latte : Mocha;
+        }
+
+        private static bool SystemUsesLightTheme()
+        {
+            try
+            {
+                using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"))
+                {
+                    object v = key?.GetValue("AppsUseLightTheme");
+                    if (v is int i)
+                    {
+                        return i != 0;
+                    }
+                }
+            }
+            catch { }
+            return false; // default to dark when unknown
+        }
 
         [DllImport("dwmapi.dll", PreserveSig = true)]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
 
         internal static void Apply(Form form)
         {
-            SetDarkTitleBar(form.Handle);
+            SetTitleBar(form.Handle);
             ApplyToControl(form);
         }
 
-        private static void SetDarkTitleBar(IntPtr handle)
+        private static void SetTitleBar(IntPtr handle)
         {
             try
             {
-                int value = 1;
+                int value = Active.IsDark ? 1 : 0;
                 DwmSetWindowAttribute(handle, 20, ref value, sizeof(int));
             }
             catch { }
