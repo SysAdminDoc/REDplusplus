@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
+using RED.Helper;
 using RED.Match;
 using TXT = RED.RedGetText;
 
@@ -173,7 +174,7 @@ namespace RED
 		{
 			this.rootPath = directory.FullName.Trim(Path.DirectorySeparatorChar);
 
-			rootNode = new TreeNode(directory.Name);
+			rootNode = new TreeNode(RedAssist.SanitizeDisplay(directory.Name));
 			rootNode.Tag = directory;
 			rootNode.ImageKey = imageKey.ToString();
 			rootNode.SelectedImageKey = imageKey.ToString();
@@ -259,7 +260,7 @@ namespace RED
 			//var directory = new DirectoryInfo(path);
 
 			// Create new tree node
-			TreeNode newTreeNode = new TreeNode(directory.Name);
+			TreeNode newTreeNode = new TreeNode(RedAssist.SanitizeDisplay(directory.Name));
 			applyNodeStyle(newTreeNode, directory, statusType, optionalErrorMsg);
 			newTreeNode.Tag = directory;
 
@@ -302,7 +303,7 @@ namespace RED
 
 			// Rebuild from the directory name: a node can be restyled more than once
 			// (e.g. rescans) and appending again would stack «Empty»«Empty» suffixes
-			string baseText = directory.Name;
+			string baseText = RedAssist.SanitizeDisplay(directory.Name);
 
 			switch (statusType)
 			{

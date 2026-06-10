@@ -74,6 +74,9 @@ namespace RED
 			var log = new StringBuilder();
 			Action<string> logMsg = (msg) =>
 			{
+				// Bidi/zero-width chars in folder names could otherwise reorder the
+				// rendered log line and misrepresent which path was deleted
+				msg = RED.Helper.RedAssist.SanitizeDisplay(msg);
 				string line = DateTime.Now.ToString("r") + "\t" + msg;
 				log.AppendLine(line);
 				Console.WriteLine(msg);

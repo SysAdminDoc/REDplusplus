@@ -125,7 +125,46 @@ namespace RED.Helper
 
         internal static string DQuote(string v)
         {
-            return string.Format("\"{0}\"", v);
+            return string.Format("\"{0}\"", SanitizeDisplay(v));
+        }
+
+        /// <summary>
+        /// Replaces bidi/zero-width control characters with visible \uXXXX escapes.
+        /// A folder name containing U+202E (right-to-left override) would otherwise
+        /// reorder the rendered text, making a confirmation or log line display a
+        /// different-looking path than the one actually deleted (MITRE T1036.002).
+        /// </summary>
+        internal static string SanitizeDisplay(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+
+            System.Text.StringBuilder sb = null;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                bool invisible =
+                    (c >= '\u202A' && c <= '\u202E') ||                // LRE/RLE/PDF/LRO/RLO
+                    (c >= '\u2066' && c <= '\u2069') ||                // LRI/RLI/FSI/PDI
+                    c == '\u200B' || c == '\u200E' || c == '\u200F' || // ZWSP/LRM/RLM
+                    (char.IsControl(c) && c != '\t');
+
+                if (invisible)
+                {
+                    if (sb == null)
+                    {
+                        sb = new System.Text.StringBuilder(text.Substring(0, i), text.Length + 8);
+                    }
+                    sb.Append("\\u").Append(((int)c).ToString("X4"));
+                }
+                else if (sb != null)
+                {
+                    sb.Append(c);
+                }
+            }
+            return sb == null ? text : sb.ToString();
         }
 
         internal static bool IsDrivePathRemovable(string path)
