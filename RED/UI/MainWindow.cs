@@ -126,6 +126,7 @@ namespace RED.UI
 
             AddRestoreMenuItem();
             AddThemeMenu();
+            AddEmptyFilesMenuItem();
 
             SetAccessibleNames();
             DarkTheme.SetMode((ThemeMode)RedConfig.UI.ThemeMode);
@@ -182,6 +183,22 @@ namespace RED.UI
             themeRoot.DropDownItems.Add(light);
             themeRoot.DropDownItems.Add(system);
             cmMenuExtras.Items.Insert(2, themeRoot);
+        }
+
+        /// <summary>
+        /// Checkable "Delete empty files too" toggle in the Extras menu — opt-in
+        /// sister mode that also removes standalone zero-byte files on the next scan.
+        /// </summary>
+        private void AddEmptyFilesMenuItem()
+        {
+            var item = new ToolStripMenuItem(TXT.Translate("Delete empty &files too"))
+            {
+                CheckOnClick = true,
+                Checked = RedConfig.Options.DeleteEmptyFiles
+            };
+            item.AccessibleName = "Also delete standalone zero-byte files";
+            item.CheckedChanged += (s, e) => RedConfig.Options.DeleteEmptyFiles = item.Checked;
+            cmMenuExtras.Items.Insert(3, item);
         }
 
         private void mnuItemRestoreLastDeletion_Click(object sender, EventArgs e)
@@ -1174,6 +1191,7 @@ namespace RED.UI
             RunData.HideIgnoredDirectories = RedConfig.Options.HideIgnoredDirectories;
             RunData.RespectGitIgnore = RedConfig.Options.RespectGitIgnore;
             RunData.UseMftScan = RedConfig.Options.UseMftScan;
+            RunData.DeleteEmptyFiles = RedConfig.Options.DeleteEmptyFiles;
             // NotBob use dedicated RedMatchItemLists for all the filters
             RunData.IgnoreFileNameList.Transform(RedConfig.Filters.FilesToIgnore);
             RunData.IgnoreDirectoryNameList.Transform(RedConfig.Filters.DirectoriesToIgnore);
