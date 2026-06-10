@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-1.1.0-blue)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
 
@@ -12,28 +12,46 @@ RED++ finds, displays, and deletes empty directories recursively below a given s
 
 ## Features
 
-- Simple user interface
-- Shows empty directories before deleting them
-- Supports multiple delete modes (including Delete to recycle bin)
+- Simple user interface with per-monitor DPI awareness
+- Shows empty directories before deleting them with confirmation summary
+- Supports multiple delete modes (Recycle Bin, Direct, Simulate, Move to folder)
 - Allows whitelisting and blacklisting of directories by using filter lists
 - Can detect directories with empty files as empty
+- Detects OneDrive/cloud-only placeholder files as real content
+- Reparse-point safety (junctions, symlinks, mount points)
 - Fully portable (local config file, no %APPDATA% required)
 - Extended directory and file name matching with sophisticated filter syntax
 - Dedicated grid for display and editing of filter rules
 - Translation support via .po files
+- Export scan results to TXT, CSV, or JSON
+- Headless CLI mode for scripted/scheduled operation
+- Single-instance enforcement
+- Persistent log file (RED++.log)
+- Explorer context menu integration
+- Environment variable expansion in path input
 
 ## System Requirements
 
 - Windows 7 or later
-- Microsoft .NET Framework 4.8
+- Microsoft .NET Framework 4.8.1
 - No installer required. Unzip and run.
 
 ## Usage
+
+### GUI Mode
 
 If the config file (**RED++.cfg**) isn't found, you'll be prompted to create one:
 - **Portable Mode** stores the config in the same folder as the executable
 - **%APPDATA%** stores the config in a subfolder of Windows %APPDATA%
 - If RED++ is in a protected folder (Program Files, etc.), select %APPDATA% instead
+
+### CLI / Headless Mode
+
+```
+RED+.exe -silent -path "C:\target" [-log "output.log"]
+```
+
+Scans and deletes (per configured delete mode) without showing a window. Writes results to the log file and exits with code 0 (success) or 1 (errors). Useful for Task Scheduler and batch scripts.
 
 ## Credits
 
