@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Security
+- Bidi/zero-width control characters (RLO and friends, MITRE T1036.002) in folder names render as visible \uXXXX escapes in the tree, logs, and headless output — a crafted name can no longer reorder the displayed path in confirmations or logs
+
 ### Reliability
 - Direct delete is now three-tier: POSIX delete semantics with read-only override (NTFS, Win10 1607+) → legacy delete-on-close (FAT32/exFAT/SMB) → error; read-only empty directories delete without a separate attribute pass
 - Long-path support independent of the OS LongPathsEnabled policy: directory enumeration, reparse verification, and Direct-mode deletes use extended-length (`\\?\`) paths; wholly-empty subtrees are deleted bottom-up by handle instead of DirectoryInfo.Delete (verified with a 499-character tree)
