@@ -12,3 +12,7 @@ languages/
 CLAUDE.md
 CODEX_CHANGELOG.md
 .claude/
+
+# Planning docs (local only)
+ROADMAP.md
+RESEARCH.md
