@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Theme
+- Light theme option (Catppuccin Latte) plus Dark and System (follows the Windows app-theme registry value); switch live from Extras → Theme, persisted in config. Dark remains the default; the title bar follows the theme via DwmSetWindowAttribute
+
 ### Features
 - `.redkeep` marker file protects a folder and its entire subtree from deletion on every scan path (standard and MFT) — unlike per-config filter lists, the marker travels with the folder across copies and network shares
 - CLI v2: repeatable `-path` for multiple scan roots in one run, `-dryrun` (report without deleting), `-mode recycle|direct|move|simulate` to override the configured delete mode, `-export <file>` (.txt/.csv/.json by extension), `-json` NDJSON to stdout for piping, and `-help`/`-version`; bare path arguments are accepted as scan roots
