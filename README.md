@@ -1,6 +1,6 @@
-![Version](https://img.shields.io/badge/version-1.2.0-blue)
+![Version](https://img.shields.io/badge/version-1.3.0-blue)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-green)
-![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
+![Platform](https://img.shields.io/badge/platform-Windows%2010%2B-lightgrey)
 
 # RED++ : Remove Empty Directories
 
@@ -18,17 +18,30 @@ RED++ finds, displays, and deletes empty directories recursively below a given s
 - Allows whitelisting and blacklisting of directories by using filter lists
 - Can detect directories with empty files as empty
 - Detects OneDrive/cloud-only placeholder files as real content
-- Reparse-point safety (junctions, symlinks, mount points)
+- Handle-based reparse-point safety (junctions, symlinks, mount points)
 - Fully portable (local config file, no %APPDATA% required)
 - Extended directory and file name matching with sophisticated filter syntax
 - Dedicated grid for display and editing of filter rules
 - Translation support via .po files
 - Export scan results to TXT, CSV, or JSON
 - Headless CLI mode for scripted/scheduled operation
+- Keyboard shortcuts (Enter to scan, Del to delete selected)
 - Single-instance enforcement
 - Persistent log file (RED++.log)
 - Explorer context menu integration
 - Environment variable expansion in path input
+
+## Why RED++?
+
+| Feature | RED++ | TreeSize Pro | FolderSizes | Store apps |
+|---------|:-----:|:----------:|:-----------:|:----------:|
+| Empty-dir scan + preview | Free | ~$50/yr | $60+ | Free |
+| Network/UNC share support | Free | Paid only | Paid only | No |
+| CLI / Task Scheduler | Free | Paid only | No | No |
+| CSV/JSON export | Free | Paid only | Paid only | No |
+| Custom filter rules | Free | No | No | No |
+| "Select All" results | Free | Free | Free | Paid |
+| Portable (no install) | Yes | No | No | No |
 
 ## System Requirements
 
@@ -52,6 +65,37 @@ RED+.exe -silent -path "C:\target" [-log "output.log"]
 ```
 
 Scans and deletes (per configured delete mode) without showing a window. Writes results to the log file and exits with code 0 (success) or 1 (errors). Useful for Task Scheduler and batch scripts.
+
+Works with UNC paths directly — no mapped drive needed:
+
+```
+RED+.exe -silent -path "\\server\share\folder" -log "cleanup.log"
+```
+
+### Post-Migration Cleanup
+
+After a `robocopy /MIR` or file-server migration, clean up leftover empty directories:
+
+```
+RED+.exe -silent -path "\\server\share" -log "migration-cleanup.log"
+```
+
+RED++ handles Thumbs.db and desktop.ini correctly (treats them as ignored files), unlike `robocopy "X" "X" /S /move` which chokes on them.
+
+### Task Scheduler
+
+Create a scheduled task to clean a directory nightly:
+
+```xml
+<Actions>
+  <Exec>
+    <Command>C:\Tools\RED+.exe</Command>
+    <Arguments>-silent -path "D:\Shares\Home" -log "D:\Logs\red-cleanup.log"</Arguments>
+  </Exec>
+</Actions>
+```
+
+Exit code 0 = success, 1 = errors occurred. Configure the task to use UNC paths directly — mapped drives are not available in task context.
 
 ## Credits
 
