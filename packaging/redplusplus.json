@@ -11,11 +11,14 @@
         ["RED+.exe", "RED++"]
     ],
     "persist": [
-        "RED++.cfg",
+        "RED+.cfg",
         "language"
     ],
     "checkver": "github",
     "autoupdate": {
-        "url": "https://github.com/SysAdminDoc/REDplusplus/releases/download/v$version/RED++_v$version.zip"
+        "url": "https://github.com/SysAdminDoc/REDplusplus/releases/download/v$version/RED++_v$version.zip",
+        "hash": {
+            "url": "https://github.com/SysAdminDoc/REDplusplus/releases/download/v$version/SHA256SUMS"
+        }
     }
 }

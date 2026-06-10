@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Distribution
+- Release workflow now publishes a SHA256SUMS asset, attests build provenance via GitHub Sigstore (`gh attestation verify` documented in README), and optionally scans the zip on VirusTotal (when `VIRUSTOTAL_API_KEY` secret is set) and auto-submits winget version bumps (when `WINGET_TOKEN` secret is set)
+- Scoop manifest: fix persisted config filename (RED+.cfg) and extract update hashes from the SHA256SUMS release asset
+
 ## 1.4.0 (2026-06-10)
 
 ### Critical Fixes
