@@ -81,13 +81,26 @@ namespace RED.Helper
             }
         }
 
+        /// <summary>Public entry for the headless CLI -export path.</summary>
+        public void WriteCsvFile(RedScanResultItemList v, string filename)
+        {
+            WriteCsv(v, filename);
+        }
+
+        /// <summary>Public entry for the headless CLI -export path.</summary>
+        public void WriteJsonFile(RedScanResultItemList v, string filename)
+        {
+            WriteJson(v, filename);
+        }
+
         private void WriteCsv(RedScanResultItemList v, string filename)
         {
-            var lines = new List<string> { "\"Path\",\"Status\"" };
+            var lines = new List<string> { "\"Path\",\"Status\",\"Reason\"" };
             for (int i = 0; i < v.Count; i++)
             {
                 string escapedPath = v[i].FullPath.Replace("\"", "\"\"");
-                lines.Add(string.Format("\"{0}\",\"{1}\"", escapedPath, v[i].SearchStatus));
+                string escapedReason = (v[i].StatusReason ?? string.Empty).Replace("\"", "\"\"");
+                lines.Add(string.Format("\"{0}\",\"{1}\",\"{2}\"", escapedPath, v[i].SearchStatus, escapedReason));
             }
             File.WriteAllLines(filename, lines, Encoding.UTF8);
         }
@@ -99,7 +112,8 @@ namespace RED.Helper
             for (int i = 0; i < v.Count; i++)
             {
                 string escapedPath = v[i].FullPath.Replace("\\", "\\\\").Replace("\"", "\\\"");
-                sb.AppendFormat("  {{ \"path\": \"{0}\", \"status\": \"{1}\" }}", escapedPath, v[i].SearchStatus);
+                string escapedReason = (v[i].StatusReason ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\"");
+                sb.AppendFormat("  {{ \"path\": \"{0}\", \"status\": \"{1}\", \"reason\": \"{2}\" }}", escapedPath, v[i].SearchStatus, escapedReason);
                 if (i < v.Count - 1) sb.Append(",");
                 sb.AppendLine();
             }

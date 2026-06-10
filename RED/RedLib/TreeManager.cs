@@ -300,6 +300,7 @@ namespace RED
 			// TODO: use enums for icon names
 			treeNode.ForeColor = (statusType == DirectorySearchStatusTypes.Empty) ? ColortoBeDeleted : ColorDoNotTouch;
 			string iconKey = string.Empty;
+			string accessibleReason = string.Empty;
 
 			// Rebuild from the directory name: a node can be restyled more than once
 			// (e.g. rescans) and appending again would stack «Empty»«Empty» suffixes
@@ -340,10 +341,12 @@ namespace RED
 					if (containsTrash)
 					{
 						treeNode.ToolTipText = TXT.Translate("«ignored files: {0}»", fileCount);
+						accessibleReason = TXT.Translate("Empty except for {0} ignored files - eligible for deletion", fileCount);
 					}
 					else
 					{
 						treeNode.ToolTipText = TXT.Translate("«Empty»");
+						accessibleReason = TXT.Translate("Empty - eligible for deletion");
 					}
 					treeNode.Text = baseText + "  " + treeNode.ToolTipText;
 					break;
@@ -352,6 +355,7 @@ namespace RED
 					iconKey = "protected_icon";
 					treeNode.ForeColor = ColorProtected;
 					treeNode.ToolTipText = TXT.Translate("«Ignored»");
+					accessibleReason = TXT.Translate("Kept - matches an ignore filter rule");
 					treeNode.Text = baseText + "  " + treeNode.ToolTipText;
 					break;
 
@@ -359,11 +363,15 @@ namespace RED
 					iconKey = "folder_never_empty";
 					treeNode.ForeColor = ColorDoNotTouch;
 					treeNode.ToolTipText = TXT.Translate("«Never Empty»");
+					accessibleReason = TXT.Translate("Kept - matches a never-empty rule");
 					treeNode.Text = baseText + "  " + treeNode.ToolTipText;
 					break;
 
 				case DirectorySearchStatusTypes.Error:
 					iconKey = "folder_warning";
+					accessibleReason = string.IsNullOrWhiteSpace(optionalErrorMsg)
+						? TXT.Translate("Kept - could not be read")
+						: TXT.Translate("Kept - {0}", optionalErrorMsg.Replace("\r", " ").Replace("\n", " "));
 					if (!string.IsNullOrWhiteSpace(optionalErrorMsg))
 					{
 						optionalErrorMsg = optionalErrorMsg.Replace("\r", string.Empty).Replace("\n", string.Empty);
@@ -377,6 +385,14 @@ namespace RED
 
 				default:
 					break;
+			}
+
+			// Screen readers read TreeNode.Text; spell out the reason there (the
+			// «glyph» markers alone are terse) so Narrator/NVDA announce why a
+			// folder is kept, not just its name. TreeNode has no AccessibleName.
+			if (!string.IsNullOrEmpty(accessibleReason) && statusType != DirectorySearchStatusTypes.Error)
+			{
+				treeNode.ToolTipText = accessibleReason;
 			}
 
 			if (treeNode != this.rootNode)
