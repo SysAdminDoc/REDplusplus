@@ -17,7 +17,10 @@ namespace RED.UI
 
         private void grdFilter_DataError(object sender, DataGridViewDataErrorEventArgs e)
         {
-            _ = MessageBox.Show($"Row={e.RowIndex}, Col={e.ColumnIndex}, {e.Exception.Message}");
+            e.ThrowException = false;
+            _ = MessageBox.Show(
+                TXT.Translate("This filter entry could not be applied:") + "\r\n\r\n" + e.Exception.Message,
+                "RED++", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
         private RedMatchItemList MatchList { get; set; }
@@ -201,10 +204,18 @@ namespace RED.UI
 
             foreach (DataGridViewRow row in grdFilter.Rows)
             {
+                // Skip incomplete rows (no method tag or empty match text) instead of crashing
+                object methodTag = row.Cells[colMatchMethod.Index].Tag;
+                object textValue = row.Cells[colMatchText.Index].Value;
+                if (methodTag == null || textValue == null || string.IsNullOrWhiteSpace(textValue.ToString()))
+                {
+                    continue;
+                }
+
                 DataGridViewCheckBoxCell chk = (DataGridViewCheckBoxCell)row.Cells[colMatchEnabled.Index];
                 bool enabled = chk.Value == chk.TrueValue ? true : false;
-                RedMatchMethodType matchMethod = (RedMatchMethodType)row.Cells[colMatchMethod.Index].Tag;
-                string matchText = row.Cells[colMatchText.Index].Value.ToString();
+                RedMatchMethodType matchMethod = (RedMatchMethodType)methodTag;
+                string matchText = textValue.ToString();
                 rml.AddItem(enabled, matchMethod, matchText);
             }
 

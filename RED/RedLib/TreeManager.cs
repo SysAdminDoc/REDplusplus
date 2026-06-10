@@ -217,6 +217,10 @@ namespace RED
 		internal void UpdateItemIcon(RedScanResultItem scanResult, DirectoryIcons iconKey)
 		{
 			TreeNode treeNode = this.findOrCreateDirectoryNodeByPath(scanResult.Directory);
+			if (treeNode == null)
+			{
+				return;
+			}
 
 			treeNode.ImageKey = iconKey.ToString();
 			treeNode.SelectedImageKey = iconKey.ToString();
@@ -259,14 +263,22 @@ namespace RED
 			applyNodeStyle(newTreeNode, directory, statusType, optionalErrorMsg);
 			newTreeNode.Tag = directory;
 
-			if (directory.Parent.FullName.Trim(Path.AltDirectorySeparatorChar).Equals(this.rootPath, StringComparison.OrdinalIgnoreCase))
+			if (directory.Parent == null ||
+				directory.Parent.FullName.Trim(Path.AltDirectorySeparatorChar).Equals(this.rootPath, StringComparison.OrdinalIgnoreCase))
 			{
 				this.rootNode.Nodes.Add(newTreeNode);
 			}
 			else
 			{
 				TreeNode parentNode = this.findOrCreateDirectoryNodeByPath(directory.Parent);
-				parentNode.Nodes.Add(newTreeNode);
+				if (parentNode != null)
+				{
+					parentNode.Nodes.Add(newTreeNode);
+				}
+				else
+				{
+					this.rootNode.Nodes.Add(newTreeNode);
+				}
 			}
 
 			directoryToTreeNodeMapping.Add(directory.FullName, newTreeNode);
@@ -284,54 +296,69 @@ namespace RED
 		//private void applyNodeStyle(TreeNode treeNode, string path, DirectorySearchStatusTypes statusType, string optionalErrorMsg)
 		private void applyNodeStyle(TreeNode treeNode, DirectoryInfo directory, DirectorySearchStatusTypes statusType, string optionalErrorMsg)
 		{
-			//var directory = new DirectoryInfo(path);
-
 			// TODO: use enums for icon names
 			treeNode.ForeColor = (statusType == DirectorySearchStatusTypes.Empty) ? ColortoBeDeleted : ColorDoNotTouch;
 			string iconKey = string.Empty;
 
+			// Rebuild from the directory name: a node can be restyled more than once
+			// (e.g. rescans) and appending again would stack «Empty»«Empty» suffixes
+			string baseText = directory.Name;
+
 			switch (statusType)
 			{
 				case DirectorySearchStatusTypes.Empty:
-					int fileCount = directory.GetFiles().Length;
+					int fileCount = 0;
+					try
+					{
+						// Can throw if the directory vanished or access was revoked
+						// between the scan thread finding it and the UI styling it
+						fileCount = FastDirectoryEnumerator.GetFiles(directory).Length;
+					}
+					catch
+					{
+						fileCount = 0;
+					}
 					bool containsTrash = (fileCount > 0);
 
+					FileAttributes attribs = 0;
+					try { attribs = directory.Attributes; } catch { }
+
 					iconKey = containsTrash ? "folder_trash_files" : "folder";
-					if ((directory.Attributes & FileAttributes.Hidden) == FileAttributes.Hidden)
+					if ((attribs & FileAttributes.Hidden) == FileAttributes.Hidden)
 					{
 						iconKey = containsTrash ? "folder_hidden_trash_files" : "folder_hidden";
 					}
-					if ((directory.Attributes & FileAttributes.Encrypted) == FileAttributes.Encrypted)
+					if ((attribs & FileAttributes.Encrypted) == FileAttributes.Encrypted)
 					{
 						iconKey = containsTrash ? "folder_lock_trash_files" : "folder_lock";
 					}
-					if ((directory.Attributes & FileAttributes.System) == FileAttributes.System)
+					if ((attribs & FileAttributes.System) == FileAttributes.System)
 					{
 						iconKey = containsTrash ? "folder_lock_trash_files" : "folder_lock";
 					}
 					if (containsTrash)
 					{
-						treeNode.ToolTipText += TXT.Translate("«ignored files: {0}»", fileCount);
+						treeNode.ToolTipText = TXT.Translate("«ignored files: {0}»", fileCount);
 					}
 					else
 					{
 						treeNode.ToolTipText = TXT.Translate("«Empty»");
 					}
-					treeNode.Text += "  " + treeNode.ToolTipText;
+					treeNode.Text = baseText + "  " + treeNode.ToolTipText;
 					break;
 
 				case DirectorySearchStatusTypes.Ignore:
 					iconKey = "protected_icon";
 					treeNode.ForeColor = ColorProtected;
 					treeNode.ToolTipText = TXT.Translate("«Ignored»");
-					treeNode.Text += "  " + treeNode.ToolTipText;
+					treeNode.Text = baseText + "  " + treeNode.ToolTipText;
 					break;
 
 				case DirectorySearchStatusTypes.NeverEmpty:
 					iconKey = "folder_never_empty";
 					treeNode.ForeColor = ColorDoNotTouch;
 					treeNode.ToolTipText = TXT.Translate("«Never Empty»");
-					treeNode.Text += "  " + treeNode.ToolTipText;
+					treeNode.Text = baseText + "  " + treeNode.ToolTipText;
 					break;
 
 				case DirectorySearchStatusTypes.Error:
@@ -343,7 +370,7 @@ namespace RED
 						{
 							optionalErrorMsg = optionalErrorMsg.Substring(0, 55) + "...";
 						}
-						treeNode.Text += " (" + optionalErrorMsg + ")";
+						treeNode.Text = baseText + " (" + optionalErrorMsg + ")";
 					}
 					break;
 
