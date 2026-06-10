@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.5.0 (2026-06-10)
 
 ### Theme
 - Light theme option (Catppuccin Latte) plus Dark and System (follows the Windows app-theme registry value); switch live from Extras → Theme, persisted in config. Dark remains the default; the title bar follows the theme via DwmSetWindowAttribute
