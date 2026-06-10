@@ -1,0 +1,14 @@
+.svn/
+.vs/
+\#/
+bin/
+obj/
+packages/
+languages/
+*.suo
+*.user
+
+# AI agent working files
+CLAUDE.md
+CODEX_CHANGELOG.md
+.claude/

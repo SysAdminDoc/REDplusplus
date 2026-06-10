@@ -1,0 +1,68 @@
+/* CSS for RED+ Help: v25.12.13a  */
+/* Only use W3C Color Names.      */
+html * {font-family: Arial, sans-serif;}
+h1,h2,h3 {text-decoration: underline;}
+h4,h5 {margin-top: 1em; margin-bottom: 0.25em;}
+h4,h5 {margin-top: 0.5em; margin-bottom: 0.25em;}
+figure {display: table;}
+figure img {text-align: left;}
+figcaption {display: table-caption; caption-side: top; color: SlateGrey; background-color: LightBlue; padding-left: 0.5em; width: auto; font-weight: bold; font-size: x-small; font-weight: bold; text-transform: uppercase;}
+code {font-family: Consolas,"courier new"; color: Black; background-color: GhostWhite; border: 1px solid Grey; padding: 0.5em; margin: 0.5em;}
+blockquote {font-style: italic;}
+li div {padding-bottom: 0.4em;}
+
+.narrow-body {max-width: 800px; margin: 0 auto;}
+.footer  {position: fixed; left: 0; bottom: 0; width: 100%; background-color: LightBlue; color: Grey; text-align: center;z-index: 999;}
+.moddate {font-size: xx-small;}
+.indent1 {margin-left: 2em;}
+.changelog {font-size: small;}
+.nih  {position: fixed; top: 0; font-size: xx-small; color: SlateGrey;}
+.fal  {float:left;}
+.far  {float:right;}
+.red  {font-weight: bold; color: Red;}
+.ver  {font-weight: bold;}
+.imgx {width: 50%;}
+.imgx:hover {position: static; height: auto; width: auto;}
+.note {color: MidnightBlue; background-color: WhiteSmoke; border: 1px solid LightGrey; font-size: smaller; padding: 0.25em 0.5em 0.25em 0.5em; margin: 1em 0.5em 1em 0.5em;}
+.hint {color: MidnightBlue; background-color: WhiteSmoke; font-size: smaller;}
+.hilt {color: MidnightBlue; background-color: Ivory; margin: 0.25em 0.25em 0.25em 0.25em;}
+.eg   {color: MidnightBlue; background-color: GhostWhite; font-size: smaller; margin: 0.5em;}
+.nbn  {color: MidnightBlue; background-color: WhiteSmoke; border: 1px solid LightGrey;}
+.nbs  {font-size: smaller; font-weight: bold;}
+.sx   {font-size: medium; font-weight: bold; color: DarkBlue;}
+.sm   {font-size: smaller;}
+.btd  {border-top: 1px dashed LightGrey; padding: 0.5em 0em 1em 0em;}
+.box1 {border: 1px solid LightGrey;}
+.box2 {border: 1px solid LightGrey; background-color: WhiteSmoke;}
+.box3 {height: 3em; display: flex; align-items:center;}
+
+/* main should be the same width as sidenav */
+.main {margin-left: 12em;}
+/* Sidebar Menu */
+.sidenav {
+  height: 100%;
+  width: 12em;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  background-color: WhiteSmoke;
+  overflow-x: hidden;
+  padding-top: 1.5em;
+}
+.sidenav a {
+  padding: 0.4em 0.4em 0.4em 0.4em;
+  text-decoration: none;
+  font-size: medium;
+  color: SlateGrey;
+  display: block;
+}
+.sidenav .menu {padding: 0.4em 0.4em 0.4em 1.0em;}
+.sidenav a:hover {color: Red;}
+.sidenav .hit {display: list-item; color: Grey;}
+.menu .smenu {padding: 0em 1em 0em 0em;}
+
+@media screen and (max-height: 450px) {
+  .sidenav {padding-top: 1em;}
+  .sidenav a {font-size: 1em;}
+}
