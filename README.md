@@ -22,7 +22,7 @@ RED++ finds, displays, and deletes empty directories recursively below a given s
 - Fully portable (local config file, no %APPDATA% required)
 - Extended directory and file name matching with sophisticated filter syntax
 - Dedicated grid for display and editing of filter rules
-- Translation support via .po files
+- Translation-ready via .po files (template included, community translations welcome)
 - Export scan results to TXT, CSV, or JSON
 - Headless CLI mode for scripted/scheduled operation
 - Keyboard shortcuts (Enter to scan, Del to delete selected)

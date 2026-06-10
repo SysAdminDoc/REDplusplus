@@ -18,6 +18,14 @@
 - Add default NeverEmpty list: AUDIO_TS, VIDEO_TS, .git, .svn, .hg
 - Annotate tree nodes with status text for screen readers (Empty, Ignored, Protected)
 
+### Performance
+- Topmost-subtree single-pass deletion — parents processed before children; one recursive delete handles the whole empty subtree instead of individual leaf-by-leaf removal
+
+### Infrastructure
+- Ship .pot translation template (130 strings) in language/ folder; release workflow now bundles language/ in the zip
+- README claim downgraded from "Translation support" to "Translation-ready" (template only, no translations yet)
+- Exact/wildcard protect-list matching already implemented (NameExact match type does strict equality; no code change needed)
+
 ### Documentation
 - Add competitive comparison table (vs TreeSize Pro, FolderSizes, Store apps)
 - Add UNC path, post-migration cleanup, and Task Scheduler examples to README

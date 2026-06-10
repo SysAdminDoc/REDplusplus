@@ -1,0 +1,352 @@
+# RED++ Translation Template
+# Copy this file to <language-code>.po (e.g. de.po, fr.po, es.po)
+# and translate the msgstr entries.
+# Place the .po file in the language/ folder next to RED+.exe.
+# Select the language from Settings > Language in RED++.
+#
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Remove Empty Directories ++"
+msgstr ""
+
+msgid "RED++"
+msgstr ""
+
+msgid "RED++ Error"
+msgstr ""
+
+msgid "Admin mode"
+msgstr ""
+
+msgid "Busy"
+msgstr ""
+
+msgid "Ready"
+msgstr ""
+
+msgid "Error"
+msgstr ""
+
+msgid "Exit"
+msgstr ""
+
+msgid "Root"
+msgstr ""
+
+msgid "Empty"
+msgstr ""
+
+msgid "Deleted"
+msgstr ""
+
+msgid "Failed"
+msgstr ""
+
+msgid "Hidden"
+msgstr ""
+
+msgid "Locked"
+msgstr ""
+
+msgid "Never Empty"
+msgstr ""
+
+msgid "Protected"
+msgstr ""
+
+msgid "Contains 'Trash'"
+msgstr ""
+
+msgid "Empty Directories Deleted So Far"
+msgstr ""
+
+msgid "Unknown"
+msgstr ""
+
+msgid "Unknown Error"
+msgstr ""
+
+msgid "Error Message: {0}"
+msgstr ""
+
+msgid "Internal error: Unknown delete mode: {0}"
+msgstr ""
+
+msgid "Internal error: event handler is missing"
+msgstr ""
+
+msgid "You may need to restart the application for this to take full effect"
+msgstr ""
+
+msgid "You will need to restart the application for this to take full effect"
+msgstr ""
+
+msgid "Contains"
+msgstr ""
+
+msgid "Endswith"
+msgstr ""
+
+msgid "Startswith"
+msgstr ""
+
+msgid "Name (Exact)"
+msgstr ""
+
+msgid "Path (Exact)"
+msgstr ""
+
+msgid "RegEx (Name)"
+msgstr ""
+
+msgid "RegEx (Path)"
+msgstr ""
+
+msgid "Invalid: No Match"
+msgstr ""
+
+msgid "Searching For Empty Directories..."
+msgstr ""
+
+msgid "Empty Directories Found: {0} (Checked: {1} / Runtime: {2})"
+msgstr ""
+
+msgid "Checking directory: {0}"
+msgstr ""
+
+msgid "Delete {0} empty directories?"
+msgstr ""
+
+msgid "Move {0} empty directories?"
+msgstr ""
+
+msgid "({0} protected directories will be skipped)"
+msgstr ""
+
+msgid "Started Deletion Process..."
+msgstr ""
+
+msgid "Deleting Empty Directories"
+msgstr ""
+
+msgid "Deleted {0} empty directories (Failed: {1}, Skipped: {2}, Runtime: {3})"
+msgstr ""
+
+msgid "Process was Cancelled"
+msgstr ""
+
+msgid "Process was Aborted"
+msgstr ""
+
+msgid "Delete Process was Cancelled"
+msgstr ""
+
+msgid "Delete Process was Aborted"
+msgstr ""
+
+msgid "The path you picked is not a directory, or does not exist"
+msgstr ""
+
+msgid "The given directory caused a problem"
+msgstr ""
+
+msgid "Only one directory can be accepted"
+msgstr ""
+
+msgid "Use this value as the start directory?"
+msgstr ""
+
+msgid "RED+ is busy, cannot close."
+msgstr ""
+
+msgid "Please select the directory that you want to be cleaned"
+msgstr ""
+
+msgid "Select the folder where empty directories will be moved to"
+msgstr ""
+
+msgid "Reset ALL FILTERS to their default values?"
+msgstr ""
+
+msgid "Reset SETTINGS (excluding filters) to their default values?"
+msgstr ""
+
+msgid "Copied Debug Information to clipboard"
+msgstr ""
+
+msgid "Could not copy the debug information to clipboard"
+msgstr ""
+
+msgid "This is a Per User setting"
+msgstr ""
+
+msgid "Start the application as an Admin user to change this"
+msgstr ""
+
+msgid "Unable to determine explorer integration status"
+msgstr ""
+
+msgid "Running from a removable drive. Cannot integrate"
+msgstr ""
+
+msgid "Could not change registry settings:"
+msgstr ""
+
+msgid "Error during config initialisation (Runtime)"
+msgstr ""
+
+msgid "Error trying to read configuration file"
+msgstr ""
+
+msgid "Error trying to save configuration file"
+msgstr ""
+
+msgid "Error trying to set configuration details"
+msgstr ""
+
+msgid "Save Settings?"
+msgstr ""
+
+msgid "Settings have been set to their defaults"
+msgstr ""
+
+msgid "Scan process was cancelled"
+msgstr ""
+
+msgid "The start folder is a reparse point (junction, symlink, or mount point) and cannot be scanned: {0}"
+msgstr ""
+
+msgid "An error occurred during the scan process: "
+msgstr ""
+
+msgid "Detected possible infinite - loop somewhere in the target path {0} (symbolic links can cause this)"
+msgstr ""
+
+msgid "Aborted - possible infinite-loop detected"
+msgstr ""
+
+msgid "Directory is on the NeverEmpty list: {0}"
+msgstr ""
+
+msgid "Failed to access files in {0}"
+msgstr ""
+
+msgid "Failed to access files"
+msgstr ""
+
+msgid "Failed to access subdirectories in {0}"
+msgstr ""
+
+msgid "Failed to access subdirectories"
+msgstr ""
+
+msgid "Aborted scan of {0} because it is on the ignore list"
+msgstr ""
+
+msgid "Aborted scan of {0} because it is a symbolic link"
+msgstr ""
+
+msgid "Aborted because directory is a symbolic link"
+msgstr ""
+
+msgid "Directory {0} skipped because creation time [{1}] is < {2} hours old"
+msgstr ""
+
+msgid "An unknown error occurred while trying to scan directory: {0} - {1}"
+msgstr ""
+
+msgid "Path too long: {0}"
+msgstr ""
+
+msgid "Successfully deleted directory: {0}"
+msgstr ""
+
+msgid "Directory is protected by the system: {0} - {1}"
+msgstr ""
+
+msgid "Failed to delete directory: {0} - {1}"
+msgstr ""
+
+msgid "Could not delete the directory because it does not exist anymore: {0}"
+msgstr ""
+
+msgid "-> Successfully deleted file {0} because it matched the ignore pattern {1}"
+msgstr ""
+
+msgid "Could not delete this empty (trash) file: {0}"
+msgstr ""
+
+msgid "Could not delete directory because the path was empty"
+msgstr ""
+
+msgid "Refused to delete directory because it is a reparse point (junction, symlink, or mount point): {0}"
+msgstr ""
+
+msgid "Cannot open directory for verification (error {0}): {1}"
+msgstr ""
+
+msgid "Cannot read directory attributes: {0}"
+msgstr ""
+
+msgid "Cannot open directory for deletion (error {0}): {1}"
+msgstr ""
+
+msgid "Failed to delete directory by handle (error {0}): {1}"
+msgstr ""
+
+msgid "Move-to-folder target has not been set"
+msgstr ""
+
+msgid "Aborted deletion of the directory because it is no longer empty. This can happen if RED previously failed to delete an empty (trash) file: {0}"
+msgstr ""
+
+msgid "Delete to Recycle Bin, Ignore Errors (Safer but slower. Default Setting)"
+msgstr ""
+
+msgid "Delete to Recycle Bin, Show Errors"
+msgstr ""
+
+msgid "Delete to Recycle Bin, Ask Before Every Deletion (can be annoying)"
+msgstr ""
+
+msgid "Bypass Recycle Bin. Directly Delete Directories (more dangerous but faster)"
+msgstr ""
+
+msgid "Simulate Deletion (Just pretend to delete, for testing)"
+msgstr ""
+
+msgid "Move to specified folder (preserves directories for review)"
+msgstr ""
+
+msgid "Unknown delete mode"
+msgstr ""
+
+msgid "Match Method"
+msgstr ""
+
+msgid "Match Text"
+msgstr ""
+
+msgid "Do you want to use Portable Mode or %APPDATA%?"
+msgstr ""
+
+msgid "Redirect maximum [{0}] reached in configuration file"
+msgstr ""
+
+msgid "«Empty»"
+msgstr ""
+
+msgid "«Ignored»"
+msgstr ""
+
+msgid "«Never Empty»"
+msgstr ""
+
+msgid "«Protected»"
+msgstr ""
+
+msgid "«ignored files: {0}»"
+msgstr ""
