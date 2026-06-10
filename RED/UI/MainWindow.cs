@@ -376,6 +376,26 @@ namespace RED.UI
 
         private void btnDelete_Click(object sender, EventArgs e)
         {
+            UpdateRuntimeDataObject();
+
+            if (RunData.DeleteMode != DeleteModes.Simulate)
+            {
+                int totalCount = RunData.ScanResults.Count;
+                int protectedCount = RunData.ProtectedFolderList.Count;
+                int deleteCount = totalCount - protectedCount;
+
+                string msg = TXT.Translate("Delete {0} empty directories?", deleteCount);
+                if (protectedCount > 0)
+                {
+                    msg += "\n" + TXT.Translate("({0} protected directories will be skipped)", protectedCount);
+                }
+
+                if (DialogResult.No == UiAssist.MsgBoxYesNo(this, msg))
+                {
+                    return;
+                }
+            }
+
             RunData.AddLogSpacer();
             SetStatusAndLogMessage(TXT.Translate("Started Deletion Process..."));
 
@@ -384,8 +404,6 @@ namespace RED.UI
             SetProcessActiveLock(true);
             btnSearch.Enabled = false;
             btnDelete.Enabled = false;
-
-            UpdateRuntimeDataObject();
 
             TreeMgr.OnDeletionProcessStart();
 
@@ -480,7 +498,7 @@ namespace RED.UI
 
             SetProcessActiveLock(false);
             btnSearch.Enabled = true;
-            btnDelete.Enabled = false;
+            btnDelete.Enabled = (RunData.ScanResults.Count > 0);
 
             TreeMgr.OnProcessCancelled();
         }
@@ -500,7 +518,7 @@ namespace RED.UI
 
             SetProcessActiveLock(false);
             btnSearch.Enabled = true;
-            btnDelete.Enabled = false;
+            btnDelete.Enabled = (RunData.ScanResults.Count > 0);
 
             TreeMgr.OnProcessCancelled();
         }

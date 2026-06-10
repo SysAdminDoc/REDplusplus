@@ -128,19 +128,7 @@ namespace RED
             // Last security check before deletion
             if (Directory.GetFiles(path).Length == 0 && Directory.GetDirectories(path).Length == 0)
             {
-                if (deleteMode == DeleteModes.RecycleBin)
-                {
-                    // Check CLR permissions -> could raise a exception
-                    new FileIOPermission(FileIOPermissionAccess.Write, path + Path.DirectorySeparatorChar.ToString()).Demand();
-
-                    if (IsDirLocked(path))
-                    {
-                        throw new REDPermissionDeniedException(TXT.Translate("Could not delete directory because the access is protected by the (file) system (permission denied): {0}", RedAssist.DQuote(path)));
-                    }
-
-                    FileSystem.DeleteDirectory(path, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin, UICancelOption.ThrowException);
-                }
-                else if (deleteMode == DeleteModes.RecycleBinShowErrors)
+                if (deleteMode == DeleteModes.RecycleBin || deleteMode == DeleteModes.RecycleBinShowErrors)
                 {
                     FileSystem.DeleteDirectory(path, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin, UICancelOption.ThrowException);
                 }
@@ -166,19 +154,7 @@ namespace RED
                 return;
             }
 
-            if (deleteMode == DeleteModes.RecycleBin)
-            {
-                // Check CLR permissions -> could raise a exception
-                new FileIOPermission(FileIOPermissionAccess.Write, file.FullName).Demand();
-
-                if (IsFileLocked(file))
-                {
-                    throw new REDPermissionDeniedException(TXT.Translate("Could not delete file because the access is protected by the (file) system (permission denied): {0}", RedAssist.DQuote(file.FullName)));
-                }
-
-                FileSystem.DeleteFile(file.FullName, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin, UICancelOption.ThrowException);
-            }
-            else if (deleteMode == DeleteModes.RecycleBinShowErrors)
+            if (deleteMode == DeleteModes.RecycleBin || deleteMode == DeleteModes.RecycleBinShowErrors)
             {
                 FileSystem.DeleteFile(file.FullName, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin, UICancelOption.ThrowException);
             }
