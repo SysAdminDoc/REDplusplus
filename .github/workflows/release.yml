@@ -35,6 +35,7 @@ jobs:
           copy bin\Release\RED+.exe release\
           copy LICENSE release\
           xcopy help release\help\ /E /I
+          xcopy language release\language\ /E /I
           Compress-Archive -Path release\* -DestinationPath "RED++_${{ inputs.version }}.zip"
 
       - name: Create GitHub Release
