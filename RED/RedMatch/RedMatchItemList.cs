@@ -62,6 +62,7 @@ namespace RED.Match
 			string enabledFlag;
 			string matchCode;
 			string matchText;
+			bool codeWasExplicit;
 
 			if (!string.IsNullOrWhiteSpace(v))
 			{
@@ -72,27 +73,34 @@ namespace RED.Match
 						enabledFlag = "+";
 						matchCode = "N";
 						matchText = v;
+						codeWasExplicit = false;
 						break;
 					case 2:
 						enabledFlag = "+";
 						matchCode = items[0];
 						matchText = items[1];
+						codeWasExplicit = true;
 						break;
 					case 3:
 						enabledFlag = items[0];
 						matchCode = items[1];
 						matchText = items[2];
+						codeWasExplicit = true;
 						break;
 					default:
 						// invalid
 						enabledFlag = "-";
 						matchCode = "?";
 						matchText = v;
+						codeWasExplicit = false;
 						break;
 				}
 
-				// MatchText only
-				if (matchText.Contains("*") || (matchText.StartsWith("/") && matchText.EndsWith("/")))
+				// Auto-detect wildcard/regex syntax only for codeless entries. An
+				// explicit code (e.g. "P|" path-exact) is honored as written, so a
+				// literal-ish wildcard no longer silently becomes a name regex.
+				if (!codeWasExplicit &&
+					(matchText.Contains("*") || (matchText.StartsWith("/") && matchText.EndsWith("/"))))
 				{
 					matchCode = "RN";
 				}
