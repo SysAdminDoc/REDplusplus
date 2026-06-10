@@ -5,8 +5,8 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
 using System.Windows.Forms;
-using Microsoft.VisualBasic.FileIO;
 using Microsoft.Win32;
+using NotBob.Config;
 using RED.Helper;
 using TXT = RED.RedGetText;
 
@@ -214,7 +214,30 @@ namespace RED
             // Never recursively delete through a junction/symlink target
             VerifyNotReparsePoint(path);
 
-            FileSystem.DeleteDirectory(path, UIOption.AllDialogs, RecycleOption.SendToRecycleBin, UICancelOption.ThrowException);
+            RecycleBinOperation.RecycleSingle(path,
+                allowConfirmation: !ConfigAssist.SilentMode,
+                allowErrorUi: !ConfigAssist.SilentMode);
+        }
+
+        /// <summary>
+        /// The full pre-recycle safety gate: handle-based reparse check plus
+        /// stale-scan re-verification that the subtree is still file-free.
+        /// Must run on every path immediately before it is queued for recycling —
+        /// the shell deletes whatever it is handed, recursively.
+        /// </summary>
+        internal static void VerifyRecycleSafe(string path)
+        {
+            VerifyNotReparsePoint(path);
+
+            var listing = FastDirectoryEnumerator.GetFilesAndDirectories(new DirectoryInfo(path));
+            if (listing.Files.Length > 0)
+            {
+                throw new Exception(TXT.Translate("Aborted deletion of the directory because it is no longer empty. This can happen if RED previously failed to delete an empty (trash) file: {0}", RedAssist.DQuote(path)));
+            }
+            if (listing.Directories.Length > 0)
+            {
+                VerifySubtreeHasNoFiles(path);
+            }
         }
 
         /// <summary>
@@ -382,19 +405,25 @@ namespace RED
 
             // Last security check before recycle-bin deletion — the subtree must still
             // be free of files at every level (the scan may be stale)
-            if (Directory.GetFiles(path).Length == 0)
+            var recycleListing = FastDirectoryEnumerator.GetFilesAndDirectories(new DirectoryInfo(path));
+            if (recycleListing.Files.Length == 0)
             {
-                if (Directory.GetDirectories(path).Length > 0)
+                if (recycleListing.Directories.Length > 0)
                 {
                     VerifySubtreeHasNoFiles(path);
                 }
-                if (deleteMode == DeleteModes.RecycleBin || deleteMode == DeleteModes.RecycleBinShowErrors)
+                bool silent = ConfigAssist.SilentMode;
+                if (deleteMode == DeleteModes.RecycleBin)
                 {
-                    FileSystem.DeleteDirectory(path, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin, UICancelOption.ThrowException);
+                    RecycleBinOperation.RecycleSingle(path, allowConfirmation: false, allowErrorUi: false);
+                }
+                else if (deleteMode == DeleteModes.RecycleBinShowErrors)
+                {
+                    RecycleBinOperation.RecycleSingle(path, allowConfirmation: false, allowErrorUi: !silent);
                 }
                 else if (deleteMode == DeleteModes.RecycleBinWithQuestion)
                 {
-                    FileSystem.DeleteDirectory(path, UIOption.AllDialogs, RecycleOption.SendToRecycleBin, UICancelOption.ThrowException);
+                    RecycleBinOperation.RecycleSingle(path, allowConfirmation: !silent, allowErrorUi: !silent);
                 }
                 else
                 {
@@ -446,11 +475,14 @@ namespace RED
 
             if (deleteMode == DeleteModes.RecycleBin || deleteMode == DeleteModes.RecycleBinShowErrors)
             {
-                FileSystem.DeleteFile(file.FullName, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin, UICancelOption.ThrowException);
+                RecycleBinOperation.RecycleSingle(file.FullName, allowConfirmation: false,
+                    allowErrorUi: deleteMode == DeleteModes.RecycleBinShowErrors && !ConfigAssist.SilentMode);
             }
             else if (deleteMode == DeleteModes.RecycleBinWithQuestion)
             {
-                FileSystem.DeleteFile(file.FullName, UIOption.AllDialogs, RecycleOption.SendToRecycleBin, UICancelOption.ThrowException);
+                RecycleBinOperation.RecycleSingle(file.FullName,
+                    allowConfirmation: !ConfigAssist.SilentMode,
+                    allowErrorUi: !ConfigAssist.SilentMode);
             }
             else if (deleteMode == DeleteModes.Direct)
             {

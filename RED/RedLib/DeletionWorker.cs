@@ -63,6 +63,14 @@ namespace RED
 				this.Data.ScanResults.Items.Sort((a, b) => a.FullPath.Length.CompareTo(b.FullPath.Length));
 			}
 
+			if (this.Data.DeleteMode == DeleteModes.RecycleBin ||
+				this.Data.DeleteMode == DeleteModes.RecycleBinShowErrors ||
+				this.Data.DeleteMode == DeleteModes.RecycleBinWithQuestion)
+			{
+				BatchRecycleRun(e);
+				return;
+			}
+
 			while (this.ListPos < this.Data.ScanResults.Count)
 			{
 				if (CancellationPending)
@@ -168,6 +176,185 @@ namespace RED
 			WriteUndoManifest();
 		}
 
+		/// <summary>
+		/// All Recycle Bin modes delete through one IFileOperation transaction —
+		/// per-call shell setup made large runs take minutes (RED+ reported ~3 min
+		/// for 250 dirs) and the legacy VisualBasic call could raise modal dialogs
+		/// even headless. Every path is reparse/emptiness re-verified immediately
+		/// before queueing; per-item results arrive through the progress sink.
+		/// </summary>
+		private void BatchRecycleRun(DoWorkEventArgs e)
+		{
+			bool silent = NotBob.Config.ConfigAssist.SilentMode;
+			bool allowConfirmation = this.Data.DeleteMode == DeleteModes.RecycleBinWithQuestion && !silent;
+			bool allowErrorUi = (this.Data.DeleteMode == DeleteModes.RecycleBinShowErrors ||
+								 this.Data.DeleteMode == DeleteModes.RecycleBinWithQuestion) && !silent;
+
+			var queuedPaths = new List<string>();
+			var queuedRoots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			var positionByPath = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+			var resultByPath = new Dictionary<string, RecycleBinOperation.ItemResult>(StringComparer.OrdinalIgnoreCase);
+			// (position, item, queued ancestor) — resolved from the ancestor's result
+			var deferredChildren = new List<Tuple<int, Match.RedScanResultItem, string>>();
+			int total = this.Data.ScanResults.Count;
+
+			// Phase 1: verify and queue topmost dirs only. Children of a queued dir
+			// vanish with their parent's recursive recycle — queueing them too would
+			// just produce unreportable not-found items in the sink.
+			for (int pos = this.ListPos; pos < total; pos++)
+			{
+				if (CancellationPending)
+				{
+					e.Cancel = true;
+					WriteUndoManifest();
+					return;
+				}
+
+				Match.RedScanResultItem scanResult = this.Data.ScanResults[pos];
+
+				if (this.Data.ProtectedFolderList.ContainsKey(scanResult.FullPath))
+				{
+					this.ReportProgress(1, new DeleteProcessUpdateEventArgs(pos, scanResult, DirectoryDeletionStatusTypes.Protected, total));
+					continue;
+				}
+
+				string queuedAncestor = null;
+				foreach (string rootPath in queuedRoots)
+				{
+					if (scanResult.FullPath.StartsWith(rootPath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+					{
+						queuedAncestor = rootPath;
+						break;
+					}
+				}
+				if (queuedAncestor != null)
+				{
+					deferredChildren.Add(Tuple.Create(pos, scanResult, queuedAncestor));
+					continue;
+				}
+
+				try
+				{
+					cleanupTrashFiles(scanResult.Directory);
+					SystemFunctions.VerifyRecycleSafe(scanResult.FullPath);
+				}
+				catch (REDPermissionDeniedException ex)
+				{
+					this.Data.AddLogMessage(TXT.Translate("Directory is protected by the system: {0} - {1}", RedAssist.DQuote(scanResult.FullPath), RedGetText.Words.ErrorMessage1(ex.Message)));
+					this.ProtectedCount++;
+					this.ReportProgress(1, new DeleteProcessUpdateEventArgs(pos, scanResult, DirectoryDeletionStatusTypes.Protected, total));
+					continue;
+				}
+				catch (Exception ex)
+				{
+					this.Data.AddLogMessage(TXT.Translate("Failed to delete directory: {0} - {1}", RedAssist.DQuote(scanResult.FullPath), RedGetText.Words.ErrorMessage1(ex.Message)));
+					this.FailedCount++;
+					this.ReportProgress(1, new DeleteProcessUpdateEventArgs(pos, scanResult, DirectoryDeletionStatusTypes.Warning, total));
+					continue;
+				}
+
+				queuedPaths.Add(scanResult.FullPath);
+				queuedRoots.Add(scanResult.FullPath);
+				positionByPath[scanResult.FullPath] = pos;
+			}
+
+			// Phase 2: one shell transaction for every verified topmost dir.
+			// Results may arrive with a null/different path for vanished items, so
+			// queue order is the fallback key (DeleteItem order is preserved).
+			try
+			{
+				int resultIndex = 0;
+				RecycleBinOperation.RecycleBatch(
+					queuedPaths,
+					allowConfirmation,
+					allowErrorUi,
+					() => CancellationPending,
+					result =>
+					{
+						string path = result.Path;
+						if (path == null || !positionByPath.ContainsKey(path))
+						{
+							path = (resultIndex < queuedPaths.Count) ? queuedPaths[resultIndex] : null;
+						}
+						resultIndex++;
+						if (path != null)
+						{
+							resultByPath[path] = result;
+						}
+					});
+			}
+			catch (Exception ex)
+			{
+				// The transaction itself failed (COM error before any item ran)
+				this.Data.AddLogMessage(TXT.Translate("Recycle Bin operation failed: {0}", ex.Message));
+			}
+
+			// Phase 3: report queued roots from their sink results, then resolve
+			// children from their ancestor's outcome
+			foreach (string path in queuedPaths)
+			{
+				int pos = positionByPath[path];
+				Match.RedScanResultItem scanResult = this.Data.ScanResults[pos];
+				RecycleBinOperation.ItemResult result;
+				bool deleted = resultByPath.TryGetValue(path, out result)
+					? (result.Succeeded || IsNotFoundHResult(result.HResult))
+					: !Directory.Exists(path); // no sink result (cancelled/skipped) — trust the filesystem
+
+				if (deleted)
+				{
+					this.Data.AddLogMessage(TXT.Translate("Successfully deleted directory: {0}", RedAssist.DQuote(path)));
+					this.DeletedCount++;
+					undoEntries.Add(new UndoManifestEntry { Path = path, Mode = this.Data.DeleteMode.ToString(), MovedTo = null });
+					this.ReportProgress(1, new DeleteProcessUpdateEventArgs(pos, scanResult, DirectoryDeletionStatusTypes.Deleted, total));
+				}
+				else
+				{
+					string detail = (result != null) ? new System.ComponentModel.Win32Exception(result.HResult & 0xFFFF).Message : TXT.Translate("Operation did not complete");
+					this.Data.AddLogMessage(TXT.Translate("Failed to delete directory: {0} - {1}", RedAssist.DQuote(path), RedGetText.Words.ErrorMessage1(detail)));
+					this.FailedCount++;
+					this.ReportProgress(1, new DeleteProcessUpdateEventArgs(pos, scanResult, DirectoryDeletionStatusTypes.Warning, total));
+				}
+			}
+
+			foreach (Tuple<int, Match.RedScanResultItem, string> child in deferredChildren)
+			{
+				bool parentDeleted = resultByPath.ContainsKey(child.Item3)
+					? (resultByPath[child.Item3].Succeeded || IsNotFoundHResult(resultByPath[child.Item3].HResult))
+					: !Directory.Exists(child.Item3);
+
+				if (parentDeleted)
+				{
+					this.DeletedCount++;
+					undoEntries.Add(new UndoManifestEntry { Path = child.Item2.FullPath, Mode = this.Data.DeleteMode.ToString(), MovedTo = null });
+					this.ReportProgress(1, new DeleteProcessUpdateEventArgs(child.Item1, child.Item2, DirectoryDeletionStatusTypes.Deleted, total));
+				}
+				else
+				{
+					this.FailedCount++;
+					this.ReportProgress(1, new DeleteProcessUpdateEventArgs(child.Item1, child.Item2, DirectoryDeletionStatusTypes.Warning, total));
+				}
+			}
+
+			this.ListPos = total;
+			if (CancellationPending)
+			{
+				e.Cancel = true;
+			}
+			else
+			{
+				e.Result = total;
+			}
+
+			WriteUndoManifest();
+		}
+
+		private static bool IsNotFoundHResult(int hr)
+		{
+			const int E_FILENOTFOUND = unchecked((int)0x80070002);
+			const int E_PATHNOTFOUND = unchecked((int)0x80070003);
+			return hr == E_FILENOTFOUND || hr == E_PATHNOTFOUND;
+		}
+
 		private void WriteUndoManifest()
 		{
 			if (undoEntries.Count == 0) return;
@@ -208,16 +395,29 @@ namespace RED
 		/// <returns>The actual MoveToFolder destination, null for other modes.</returns>
 		private string secureDelete(DirectoryInfo emptyDirectory)
 		{
-			//var emptyDirectory = new DirectoryInfo(path);
-
 			if (!emptyDirectory.Exists)
 			{
 				throw new Exception(TXT.Translate("Could not delete the directory because it does not exist anymore: {0}", RedAssist.DQuote(emptyDirectory.FullName)));
 			}
 
-			// Cleanup folder
+			cleanupTrashFiles(emptyDirectory);
 
-			//String[] ignoreFileList = this.Data.GetIgnoreFileList();
+			// This function will ensure that the directory is really empty before it gets deleted
+			string movedTo;
+			SystemFunctions.SecureDeleteDirectory(emptyDirectory.FullName, this.Data.DeleteMode, out movedTo);
+			return movedTo;
+		}
+
+		/// <summary>
+		/// Deletes the ignorable (trash) files inside a directory that the scan
+		/// classified as empty, so the directory delete that follows can succeed.
+		/// </summary>
+		private void cleanupTrashFiles(DirectoryInfo emptyDirectory)
+		{
+			if (!emptyDirectory.Exists)
+			{
+				throw new Exception(TXT.Translate("Could not delete the directory because it does not exist anymore: {0}", RedAssist.DQuote(emptyDirectory.FullName)));
+			}
 
 			FileInfo[] Files = emptyDirectory.GetFiles();
 
@@ -258,11 +458,6 @@ namespace RED
 			}
 
 			// End cleanup
-
-			// This function will ensure that the directory is really empty before it gets deleted
-			string movedTo;
-			SystemFunctions.SecureDeleteDirectory(emptyDirectory.FullName, this.Data.DeleteMode, out movedTo);
-			return movedTo;
 		}
 	}
 
