@@ -1,0 +1,45 @@
+name: Release Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
+
+      - name: Restore NuGet packages
+        run: nuget restore "!RED+.sln"
+
+      - name: Build Release
+        run: msbuild "!RED+.sln" /p:Configuration=Release /p:Platform="Any CPU"
+
+      - name: Create release archive
+        run: |
+          mkdir release
+          copy bin\Release\RED+.exe release\
+          copy bin\Release\AlphaFS.dll release\
+          copy LICENSE release\
+          xcopy help release\help\ /E /I
+          Compress-Archive -Path release\* -DestinationPath "RED++_${{ inputs.version }}.zip"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ inputs.version }}" "RED++_${{ inputs.version }}.zip" --title "RED++ ${{ inputs.version }}" --generate-notes
