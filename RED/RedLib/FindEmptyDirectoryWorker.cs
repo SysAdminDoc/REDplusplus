@@ -286,12 +286,14 @@ namespace RED
 			}
 			catch (Exception ex)
 			{
-				// Error handling
 				if (ex is System.IO.PathTooLongException)
 				{
-					this.PossibleEndlessLoop++;
+					this.RunData.AddLogMessage(TXT.Translate("Path too long: {0}", RedAssist.DQuote(startDir.FullName)));
 				}
-				this.RunData.AddLogMessage(TXT.Translate("An unknown error occurred while trying to scan directory: {0} - {1}", RedAssist.DQuote(startDir.FullName), ex.Message));
+				else
+				{
+					this.RunData.AddLogMessage(TXT.Translate("An unknown error occurred while trying to scan directory: {0} - {1}", RedAssist.DQuote(startDir.FullName), ex.Message));
+				}
 				this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startDir, DirectorySearchStatusTypes.Error, ex.Message));
 				return DirectorySearchStatusTypes.Error;
 			}

@@ -405,6 +405,7 @@ namespace RED.UI
             this.tvSearchResults.ShowNodeToolTips = true;
             this.tvSearchResults.Size = new System.Drawing.Size(500, 385);
             this.tvSearchResults.TabIndex = 3;
+            this.tvSearchResults.KeyDown += new System.Windows.Forms.KeyEventHandler(this.tvSearchResults_KeyDown);
             this.tvSearchResults.DoubleClick += new System.EventHandler(this.tvSearchResults_DoubleClick);
             // 
             // cmTreeview
@@ -531,6 +532,7 @@ namespace RED.UI
             this.txtSearchDirectory.TabIndex = 1;
             this.txtSearchDirectory.Text = "C:\\";
             this.txtSearchDirectory.Enter += new System.EventHandler(this.txtSearchDirectory_Enter);
+            this.txtSearchDirectory.KeyDown += new System.Windows.Forms.KeyEventHandler(this.txtSearchDirectory_KeyDown);
             this.txtSearchDirectory.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.txtSearchDirectory_MouseDoubleClick);
             // 
             // lblPickAFolder

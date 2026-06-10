@@ -155,6 +155,7 @@ namespace RED
 				logMsg(item.FullPath);
 			}
 
+			runData.Dispose();
 			WriteLogFile(logFile, log);
 			return (hadErrors || failed > 0) ? 1 : 0;
 		}

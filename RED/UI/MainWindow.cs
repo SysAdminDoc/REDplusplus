@@ -869,11 +869,30 @@ namespace RED.UI
             {
                 bool ask = cbSavePrompt.Checked || ModifierKeys.HasFlag(Keys.Alt);
                 ConfigUpdateAndSave(ask);
+                RunData.Dispose();
             }
             else
             {
                 e.Cancel = true;
                 UiAssist.MsgBoxWarning(this, TXT.Translate("RED+ is busy, cannot close."));
+            }
+        }
+
+        private void txtSearchDirectory_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter && btnSearch.Enabled && !UiIsBusy())
+            {
+                e.SuppressKeyPress = true;
+                btnSearch.PerformClick();
+            }
+        }
+
+        private void tvSearchResults_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Delete && tvSearchResults.SelectedNode != null && !UiIsBusy())
+            {
+                e.SuppressKeyPress = true;
+                TreeMgr.DeleteSelectedDirectory();
             }
         }
 
