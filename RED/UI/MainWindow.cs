@@ -118,6 +118,37 @@ namespace RED.UI
             {
                 txtSearchDirectory.Text = RedConfig.Runtime.Volatile.LastUsedDirectory;
             }
+
+            SetAccessibleNames();
+        }
+
+        private void SetAccessibleNames()
+        {
+            txtSearchDirectory.AccessibleName = "Search directory path";
+            btnSearch.AccessibleName = "Search for empty directories";
+            btnDelete.AccessibleName = "Delete empty directories";
+            btnCancel.AccessibleName = "Cancel current operation";
+            btnExit.AccessibleName = "Exit application";
+            btnSearchDirectoryBrowseFor.AccessibleName = "Browse for directory";
+            tvSearchResults.AccessibleName = "Search results tree";
+            cbDeleteMode.AccessibleName = "Delete mode selection";
+            btnHelp.AccessibleName = "Open help";
+            btnCopyDebugInfo.AccessibleName = "Copy debug information to clipboard";
+            btnResetConfig.AccessibleName = "Reset settings to defaults";
+            btnResetFilters.AccessibleName = "Reset filters to defaults";
+            btnExplorerIntegrate.AccessibleName = "Add Explorer context menu integration";
+            btnExplorerRemove.AccessibleName = "Remove Explorer context menu integration";
+            cbFastSearchMode.AccessibleName = "Enable fast search mode";
+            cbSavePrompt.AccessibleName = "Prompt to save settings on exit";
+            cbIgnore0kbFiles.AccessibleName = "Treat directories with empty files as empty";
+            cbIgnoreHiddenFolders.AccessibleName = "Ignore hidden directories";
+            cbIgnoreSystemFolders.AccessibleName = "Ignore system directories";
+            cbHideScanErrors.AccessibleName = "Hide errors during search";
+            cbHideDeletionErrors.AccessibleName = "Hide errors during deletion";
+            cbHideIgnoredFolders.AccessibleName = "Hide ignored directories from results";
+            cbAutoProtectRoot.AccessibleName = "Automatically protect the starting directory";
+            cbClipboardDetection.AccessibleName = "Detect paths in the clipboard";
+            pbProgressStatus.AccessibleName = "Operation progress";
         }
 
         /// <summary>
