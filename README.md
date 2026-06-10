@@ -32,7 +32,7 @@ RED++ finds, displays, and deletes empty directories recursively below a given s
 
 ## System Requirements
 
-- Windows 7 or later
+- Windows 10 (version 20H2 or later) or Windows 11
 - Microsoft .NET Framework 4.8.1
 - No installer required. Unzip and run.
 
