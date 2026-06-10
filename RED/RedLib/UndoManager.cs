@@ -32,6 +32,7 @@ namespace RED
 			[DataMember(Name = "path")] public string Path { get; set; }
 			[DataMember(Name = "movedTo", IsRequired = false)] public string MovedTo { get; set; }
 			[DataMember(Name = "mode", IsRequired = false)] public string Mode { get; set; }
+			[DataMember(Name = "isFile", IsRequired = false)] public bool IsFile { get; set; }
 		}
 
 		public static string ManifestPath
@@ -78,6 +79,23 @@ namespace RED
 
 				try
 				{
+					if (entry.IsFile)
+					{
+						// Zero-byte files are recreated losslessly (they had no content)
+						string parent = Path.GetDirectoryName(entry.Path);
+						if (!string.IsNullOrEmpty(parent))
+						{
+							Directory.CreateDirectory(parent);
+						}
+						if (!File.Exists(entry.Path))
+						{
+							using (File.Create(entry.Path)) { }
+						}
+						restored++;
+						log?.Invoke(TXT.Translate("Restored empty file: {0}", RedAssist.DQuote(entry.Path)));
+						continue;
+					}
+
 					if (!string.IsNullOrWhiteSpace(entry.MovedTo) && Directory.Exists(entry.MovedTo))
 					{
 						string parent = Path.GetDirectoryName(entry.Path);

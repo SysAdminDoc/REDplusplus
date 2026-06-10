@@ -26,6 +26,11 @@ namespace RED.Config
         public bool IgnoreEmptyFiles { get { return _IgnoreEmptyFiles; } set { SetField(ref _IgnoreEmptyFiles, value); } }
         private bool _IgnoreEmptyFiles;
 
+        // Opt-in sister mode: also delete standalone zero-byte files (not just
+        // empty directories). Off by default.
+        public bool DeleteEmptyFiles { get { return _DeleteEmptyFiles; } set { SetField(ref _DeleteEmptyFiles, value); } }
+        private bool _DeleteEmptyFiles;
+
         public bool HideDeletionErrors { get { return _HideDeletionErrors; } set { SetField(ref _HideDeletionErrors, value); } }
         private bool _HideDeletionErrors;
 

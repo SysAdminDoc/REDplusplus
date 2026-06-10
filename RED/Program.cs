@@ -57,6 +57,7 @@ namespace RED
 			bool isUndo = false;
 			bool isDryRun = false;
 			bool isJson = false;
+			bool emptyFiles = false;
 
 			for (int i = 1; i < args.Length; i++)
 			{
@@ -80,6 +81,10 @@ namespace RED
 					case "-json":
 					case "--json":
 						isJson = true;
+						break;
+					case "-emptyfiles":
+					case "--emptyfiles":
+						emptyFiles = true;
 						break;
 					case "-path":
 					case "--path":
@@ -135,7 +140,7 @@ namespace RED
 					Environment.ExitCode = 1;
 					return;
 				}
-				Environment.ExitCode = RunHeadless(paths, logFile, exportFile, modeOverride, isDryRun, isJson);
+				Environment.ExitCode = RunHeadless(paths, logFile, exportFile, modeOverride, isDryRun, isJson, emptyFiles);
 				return;
 			}
 
@@ -194,7 +199,7 @@ namespace RED
 				{ "dryrun", DeleteModes.Simulate },
 			};
 
-		private static int RunHeadless(List<string> paths, string logFile, string exportFile, string modeOverride, bool dryRun, bool jsonOutput)
+		private static int RunHeadless(List<string> paths, string logFile, string exportFile, string modeOverride, bool dryRun, bool jsonOutput, bool emptyFiles)
 		{
 			var log = new StringBuilder();
 			Action<string> logMsg = (msg) =>
@@ -259,6 +264,7 @@ namespace RED
 				runData.HideIgnoredDirectories = config.Options.HideIgnoredDirectories;
 				runData.RespectGitIgnore = config.Options.RespectGitIgnore;
 				runData.UseMftScan = config.Options.UseMftScan;
+				runData.DeleteEmptyFiles = config.Options.DeleteEmptyFiles || emptyFiles;
 				runData.IgnoreFileNameList.Transform(config.Filters.FilesToIgnore);
 				runData.IgnoreDirectoryNameList.Transform(config.Filters.DirectoriesToIgnore);
 				runData.NeverEmptyDirectoryList.Transform(config.Filters.DirectoriesNeverEmpty);
@@ -280,7 +286,12 @@ namespace RED
 				core.SearchingForEmptyDirectories();
 				scanDone.WaitOne();
 
+				int emptyFileCount = runData.EmptyFileResults.Count;
 				logMsg(string.Format("Found {0} empty directories", emptyCount));
+				if (runData.DeleteEmptyFiles)
+				{
+					logMsg(string.Format("Found {0} empty files", emptyFileCount));
+				}
 				totalEmpty += emptyCount;
 
 				// Honor the same default as the GUI: protect the start folder itself
@@ -289,8 +300,10 @@ namespace RED
 					core.AddProtectedFolder(startDir.FullName);
 				}
 
-				// Simulate/dry-run never deletes — scan results stand as the report
-				if (emptyCount > 0 && !runErrors && deleteMode != DeleteModes.Simulate)
+				// Simulate/dry-run never deletes — scan results stand as the report.
+				// The delete phase must also run when only empty files were found
+				// (the empty-files pre-pass lives inside the deletion worker).
+				if ((emptyCount > 0 || emptyFileCount > 0) && !runErrors && deleteMode != DeleteModes.Simulate)
 				{
 					int deleted = 0;
 					core.OnDeleteProcessFinished += (s, e) => { deleted = e.DeletedFolderCount; failed = e.FailedFolderCount; deleteDone.Set(); };
@@ -386,6 +399,7 @@ Options:
   -path <dir>      Scan root (repeatable). A bare path argument also works.
   -silent          Headless mode (no window). Implied when -path is given.
   -dryrun          Scan and report only; never delete (forces simulate mode).
+  -emptyfiles      Also delete standalone zero-byte files (sister mode, opt-in).
   -mode <mode>     Override delete mode: recycle | direct | move | simulate.
   -export <file>   Write results to .txt / .csv / .json (by extension).
   -json            Emit one NDJSON object per result to stdout.
