@@ -113,6 +113,8 @@ namespace RED
 			var core = new REDCore(runData);
 			var scanDone = new ManualResetEvent(false);
 			int emptyCount = 0;
+			int failed = 0;
+			bool hadErrors = false;
 
 			core.OnFinishedScanForEmptyDirs += (s, e) =>
 			{
@@ -120,8 +122,8 @@ namespace RED
 				scanDone.Set();
 			};
 			core.OnCancelled += (s, e) => scanDone.Set();
-			core.OnAborted += (s, e) => scanDone.Set();
-			core.OnError += (s, e) => { logMsg("Error: " + e.Message); scanDone.Set(); };
+			core.OnAborted += (s, e) => { hadErrors = true; scanDone.Set(); };
+			core.OnError += (s, e) => { hadErrors = true; logMsg("Error: " + e.Message); scanDone.Set(); };
 
 			core.SearchingForEmptyDirectories();
 			scanDone.WaitOne();
@@ -131,7 +133,7 @@ namespace RED
 			if (emptyCount > 0)
 			{
 				var deleteDone = new ManualResetEvent(false);
-				int deleted = 0, failed = 0;
+				int deleted = 0;
 
 				core.OnDeleteProcessFinished += (s, e) =>
 				{
@@ -154,7 +156,7 @@ namespace RED
 			}
 
 			WriteLogFile(logFile, log);
-			return emptyCount > 0 ? 0 : 0;
+			return (hadErrors || failed > 0) ? 1 : 0;
 		}
 
 		private static void WriteLogFile(string logFile, StringBuilder log)
