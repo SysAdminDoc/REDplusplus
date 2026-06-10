@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Alphaleonis.Win32.Filesystem;
@@ -6,16 +6,25 @@ using RED.Match;
 
 namespace RED
 {
-	/// <summary>
-	/// Container for runtime related data
-	/// </summary>
 	public class RuntimeData
 	{
+		private System.IO.StreamWriter _logWriter;
+
 		public RuntimeData()
 		{
 			this.LogMessages = new StringBuilder();
 			this.ProtectedFolderList = new Dictionary<string, bool>();
 			this.ScanResults = new RedScanResultItemList();
+
+			try
+			{
+				string logPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath), "RED++.log");
+				_logWriter = new System.IO.StreamWriter(logPath, append: true, encoding: Encoding.UTF8) { AutoFlush = true };
+			}
+			catch
+			{
+				_logWriter = null;
+			}
 		}
 
 		public RedMatchItemList NeverEmptyDirectoryList = new RedMatchItemList(RedMatchFilterType.Directory);
@@ -40,15 +49,15 @@ namespace RED
 		public StringBuilder LogMessages = null;
 		public Dictionary<string, bool> ProtectedFolderList = new Dictionary<string, bool>();
 
-		// NotBob option to exclude ignored directories from the main window scanned list
 		public bool HideIgnoredDirectories { get; set; }
 
-		// NotBob - Dedicated ScanResults list to collect details of a RED scan
 		public RedScanResultItemList ScanResults { get; private set; }
 
 		public void AddLogMessage(string msg)
 		{
-			this.LogMessages.AppendLine(DateTime.Now.ToString("r") + "\t" + msg);
+			string line = DateTime.Now.ToString("r") + "\t" + msg;
+			this.LogMessages.AppendLine(line);
+			try { _logWriter?.WriteLine(line); } catch { }
 		}
 
 		internal void AddLogSpacer()
@@ -57,6 +66,7 @@ namespace RED
             {
                 this.LogMessages.Append(Environment.NewLine);
             }
+			try { _logWriter?.WriteLine(); } catch { }
         }
 	}
 }

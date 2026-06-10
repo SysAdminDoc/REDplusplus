@@ -310,7 +310,7 @@ namespace RED
 					}
 					if (containsTrash)
 					{
-						treeNode.ToolTipText += TXT.Translate("«empty files: {0}»", fileCount);
+						treeNode.ToolTipText += TXT.Translate("«ignored files: {0}»", fileCount);
 						treeNode.Text += "  " + treeNode.ToolTipText;
 					}
 					break;

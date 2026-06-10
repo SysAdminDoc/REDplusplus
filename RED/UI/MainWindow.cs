@@ -329,9 +329,11 @@ namespace RED.UI
             string respx = dirName;
             if (!string.IsNullOrWhiteSpace(dirName))
             {
-                if (dirName.StartsWith(@"\\") && dirName.EndsWith(@"\"))
+                respx = Environment.ExpandEnvironmentVariables(respx);
+
+                if (respx.StartsWith(@"\\") && respx.EndsWith(@"\"))
                 {
-                    respx = dirName.TrimEnd(new[] { '\\' });
+                    respx = respx.TrimEnd(new[] { '\\' });
                 }
             }
             return respx;
@@ -576,10 +578,6 @@ namespace RED.UI
             // Focus Directories to Ignore Filter tab
             tcMain.SelectedTab = tabFilters;
             tcFilters.SelectedTab = tabFilterFoldersIgnore;
-
-            // TODO: Update the results + tree to reflect the newly ignored item
-            // Current solution: The user has to do a complete rescan
-            btnDelete.Enabled = false;
         }
 
         private void tsmiDeleteDirectory_Click(object sender, EventArgs e)
