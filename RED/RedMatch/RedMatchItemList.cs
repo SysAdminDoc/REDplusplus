@@ -152,114 +152,61 @@ namespace RED.Match
 
 		private bool IsOnList(string nameToCheck, string pathToCheck, long filesize, bool ignoreEmptyFiles, out string delPattern)
 		{
-			bool matched = false;
-
 			delPattern = "";
 
-			if (Items.Count > 0)
+			if (FilterType == RedMatchFilterType.Files && ignoreEmptyFiles && filesize == 0)
 			{
-				string textToCheck;
+				delPattern = "[Empty file]";
+				return true;
+			}
 
-				if (!matched && FilterType == RedMatchFilterType.Files)
+			for (int i = 0; i < Items.Count; i++)
+			{
+				RedMatchItem matchItem = Items[i];
+				if (!matchItem.Enabled)
+					continue;
+
+				string textToCheck;
+				bool hit = false;
+
+				switch (matchItem.MatchMethod)
 				{
-					if (ignoreEmptyFiles && filesize == 0)
-					{
-						delPattern = "[Empty file]";
-						matched = true;
-					}
-				}
-				if (!matched)
-				{
-					foreach (RedMatchItem matchItem in Items.FindAll(x => x.MatchMethod == RedMatchMethodType.NameExact && x.Enabled))
-					{
-						if (nameToCheck == matchItem.MatchTextToCompare)
-						{
-							matched = true;
-							delPattern = matchItem.MatchText;
-							break;
-						}
-					}
-				}
-				if (!matched)
-				{
-					foreach (RedMatchItem matchItem in Items.FindAll(x => x.MatchMethod == RedMatchMethodType.Contains && x.Enabled))
-					{
+					case RedMatchMethodType.NameExact:
+						hit = (nameToCheck == matchItem.MatchTextToCompare);
+						break;
+					case RedMatchMethodType.Contains:
 						textToCheck = GetCheckText(matchItem.MatchTextToCompare, nameToCheck, pathToCheck);
-						if (textToCheck.Contains(matchItem.MatchTextToCompare))
-						{
-							matched = true;
-							delPattern = matchItem.MatchText;
-							break;
-						}
-					}
-				}
-				if (!matched)
-				{
-					foreach (RedMatchItem matchItem in Items.FindAll(x => x.MatchMethod == RedMatchMethodType.Endswith && x.Enabled))
-					{
+						hit = textToCheck.Contains(matchItem.MatchTextToCompare);
+						break;
+					case RedMatchMethodType.Endswith:
 						textToCheck = GetCheckText(matchItem.MatchTextToCompare, nameToCheck, pathToCheck);
-						if (textToCheck.EndsWith(matchItem.MatchTextToCompare))
-						{
-							matched = true;
-							delPattern = matchItem.MatchText;
-							break;
-						}
-					}
-				}
-				if (!matched)
-				{
-					foreach (RedMatchItem matchItem in Items.FindAll(x => x.MatchMethod == RedMatchMethodType.Startwith && x.Enabled))
-					{
+						hit = textToCheck.EndsWith(matchItem.MatchTextToCompare);
+						break;
+					case RedMatchMethodType.Startwith:
 						textToCheck = GetCheckText(matchItem.MatchTextToCompare, nameToCheck, pathToCheck);
-						if (textToCheck.StartsWith(matchItem.MatchTextToCompare))
-						{
-							matched = true;
-							delPattern = matchItem.MatchText;
-							break;
-						}
-					}
+						hit = textToCheck.StartsWith(matchItem.MatchTextToCompare);
+						break;
+					case RedMatchMethodType.RegExName:
+						hit = matchItem.RegEx.IsMatch(nameToCheck);
+						break;
+					case RedMatchMethodType.RegExPath:
+						if (FilterType == RedMatchFilterType.Directory)
+							hit = matchItem.RegEx.IsMatch(pathToCheck);
+						break;
+					case RedMatchMethodType.NameExactWithPath:
+						if (FilterType == RedMatchFilterType.Directory)
+							hit = (pathToCheck == matchItem.MatchTextToCompare);
+						break;
 				}
-				if (!matched)
+
+				if (hit)
 				{
-					foreach (RedMatchItem matchItem in Items.FindAll(x => x.MatchMethod == RedMatchMethodType.RegExName && x.Enabled))
-					{
-						if (matchItem.RegEx.IsMatch(nameToCheck))
-						{
-							matched = true;
-							delPattern = matchItem.MatchText;
-							break;
-						}
-					}
-				}
-				if (!matched && FilterType == RedMatchFilterType.Directory)
-				{
-					if (!matched)
-					{
-						foreach (RedMatchItem matchItem in Items.FindAll(x => x.MatchMethod == RedMatchMethodType.RegExPath && x.Enabled))
-						{
-							if (matchItem.RegEx.IsMatch(pathToCheck))
-							{
-								matched = true;
-								delPattern = matchItem.MatchText;
-								break;
-							}
-						}
-					}
-					if (!matched)
-					{
-						foreach (RedMatchItem matchItem in Items.FindAll(x => x.MatchMethod == RedMatchMethodType.NameExactWithPath && x.Enabled))
-						{
-							if (pathToCheck == matchItem.MatchTextToCompare)
-							{
-								matched = true;
-								delPattern = matchItem.MatchText;
-								break;
-							}
-						}
-					}
+					delPattern = matchItem.MatchText;
+					return true;
 				}
 			}
-			return matched;
+
+			return false;
 		}
 	}
 }
