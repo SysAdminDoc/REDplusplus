@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.4.0 (2026-06-10)
+
+### Critical Fixes
+- Fix broken WIN32_FIND_DATAW struct layout in the FindFirstFileExW enumerator — FILETIME fields declared as `long` inserted 4 alignment-padding bytes, shifting every field so file names marshaled 2 characters short and "."/".." escaped the dot-filter; the v1.3.0 scanner recursed into itself on every directory. Same misalignment fixed in BY_HANDLE_FILE_INFORMATION (SystemFunctions, MftScanner)
+- Fail closed on directory-enumeration failure — an access-denied/vanished directory previously enumerated as an empty list and was classified Empty (delete-eligible); enumeration errors now throw and the directory is marked Error at scan time and aborts deletion at delete time (verified with a deny-ACL test)
+- Fix MFT turbo scan root lookup — the NTFS volume root was addressed by literal FRN 5, but USN records carry full 64-bit FRNs with sequence bits, so path resolution could never match; the real root FRN is now read via GetFileInformationByHandle
+
+### Data Safety
+- Re-verify the entire subtree is still file-free immediately before any recursive delete (Direct and Recycle modes) — content created between scan and delete now aborts the deletion instead of being destroyed
+- Refuse to recursively delete through reparse points discovered during re-verification, and add the handle-based reparse guard to manual tree-node deletion
+- Headless mode now honors AutoProtectRoot — a fully-empty target tree is cleaned out but the start folder itself survives
+- Apply the minimum-directory-age rule in the MFT turbo scan (was standard-scan only); a too-young directory also keeps its parent non-empty
+- Apply .gitignore rules in the MFT turbo scan (was standard-scan only)
+- Move-to-folder mode works across volumes (replicate-then-delete fallback) and refuses a move target located inside the directory being moved
+- Write the undo manifest on cancelled and error-stopped runs, not just clean completions; manifest and RED++.log fall back to %APPDATA% when the install directory is not writable
+
+### Reliability
+- Corrupt or unreadable RED+.cfg no longer crashes at startup — falls back to read-only defaults
+- Headless (-silent) mode never shows dialogs (config prompts and message boxes previously hung Task Scheduler runs) and no longer hangs forever if an unexpected error fires during the delete phase
+- Deletion error-continue no longer corrupts the run: the results list was re-sorted and the deleted-parents set reset on resume, skipping pending items and re-deleting vanished ones
+- Multi-path drag-and-drop scans accumulate results across all roots — previously each root's scan wiped the previous results, so Delete only processed the last root while the tree showed all of them; the last queued root also no longer resets the tree
+- Wire up the infinite-loop detector (the counter existed but nothing ever incremented it); pathologically deep nesting (>256 levels) now trips it
+- Regex filter rules match case-insensitively like every other match method (uppercase patterns could never match the lowercased names)
+- Deletion statistics no longer double-count: the session counter was folded into the persisted total on every scan, not once
+- Guard against crashes from: null tree nodes during icon updates, vanished directories during node styling, incomplete filter-grid rows, out-of-range config values (delete mode index, numeric settings now clamped), and a missing deletion worker on abort/continue
+
+### UX
+- Dropping folders onto the window starts the scan immediately (drops while busy are ignored)
+- Dark owner-drawn tab headers — the tab strip no longer renders system light-gray on the dark theme
+- Icon legend renders at full contrast (was disabled-gray)
+- Browse dialog starts from the path currently in the search box
+- Adding a directory to the ignore filter no longer resets the search path box
+- Deletion-error and log dialogs open centered on the main window
+- Calmer filter-grid error message instead of raw row/column diagnostics
+
+### Documentation
+- All version strings synced to 1.4.0 (assembly was still 1.0.0.0 — the title bar showed v1.0.0.0)
+- Correct config filename in README (RED+.cfg, not RED++.cfg)
+
 ## 1.3.0 (2026-06-10)
 
 ### Security
