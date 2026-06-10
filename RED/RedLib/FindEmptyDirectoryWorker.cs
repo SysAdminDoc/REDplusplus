@@ -38,7 +38,13 @@ namespace RED
 			DirectoryInfo startFolder = (DirectoryInfo)e.Argument;
 
 			this.PossibleEndlessLoop = 0;
-			this.RunData.ScanResults.Clear();
+
+			// Multi-path scans append to the previous results so the delete pass
+			// covers every scanned root, not just the most recent one.
+			if (!this.RunData.AppendScanResults)
+			{
+				this.RunData.ScanResults.Clear();
+			}
 
 			if (this.RunData.RespectGitIgnore)
 			{
@@ -98,10 +104,26 @@ namespace RED
 			e.Result = 1;
 		}
 
+		/// <summary>
+		/// A branch nested deeper than this almost certainly indicates a filesystem
+		/// cycle (e.g. a junction the enumeration could not identify as a reparse
+		/// point on some network filesystems). Each hit increments the loop counter;
+		/// the scan aborts once it exceeds the configured detection count.
+		/// </summary>
+		private const int SuspiciousDepth = 256;
+
 		private DirectorySearchStatusTypes CheckIfDirectoryEmpty(DirectoryInfo startDir, int depth)
 		{
 			if (this.PossibleEndlessLoop > this.RunData.InfiniteLoopDetectionCount)
 			{
+				this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startDir, DirectorySearchStatusTypes.Error, TXT.Translate("Aborted - possible infinite-loop detected")));
+				return DirectorySearchStatusTypes.Error;
+			}
+
+			if (depth > SuspiciousDepth)
+			{
+				this.PossibleEndlessLoop++;
+				this.RunData.AddLogMessage(TXT.Translate("Suspiciously deep directory nesting at {0} - possible filesystem loop", RedAssist.DQuote(startDir.FullName)));
 				this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startDir, DirectorySearchStatusTypes.Error, TXT.Translate("Aborted - possible infinite-loop detected")));
 				return DirectorySearchStatusTypes.Error;
 			}
@@ -361,10 +383,9 @@ namespace RED
 			this.RunData.AddLogMessage("MFT scan: analyzing directory tree...");
 			this.ReportProgress(0, "MFT: finding empty directories...");
 
-			scanner.FindEmptyDirectories(startFrn.Value, volumeRoot, this.RunData, this, ref this.folderCount);
+			scanner.FindEmptyDirectories(startFrn.Value, volumeRoot, this.RunData, this, ref this.folderCount, gitIgnoreParser, startFolder.FullName);
 
-			this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startFolder,
-				this.RunData.ScanResults.Count > 0 ? DirectorySearchStatusTypes.NotEmpty : DirectorySearchStatusTypes.NotEmpty));
+			this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startFolder, DirectorySearchStatusTypes.NotEmpty));
 
 			this.RunData.AddLogMessage(string.Format("MFT scan complete: checked {0} directories", this.folderCount));
 			return true;
