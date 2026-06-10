@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Reliability
+- Direct delete is now three-tier: POSIX delete semantics with read-only override (NTFS, Win10 1607+) → legacy delete-on-close (FAT32/exFAT/SMB) → error; read-only empty directories delete without a separate attribute pass
+- Long-path support independent of the OS LongPathsEnabled policy: directory enumeration, reparse verification, and Direct-mode deletes use extended-length (`\\?\`) paths; wholly-empty subtrees are deleted bottom-up by handle instead of DirectoryInfo.Delete (verified with a 499-character tree)
+
 ### Distribution
 - Release workflow now publishes a SHA256SUMS asset, attests build provenance via GitHub Sigstore (`gh attestation verify` documented in README), and optionally scans the zip on VirusTotal (when `VIRUSTOTAL_API_KEY` secret is set) and auto-submits winget version bumps (when `WINGET_TOKEN` secret is set)
 - Scoop manifest: fix persisted config filename (RED+.cfg) and extract update hashes from the SHA256SUMS release asset
