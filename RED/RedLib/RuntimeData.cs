@@ -51,6 +51,7 @@ namespace RED
 		public Dictionary<string, bool> ProtectedFolderList = new Dictionary<string, bool>();
 
 		public bool HideIgnoredDirectories { get; set; }
+		public bool RespectGitIgnore { get; set; }
 
 		public RedScanResultItemList ScanResults { get; private set; }
 

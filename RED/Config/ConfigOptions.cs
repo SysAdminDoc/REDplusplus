@@ -73,6 +73,9 @@ namespace RED.Config
         public bool RememberDeletionStats { get { return _RememberDeletionStats; } set { SetField(ref _RememberDeletionStats, value); } }
         private bool _RememberDeletionStats;
 
+        public bool RespectGitIgnore { get { return _RespectGitIgnore; } set { SetField(ref _RespectGitIgnore, value); } }
+        private bool _RespectGitIgnore;
+
         [XmlIgnore]
         public override bool DataIsDirty
         {

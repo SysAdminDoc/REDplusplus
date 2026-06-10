@@ -1058,8 +1058,8 @@ namespace RED.UI
             RunData.InfiniteLoopDetectionCount = RedConfig.Options.InfiniteLoopDetectionCount;
             RunData.DeleteMode = (DeleteModes)RedConfig.Options.DeleteMode;
             RunData.PauseTime = RedConfig.Options.PauseBetweenDeletions;
-            //NotBob added option to hide ignored directories
             RunData.HideIgnoredDirectories = RedConfig.Options.HideIgnoredDirectories;
+            RunData.RespectGitIgnore = RedConfig.Options.RespectGitIgnore;
             // NotBob use dedicated RedMatchItemLists for all the filters
             RunData.IgnoreFileNameList.Transform(RedConfig.Filters.FilesToIgnore);
             RunData.IgnoreDirectoryNameList.Transform(RedConfig.Filters.DirectoriesToIgnore);
