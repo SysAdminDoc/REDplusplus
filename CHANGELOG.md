@@ -12,6 +12,9 @@
 - "Why kept?" reasons: each surviving folder now carries a concrete reason (empty / N ignored files / matches ignore rule / never-empty rule / could not be read) shown on hover and added as a Reason column to CSV/JSON exports and `-json` output
 - One-click restore of the last deletion run: Extras menu → "Restore Last Deletion" in the GUI, `RED+.exe -undo [-log file]` headless — recreates every deleted directory (lossless, they were empty) and moves Move-to-folder deletions back; the undo manifest now records children of recursively-deleted subtrees and the actual Move destination (collision suffixes included)
 
+### Bug Fixes
+- Honor an explicit filter match-method code even when the text contains a wildcard — a rule like `C|*.tmp` (literal Contains) is no longer silently rewritten to a name regex; codeless entries (`*.tmp`) still auto-detect as regex
+
 ### Security
 - Harden the bundled gettext catalog parser against malicious .po/.mo files placed beside the portable exe: bound the Plural-Forms expression length and recursion depth (a deeply-nested expression would otherwise StackOverflow and kill the process — uncatchable), bounds-check every .mo string-table offset/length against the file size, and cap catalog size at 32 MB — any malformed catalog falls back to untranslated English
 - Restrict unmanaged DLL resolution to System32 and drop the current directory from the search path at startup (`SetDefaultDllDirectories`) — a DLL planted next to a portable exe in Downloads can no longer be loaded (CVE-2024-11859 class)
