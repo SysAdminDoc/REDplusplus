@@ -70,10 +70,29 @@ If the config file (**RED+.cfg**) isn't found, you'll be prompted to create one:
 ### CLI / Headless Mode
 
 ```
-RED+.exe -silent -path "C:\target" [-log "output.log"]
+RED+.exe [-silent] -path "C:\target" [-path "D:\other" ...] [options]
 ```
 
-Scans and deletes (per configured delete mode) without showing a window. Writes results to the log file and exits with code 0 (success) or 1 (errors). Useful for Task Scheduler and batch scripts.
+Scans and deletes (per configured delete mode) without showing a window. Exits with code 0 (success) or 1 (errors). Useful for Task Scheduler and batch scripts.
+
+Options:
+
+| Option | Description |
+|--------|-------------|
+| `-path <dir>` | Scan root (repeatable). A bare path argument also works. |
+| `-dryrun` | Scan and report only; never delete (forces simulate mode). |
+| `-mode <mode>` | Override delete mode: `recycle` \| `direct` \| `move` \| `simulate`. |
+| `-export <file>` | Write results to `.txt` / `.csv` / `.json` (chosen by extension). |
+| `-json` | Emit one NDJSON object per result to stdout (for piping). |
+| `-log <file>` | Write a timestamped run log. |
+| `-undo` | Restore the directories deleted by the last run. |
+| `-help`, `-version` | Show usage / version and exit. |
+
+Preview a cleanup without touching anything, machine-readable:
+
+```
+RED+.exe -path "D:\Shares" -dryrun -json
+```
 
 Works with UNC paths directly — no mapped drive needed:
 
