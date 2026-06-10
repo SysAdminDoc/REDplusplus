@@ -6,6 +6,7 @@
 - One-click restore of the last deletion run: Extras menu → "Restore Last Deletion" in the GUI, `RED+.exe -undo [-log file]` headless — recreates every deleted directory (lossless, they were empty) and moves Move-to-folder deletions back; the undo manifest now records children of recursively-deleted subtrees and the actual Move destination (collision suffixes included)
 
 ### Security
+- Restrict unmanaged DLL resolution to System32 and drop the current directory from the search path at startup (`SetDefaultDllDirectories`) — a DLL planted next to a portable exe in Downloads can no longer be loaded (CVE-2024-11859 class)
 - Bidi/zero-width control characters (RLO and friends, MITRE T1036.002) in folder names render as visible \uXXXX escapes in the tree, logs, and headless output — a crafted name can no longer reorder the displayed path in confirmations or logs
 
 ### Performance
