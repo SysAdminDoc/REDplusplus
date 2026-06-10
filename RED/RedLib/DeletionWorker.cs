@@ -61,6 +61,10 @@ namespace RED
 				// Fresh run (not an error-continue resume): order parents before
 				// children so one recursive delete covers a wholly-empty subtree.
 				this.Data.ScanResults.Items.Sort((a, b) => a.FullPath.Length.CompareTo(b.FullPath.Length));
+
+				// Empty-files pre-pass (opt-in). Done before directories and on the
+				// fresh run only, isolated from the verified directory pipeline.
+				DeleteEmptyFiles();
 			}
 
 			if (this.Data.DeleteMode == DeleteModes.RecycleBin ||
@@ -355,6 +359,51 @@ namespace RED
 			return hr == E_FILENOTFOUND || hr == E_PATHNOTFOUND;
 		}
 
+		/// <summary>
+		/// Deletes the standalone zero-byte files collected during the scan, via the
+		/// active delete mode. Kept entirely separate from the directory deletion
+		/// pipeline; failures are logged and counted but never abort the run.
+		/// </summary>
+		private void DeleteEmptyFiles()
+		{
+			if (this.Data.EmptyFileResults == null || this.Data.EmptyFileResults.Count == 0)
+			{
+				return;
+			}
+
+			foreach (System.IO.FileInfo file in this.Data.EmptyFileResults)
+			{
+				if (CancellationPending) return;
+				try
+				{
+					file.Refresh();
+					if (!file.Exists) continue;
+					// Guard: only delete if still zero bytes (the scan may be stale)
+					if (file.Length != 0)
+					{
+						this.Data.AddLogMessage(TXT.Translate("Skipped file because it is no longer empty: {0}", RedAssist.DQuote(file.FullName)));
+						continue;
+					}
+
+					SystemFunctions.SecureDeleteFile(file, this.Data.DeleteMode);
+					this.Data.AddLogMessage(TXT.Translate("Successfully deleted empty file: {0}", RedAssist.DQuote(file.FullName)));
+					this.DeletedCount++;
+					undoEntries.Add(new UndoManifestEntry
+					{
+						Path = file.FullName,
+						Mode = this.Data.DeleteMode.ToString(),
+						MovedTo = null,
+						IsFile = true
+					});
+				}
+				catch (Exception ex)
+				{
+					this.Data.AddLogMessage(TXT.Translate("Failed to delete empty file: {0} - {1}", RedAssist.DQuote(file.FullName), RedGetText.Words.ErrorMessage1(ex.Message)));
+					this.FailedCount++;
+				}
+			}
+		}
+
 		private void WriteUndoManifest()
 		{
 			if (undoEntries.Count == 0) return;
@@ -374,6 +423,8 @@ namespace RED
 					if (entry.MovedTo != null)
 						sb.Append(", \"movedTo\": \"" + EscapeJson(entry.MovedTo) + "\"");
 					sb.Append(", \"mode\": \"" + entry.Mode + "\"");
+					if (entry.IsFile)
+						sb.Append(", \"isFile\": true");
 					sb.Append(" }");
 					if (i < undoEntries.Count - 1) sb.Append(",");
 					sb.AppendLine();
@@ -466,5 +517,6 @@ namespace RED
 		public string Path { get; set; }
 		public string Mode { get; set; }
 		public string MovedTo { get; set; }
+		public bool IsFile { get; set; }
 	}
 }

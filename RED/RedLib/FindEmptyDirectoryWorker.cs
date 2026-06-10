@@ -112,6 +112,36 @@ namespace RED
 		/// </summary>
 		private const int SuspiciousDepth = 256;
 
+		/// <summary>
+		/// Adds zero-byte files (not matched by the ignore list) to the empty-file
+		/// results. Ignore-list files (e.g. an empty Thumbs.db) are skipped — they
+		/// are trash handled by directory deletion, not standalone targets.
+		/// </summary>
+		private void CollectEmptyFiles(FileInfo[] fileList)
+		{
+			foreach (FileInfo file in fileList)
+			{
+				try
+				{
+					if (file.Length != 0) continue;
+
+					int rawAttribs = (int)file.Attributes;
+					const int RECALL_ON_DATA = 0x00400000;
+					const int RECALL_ON_OPEN = 0x00040000;
+					if ((rawAttribs & RECALL_ON_DATA) != 0 || (rawAttribs & RECALL_ON_OPEN) != 0) continue;
+
+					string pattern;
+					// IsOnList with ignoreEmptyFiles=false: only true name-based ignore
+					// rules match here, so a truly-named trash file is excluded
+					if (this.RunData.IgnoreFileNameList.IsOnList(file, 0, false, out pattern)) continue;
+
+					this.RunData.EmptyFileResults.Add(file);
+					this.RunData.AddLogMessage(TXT.Translate("Empty file queued for deletion: {0}", RedAssist.DQuote(file.FullName)));
+				}
+				catch { }
+			}
+		}
+
 		private DirectorySearchStatusTypes CheckIfDirectoryEmpty(DirectoryInfo startDir, int depth)
 		{
 			if (this.PossibleEndlessLoop > this.RunData.InfiniteLoopDetectionCount)
@@ -243,8 +273,19 @@ namespace RED
 								containsFiles = true;
 							}
 						}
+
+						// Empty-files sister mode: collect standalone zero-byte files
+						// (not on the ignore list) for deletion. Separate non-short-
+						// circuiting pass so it finds every empty file, not just up to
+						// the first real file that stops the directory check above.
+						if (this.RunData.DeleteEmptyFiles)
+						{
+							CollectEmptyFiles(fileList);
+						}
 					}
 				}
+
+				// (CollectEmptyFiles is defined below; invoked above when DeleteEmptyFiles is on)
 
 				List<DirectoryInfo> subFolderList = new List<DirectoryInfo>();
 				try

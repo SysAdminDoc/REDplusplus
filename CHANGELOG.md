@@ -6,6 +6,7 @@
 - Light theme option (Catppuccin Latte) plus Dark and System (follows the Windows app-theme registry value); switch live from Extras → Theme, persisted in config. Dark remains the default; the title bar follows the theme via DwmSetWindowAttribute
 
 ### Features
+- Empty-files sister mode (opt-in, off by default): also deletes standalone zero-byte files (including in the scan root, excluding ignore-list trash) via the active delete mode, with one-click restore that recreates them losslessly. Toggle from Extras → "Delete empty files too" or the `-emptyfiles` CLI flag; isolated from the directory deletion pipeline as a pre-pass
 - `.redkeep` marker file protects a folder and its entire subtree from deletion on every scan path (standard and MFT) — unlike per-config filter lists, the marker travels with the folder across copies and network shares
 - CLI v2: repeatable `-path` for multiple scan roots in one run, `-dryrun` (report without deleting), `-mode recycle|direct|move|simulate` to override the configured delete mode, `-export <file>` (.txt/.csv/.json by extension), `-json` NDJSON to stdout for piping, and `-help`/`-version`; bare path arguments are accepted as scan roots
 - "Why kept?" reasons: each surviving folder now carries a concrete reason (empty / N ignored files / matches ignore rule / never-empty rule / could not be read) shown on hover and added as a Reason column to CSV/JSON exports and `-json` output

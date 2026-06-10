@@ -77,6 +77,14 @@ namespace RED
 		public bool HideIgnoredDirectories { get; set; }
 		public bool RespectGitIgnore { get; set; }
 		public bool UseMftScan { get; set; }
+		public bool DeleteEmptyFiles { get; set; }
+
+		/// <summary>
+		/// Standalone zero-byte files found when DeleteEmptyFiles is on. Kept
+		/// separate from the directory ScanResults so the verified directory
+		/// deletion pipeline is untouched; deleted in a pre-pass before directories.
+		/// </summary>
+		public List<FileInfo> EmptyFileResults = new List<FileInfo>();
 
 		/// <summary>
 		/// When true the next scan appends to ScanResults instead of clearing them.

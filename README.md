@@ -83,6 +83,7 @@ Options:
 |--------|-------------|
 | `-path <dir>` | Scan root (repeatable). A bare path argument also works. |
 | `-dryrun` | Scan and report only; never delete (forces simulate mode). |
+| `-emptyfiles` | Also delete standalone zero-byte files (opt-in sister mode). |
 | `-mode <mode>` | Override delete mode: `recycle` \| `direct` \| `move` \| `simulate`. |
 | `-export <file>` | Write results to `.txt` / `.csv` / `.json` (chosen by extension). |
 | `-json` | Emit one NDJSON object per result to stdout (for piping). |
