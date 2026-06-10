@@ -8,7 +8,7 @@
     <OutputType>WinExe</OutputType>
     <RootNamespace>RED</RootNamespace>
     <AssemblyName>RED+</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
@@ -369,7 +369,6 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PreBuildEvent>C:\Binx\unix\gnu\bin\date.exe +"%25%25Y-%25%25m-%25%25dT%25%25T" &gt; "$(ProjectDir)Resources\BuildTime$(ConfigurationName).txt"
-</PreBuildEvent>
+    <PreBuildEvent>powershell -NoProfile -Command "[DateTime]::Now.ToString('yyyy-MM-ddTHH:mm:ss') | Set-Content '$(ProjectDir)Resources\BuildTime$(ConfigurationName).txt' -NoNewline"</PreBuildEvent>
   </PropertyGroup>
 </Project>

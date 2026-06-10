@@ -63,33 +63,28 @@ namespace RED
         {
             try
             {
-                // UGLY hack to determine whether we have write access
-                // to a specific directory
+                var acl = System.IO.Directory.GetAccessControl(path);
+                var rules = acl.GetAccessRules(true, true, typeof(System.Security.Principal.SecurityIdentifier));
+                var identity = WindowsIdentity.GetCurrent();
+                var principal = new WindowsPrincipal(identity);
 
-                Random r = new Random();
-                string tempName = path + "deltest";
-
-                int counter = 0;
-                while (Directory.Exists(tempName))
+                foreach (System.Security.AccessControl.FileSystemAccessRule rule in rules)
                 {
-                    tempName = path + "deltest" + r.Next(0, 9999).ToString();
-                    if (counter > 100)
+                    if (rule.AccessControlType == System.Security.AccessControl.AccessControlType.Deny &&
+                        (rule.FileSystemRights & System.Security.AccessControl.FileSystemRights.Delete) != 0)
                     {
-                        return true; // Something strange is going on... stop here...
+                        if (identity.User.Equals(rule.IdentityReference) ||
+                            principal.IsInRole((System.Security.Principal.SecurityIdentifier)rule.IdentityReference))
+                        {
+                            return true;
+                        }
                     }
-
-                    counter++;
                 }
-
-                Directory.Move(path, tempName);
-                Directory.Move(tempName, path);
 
                 return false;
             }
-            catch //(Exception ex)
+            catch
             {
-                // Could not rename -> probably we have no
-                // write access to the directory
                 return true;
             }
         }
@@ -116,6 +111,12 @@ namespace RED
             if (deleteMode == DeleteModes.Simulate)
             {
                 return;
+            }
+
+            var dirInfo = new DirectoryInfo(path);
+            if ((dirInfo.Attributes & System.IO.FileAttributes.ReparsePoint) == System.IO.FileAttributes.ReparsePoint)
+            {
+                throw new REDPermissionDeniedException(TXT.Translate("Refused to delete directory because it is a reparse point (junction, symlink, or mount point): {0}", RedAssist.DQuote(path)));
             }
 
             if (deleteMode == DeleteModes.Direct)

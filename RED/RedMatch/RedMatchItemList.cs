@@ -131,7 +131,7 @@ namespace RED.Match
 			return IsOnList(nameToCheck, pathToCheck, 0, false, out _);
 		}
 
-		public bool IsOnList(FileInfo fileinfo, int filesize, bool ignoreEmptyFiles, out string delPattern)
+		public bool IsOnList(FileInfo fileinfo, long filesize, bool ignoreEmptyFiles, out string delPattern)
 		{
 			string nameToCheck = fileinfo.Name.ToLowerInvariant();
 			string pathToCheck = fileinfo.FullName.ToLowerInvariant();
@@ -150,7 +150,7 @@ namespace RED.Match
 			}
 		}
 
-		private bool IsOnList(string nameToCheck, string pathToCheck, int filesize, bool ignoreEmptyFiles, out string delPattern)
+		private bool IsOnList(string nameToCheck, string pathToCheck, long filesize, bool ignoreEmptyFiles, out string delPattern)
 		{
 			bool matched = false;
 
