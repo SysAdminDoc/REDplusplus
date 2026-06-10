@@ -12,6 +12,7 @@ namespace RED.UI
 
 		private void DeletionError_Load(object sender, EventArgs e)
 		{
+			DarkTheme.Apply(this);
 		}
 
 		internal void SetPath(string path)

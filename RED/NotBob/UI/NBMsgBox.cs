@@ -38,6 +38,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
+using RED.UI;
 
 namespace NotBob.UI
 {
@@ -229,6 +230,7 @@ namespace NotBob.UI
 		/// <param name="e"></param>
 		private void NBMsgBox_Shown(object sender, EventArgs e)
 		{
+			DarkTheme.Apply(this);
 			BuildForm();
 		}
 

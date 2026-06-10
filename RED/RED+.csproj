@@ -160,6 +160,7 @@
     <Compile Include="UI\UCMenuButton.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="UI\DarkTheme.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UI\DeletionError.cs">

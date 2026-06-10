@@ -22,6 +22,7 @@ namespace RED.UI
 
 		private void FormLanguage_Load(object sender, System.EventArgs e)
 		{
+			DarkTheme.Apply(this);
 			Populate();
 		}
 

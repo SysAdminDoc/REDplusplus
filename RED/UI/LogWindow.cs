@@ -12,6 +12,7 @@ namespace RED.UI
 
 		private void LogWindow_Load(object sender, EventArgs e)
 		{
+			DarkTheme.Apply(this);
 		}
 
 		public void SetLog(string log)
