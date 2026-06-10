@@ -30,6 +30,26 @@ namespace RED
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool CloseHandle(IntPtr hObject);
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetFileInformationByHandle(IntPtr hFile, out BY_HANDLE_FILE_INFORMATION info);
+
+        // FILETIME fields must be 4-byte aligned (two DWORDs) — `long` would insert
+        // padding after dwFileAttributes and corrupt the file-index fields we rely on
+        [StructLayout(LayoutKind.Sequential)]
+        private struct BY_HANDLE_FILE_INFORMATION
+        {
+            public uint dwFileAttributes;
+            public System.Runtime.InteropServices.ComTypes.FILETIME ftCreationTime;
+            public System.Runtime.InteropServices.ComTypes.FILETIME ftLastAccessTime;
+            public System.Runtime.InteropServices.ComTypes.FILETIME ftLastWriteTime;
+            public uint dwVolumeSerialNumber;
+            public uint nFileSizeHigh;
+            public uint nFileSizeLow;
+            public uint nNumberOfLinks;
+            public uint nFileIndexHigh;
+            public uint nFileIndexLow;
+        }
+
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         private static extern bool GetVolumeInformationW(
             string lpRootPathName,
@@ -49,9 +69,12 @@ namespace RED
 
         private static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
         private const uint GENERIC_READ = 0x80000000;
+        private const uint FILE_READ_ATTRIBUTES = 0x0080;
         private const uint FILE_SHARE_READ = 0x00000001;
         private const uint FILE_SHARE_WRITE = 0x00000002;
+        private const uint FILE_SHARE_DELETE = 0x00000004;
         private const uint OPEN_EXISTING = 3;
+        private const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
         private const uint FSCTL_ENUM_USN_DATA = 0x000900B3;
         private const uint FILE_ATTRIBUTE_DIRECTORY = 0x10;
         private const uint FILE_ATTRIBUTE_REPARSE_POINT = 0x400;
@@ -71,6 +94,40 @@ namespace RED
 
         private readonly Dictionary<ulong, MftEntry> entries = new Dictionary<ulong, MftEntry>();
         private readonly Dictionary<ulong, List<ulong>> childrenOf = new Dictionary<ulong, List<ulong>>();
+
+        // The real 64-bit file reference number of the volume root (includes the
+        // sequence number in the upper bits, so it is NOT the literal MFT index 5).
+        private ulong rootFrn;
+
+        /// <summary>
+        /// Resolves the true FRN of the volume root by opening it and reading its file index.
+        /// USN records reference parents by full 64-bit FRN (with sequence bits), so a
+        /// hardcoded constant would never match and every lookup would fail.
+        /// </summary>
+        private static bool TryGetRootFrn(string volumeRoot, out ulong frn)
+        {
+            frn = 0;
+            IntPtr hDir = CreateFileW(volumeRoot, FILE_READ_ATTRIBUTES,
+                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                IntPtr.Zero, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, IntPtr.Zero);
+
+            if (hDir == INVALID_HANDLE_VALUE)
+                return false;
+
+            try
+            {
+                BY_HANDLE_FILE_INFORMATION info;
+                if (!GetFileInformationByHandle(hDir, out info))
+                    return false;
+
+                frn = ((ulong)info.nFileIndexHigh << 32) | info.nFileIndexLow;
+                return true;
+            }
+            finally
+            {
+                CloseHandle(hDir);
+            }
+        }
 
         internal static bool IsNtfsVolume(string path)
         {
@@ -94,6 +151,9 @@ namespace RED
 
         internal bool EnumerateMft(string volumeRoot, BackgroundWorker worker)
         {
+            if (!TryGetRootFrn(volumeRoot, out rootFrn))
+                return false;
+
             string volumePath = @"\\.\" + volumeRoot.TrimEnd('\\');
 
             IntPtr hVolume = CreateFileW(volumePath, GENERIC_READ,
@@ -181,11 +241,11 @@ namespace RED
             string root = Path.GetPathRoot(fullPath);
             string relative = fullPath.Substring(root.Length);
             if (string.IsNullOrEmpty(relative))
-                return 5; // NTFS root directory FRN
+                return rootFrn;
 
             string[] parts = relative.Split(new[] { Path.DirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
 
-            ulong currentFrn = 5; // NTFS root
+            ulong currentFrn = rootFrn;
             foreach (string part in parts)
             {
                 if (!childrenOf.ContainsKey(currentFrn))
@@ -215,14 +275,14 @@ namespace RED
             ulong current = frn;
             int maxDepth = 512;
 
-            while (current != 5 && maxDepth-- > 0)
+            while (current != rootFrn && maxDepth-- > 0)
             {
                 if (!entries.ContainsKey(current)) return null;
                 parts.Add(entries[current].FileName);
                 current = entries[current].ParentFileReferenceNumber;
             }
 
-            if (maxDepth <= 0) return null;
+            if (current != rootFrn) return null;
 
             parts.Reverse();
             return volumeRoot.TrimEnd('\\') + Path.DirectorySeparatorChar + string.Join(Path.DirectorySeparatorChar.ToString(), parts);
@@ -233,8 +293,13 @@ namespace RED
             string volumeRoot,
             RuntimeData runData,
             BackgroundWorker worker,
-            ref int folderCount)
+            ref int folderCount,
+            GitIgnoreParser gitIgnoreParser,
+            string startFolderPath)
         {
+            this.gitIgnore = (gitIgnoreParser != null && gitIgnoreParser.HasRules) ? gitIgnoreParser : null;
+            this.gitIgnoreBasePath = startFolderPath;
+
             var emptyDirs = new List<ulong>();
             CheckSubtreeEmpty(startFrn, volumeRoot, runData, worker, ref folderCount, emptyDirs, 1);
 
@@ -248,14 +313,16 @@ namespace RED
                 try
                 {
                     var dirInfo = new DirectoryInfo(path);
-                    if (dirInfo.Exists)
-                    {
-                        worker?.ReportProgress(0, new FoundEmptyDirInfoEventArgs(dirInfo, DirectorySearchStatusTypes.Empty));
-                    }
+                    if (!dirInfo.Exists) continue;
+
+                    worker?.ReportProgress(0, new FoundEmptyDirInfoEventArgs(dirInfo, DirectorySearchStatusTypes.Empty));
                 }
                 catch { }
             }
         }
+
+        private GitIgnoreParser gitIgnore;
+        private string gitIgnoreBasePath;
 
         private bool CheckSubtreeEmpty(
             ulong frn, string volumeRoot, RuntimeData runData,
@@ -306,6 +373,37 @@ namespace RED
                         worker.ReportProgress(0, new FoundEmptyDirInfoEventArgs(dirInfo, DirectorySearchStatusTypes.Ignore));
                     }
                     return false;
+                }
+
+                // .gitignore rules (same semantics as the standard scanner)
+                if (gitIgnore != null && gitIgnoreBasePath != null &&
+                    fullPath.Length > gitIgnoreBasePath.Length &&
+                    fullPath.StartsWith(gitIgnoreBasePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    string relativePath = fullPath.Substring(gitIgnoreBasePath.Length);
+                    if (gitIgnore.IsIgnored(entry.FileName, relativePath))
+                    {
+                        if (!runData.HideIgnoredDirectories && worker != null)
+                        {
+                            worker.ReportProgress(0, new FoundEmptyDirInfoEventArgs(dirInfo, DirectorySearchStatusTypes.Ignore));
+                        }
+                        return false;
+                    }
+                }
+
+                // Same minimum-age rule as the standard scanner: a directory younger
+                // than the threshold is not scanned and keeps its parent non-empty.
+                if (runData.MinFolderAgeHours > 0)
+                {
+                    try
+                    {
+                        if (dirInfo.CreationTime.AddHours(runData.MinFolderAgeHours) >= DateTime.Now)
+                        {
+                            runData.AddLogMessage(TXT.Translate("Directory {0} skipped because creation time [{1}] is < {2} hours old", RedAssist.DQuote(fullPath), dirInfo.CreationTime.ToString(), runData.MinFolderAgeHours.ToString()));
+                            return false;
+                        }
+                    }
+                    catch { return false; }
                 }
             }
 
