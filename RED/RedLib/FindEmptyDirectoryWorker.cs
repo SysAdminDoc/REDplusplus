@@ -49,6 +49,13 @@ namespace RED
 				gitIgnoreParser = null;
 			}
 
+			if (this.RunData.UseMftScan && TryMftScan(startFolder, e))
+			{
+				if (CancellationPending) { e.Cancel = true; }
+				e.Result = 1;
+				return;
+			}
+
 			try
 			{
 				if ((startFolder.Attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
@@ -322,6 +329,45 @@ namespace RED
 				this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startDir, DirectorySearchStatusTypes.Error, ex.Message));
 				return DirectorySearchStatusTypes.Error;
 			}
+		}
+
+		private bool TryMftScan(DirectoryInfo startFolder, DoWorkEventArgs e)
+		{
+			if (!MftScanner.IsNtfsVolume(startFolder.FullName))
+			{
+				this.RunData.AddLogMessage("MFT scan: not an NTFS volume, falling back to standard scan");
+				return false;
+			}
+
+			this.RunData.AddLogMessage("MFT scan: enumerating volume MFT...");
+			this.ReportProgress(0, "MFT: reading volume index...");
+
+			var scanner = new MftScanner();
+			string volumeRoot = Path.GetPathRoot(startFolder.FullName);
+
+			if (!scanner.EnumerateMft(volumeRoot, this))
+			{
+				this.RunData.AddLogMessage("MFT scan: enumeration failed (admin required), falling back to standard scan");
+				return false;
+			}
+
+			ulong? startFrn = scanner.FindFrnByPath(startFolder.FullName);
+			if (!startFrn.HasValue)
+			{
+				this.RunData.AddLogMessage("MFT scan: could not locate start folder in MFT, falling back to standard scan");
+				return false;
+			}
+
+			this.RunData.AddLogMessage("MFT scan: analyzing directory tree...");
+			this.ReportProgress(0, "MFT: finding empty directories...");
+
+			scanner.FindEmptyDirectories(startFrn.Value, volumeRoot, this.RunData, this, ref this.folderCount);
+
+			this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startFolder,
+				this.RunData.ScanResults.Count > 0 ? DirectorySearchStatusTypes.NotEmpty : DirectorySearchStatusTypes.NotEmpty));
+
+			this.RunData.AddLogMessage(string.Format("MFT scan complete: checked {0} directories", this.folderCount));
+			return true;
 		}
 	}
 }

@@ -1073,6 +1073,7 @@ namespace RED.UI
             RunData.PauseTime = RedConfig.Options.PauseBetweenDeletions;
             RunData.HideIgnoredDirectories = RedConfig.Options.HideIgnoredDirectories;
             RunData.RespectGitIgnore = RedConfig.Options.RespectGitIgnore;
+            RunData.UseMftScan = RedConfig.Options.UseMftScan;
             // NotBob use dedicated RedMatchItemLists for all the filters
             RunData.IgnoreFileNameList.Transform(RedConfig.Filters.FilesToIgnore);
             RunData.IgnoreDirectoryNameList.Transform(RedConfig.Filters.DirectoriesToIgnore);

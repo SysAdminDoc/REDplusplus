@@ -76,6 +76,9 @@ namespace RED.Config
         public bool RespectGitIgnore { get { return _RespectGitIgnore; } set { SetField(ref _RespectGitIgnore, value); } }
         private bool _RespectGitIgnore;
 
+        public bool UseMftScan { get { return _UseMftScan; } set { SetField(ref _UseMftScan, value); } }
+        private bool _UseMftScan;
+
         [XmlIgnore]
         public override bool DataIsDirty
         {
