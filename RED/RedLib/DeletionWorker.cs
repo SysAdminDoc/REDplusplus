@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Text;
 using System.Threading;
 using RED.Helper;
 using TXT = RED.RedGetText;
@@ -21,6 +23,8 @@ namespace RED
 		public int ListPos { get; set; }
 
 		public DeletionErrorEventArgs ErrorInfo { get; set; }
+
+		private List<UndoManifestEntry> undoEntries = new List<UndoManifestEntry>();
 
 		public DeletionWorker()
 		{
@@ -80,12 +84,17 @@ namespace RED
 				{
 					try
 					{
-						// Try to delete the directory
 						this.secureDelete(scanResult.Directory);
 						this.Data.AddLogMessage(TXT.Translate("Successfully deleted directory: {0}", RedAssist.DQuote(scanResult.FullPath)));
 						status = DirectoryDeletionStatusTypes.Deleted;
 						this.DeletedCount++;
 						deletedParents.Add(scanResult.FullPath);
+						undoEntries.Add(new UndoManifestEntry
+						{
+							Path = scanResult.FullPath,
+							Mode = this.Data.DeleteMode.ToString(),
+							MovedTo = (this.Data.DeleteMode == DeleteModes.MoveToFolder) ? SystemFunctions.MoveToFolderTarget : null
+						});
 					}
 					catch (REDPermissionDeniedException ex)
 					{
@@ -132,6 +141,47 @@ namespace RED
 			}
 
 			e.Result = this.Data.ScanResults.Count;
+
+			WriteUndoManifest();
+		}
+
+		private void WriteUndoManifest()
+		{
+			if (undoEntries.Count == 0) return;
+			try
+			{
+				string manifestPath = Path.Combine(
+					Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath),
+					"RED++.undo.json");
+
+				var sb = new StringBuilder();
+				sb.AppendLine("{");
+				sb.AppendLine("  \"timestamp\": \"" + DateTime.Now.ToString("o") + "\",");
+				sb.AppendLine("  \"deleteMode\": \"" + this.Data.DeleteMode.ToString() + "\",");
+				sb.AppendLine("  \"entries\": [");
+				for (int i = 0; i < undoEntries.Count; i++)
+				{
+					var entry = undoEntries[i];
+					sb.Append("    { \"path\": \"" + EscapeJson(entry.Path) + "\"");
+					if (entry.MovedTo != null)
+						sb.Append(", \"movedTo\": \"" + EscapeJson(entry.MovedTo) + "\"");
+					sb.Append(", \"mode\": \"" + entry.Mode + "\"");
+					sb.Append(" }");
+					if (i < undoEntries.Count - 1) sb.Append(",");
+					sb.AppendLine();
+				}
+				sb.AppendLine("  ]");
+				sb.AppendLine("}");
+
+				File.WriteAllText(manifestPath, sb.ToString(), Encoding.UTF8);
+				this.Data.AddLogMessage(TXT.Translate("Undo manifest written: {0}", RedAssist.DQuote(manifestPath)));
+			}
+			catch { }
+		}
+
+		private static string EscapeJson(string s)
+		{
+			return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 		}
 
 		private void secureDelete(DirectoryInfo emptyDirectory)
@@ -190,5 +240,12 @@ namespace RED
 			// This function will ensure that the directory is really empty before it gets deleted
 			SystemFunctions.SecureDeleteDirectory(emptyDirectory.FullName, this.Data.DeleteMode);
 		}
+	}
+
+	internal class UndoManifestEntry
+	{
+		public string Path { get; set; }
+		public string Mode { get; set; }
+		public string MovedTo { get; set; }
 	}
 }
