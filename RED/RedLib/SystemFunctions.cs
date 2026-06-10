@@ -21,7 +21,8 @@ namespace RED
         RecycleBinShowErrors = 1,
         RecycleBinWithQuestion = 2,
         Direct = 3,
-        Simulate = 4
+        Simulate = 4,
+        MoveToFolder = 5
     }
 
     [Serializable]
@@ -42,6 +43,8 @@ namespace RED
     /// </summary>
     public class SystemFunctions
     {
+        public static string MoveToFolderTarget { get; set; }
+
         public static void ManuallyDeleteDirectory(string path, DeleteModes deleteMode)
         {
             if (deleteMode == DeleteModes.Simulate)
@@ -125,6 +128,21 @@ namespace RED
                 return;
             }
 
+            if (deleteMode == DeleteModes.MoveToFolder)
+            {
+                if (string.IsNullOrWhiteSpace(MoveToFolderTarget))
+                    throw new Exception(TXT.Translate("Move-to-folder target has not been set"));
+                string relativePath = dirInfo.Name;
+                string destPath = Path.Combine(MoveToFolderTarget, relativePath);
+                int counter = 1;
+                while (Directory.Exists(destPath))
+                {
+                    destPath = Path.Combine(MoveToFolderTarget, relativePath + "_" + counter++);
+                }
+                Directory.Move(path, destPath);
+                return;
+            }
+
             // Last security check before deletion
             if (Directory.GetFiles(path).Length == 0 && Directory.GetDirectories(path).Length == 0)
             {
@@ -150,6 +168,11 @@ namespace RED
         public static void SecureDeleteFile(FileInfo file, DeleteModes deleteMode)
         {
             if (deleteMode == DeleteModes.Simulate)
+            {
+                return;
+            }
+
+            if (deleteMode == DeleteModes.MoveToFolder)
             {
                 return;
             }

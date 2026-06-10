@@ -380,19 +380,33 @@ namespace RED.UI
         {
             UpdateRuntimeDataObject();
 
+            if (RunData.DeleteMode == DeleteModes.MoveToFolder)
+            {
+                using (var dlg = new FolderBrowserDialog())
+                {
+                    dlg.Description = TXT.Translate("Select the folder where empty directories will be moved to");
+                    dlg.ShowNewFolderButton = true;
+                    if (dlg.ShowDialog(this) != DialogResult.OK)
+                        return;
+                    SystemFunctions.MoveToFolderTarget = dlg.SelectedPath;
+                }
+            }
+
             if (RunData.DeleteMode != DeleteModes.Simulate)
             {
                 int totalCount = RunData.ScanResults.Count;
                 int protectedCount = RunData.ProtectedFolderList.Count;
                 int deleteCount = totalCount - protectedCount;
 
-                string msg = TXT.Translate("Delete {0} empty directories?", deleteCount);
+                string action = (RunData.DeleteMode == DeleteModes.MoveToFolder)
+                    ? TXT.Translate("Move {0} empty directories?", deleteCount)
+                    : TXT.Translate("Delete {0} empty directories?", deleteCount);
                 if (protectedCount > 0)
                 {
-                    msg += "\n" + TXT.Translate("({0} protected directories will be skipped)", protectedCount);
+                    action += "\n" + TXT.Translate("({0} protected directories will be skipped)", protectedCount);
                 }
 
-                if (DialogResult.No == UiAssist.MsgBoxYesNo(this, msg))
+                if (DialogResult.No == UiAssist.MsgBoxYesNo(this, action))
                 {
                     return;
                 }
