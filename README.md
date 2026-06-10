@@ -50,6 +50,14 @@ RED++ finds, displays, and deletes empty directories recursively below a given s
 - Microsoft .NET Framework 4.8.1
 - No installer required. Unzip and run.
 
+## Verify Your Download
+
+Every release ships a `SHA256SUMS` file and a signed build-provenance attestation. To verify the zip really came from this repository's CI:
+
+```
+gh attestation verify RED++_v1.4.0.zip -R SysAdminDoc/REDplusplus
+```
+
 ## Usage
 
 ### GUI Mode
