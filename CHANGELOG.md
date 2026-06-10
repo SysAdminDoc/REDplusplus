@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Features
+- CLI v2: repeatable `-path` for multiple scan roots in one run, `-dryrun` (report without deleting), `-mode recycle|direct|move|simulate` to override the configured delete mode, `-export <file>` (.txt/.csv/.json by extension), `-json` NDJSON to stdout for piping, and `-help`/`-version`; bare path arguments are accepted as scan roots
+- "Why kept?" reasons: each surviving folder now carries a concrete reason (empty / N ignored files / matches ignore rule / never-empty rule / could not be read) shown on hover and added as a Reason column to CSV/JSON exports and `-json` output
 - One-click restore of the last deletion run: Extras menu → "Restore Last Deletion" in the GUI, `RED+.exe -undo [-log file]` headless — recreates every deleted directory (lossless, they were empty) and moves Move-to-folder deletions back; the undo manifest now records children of recursively-deleted subtrees and the actual Move destination (collision suffixes included)
 
 ### Security
