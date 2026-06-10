@@ -305,7 +305,7 @@ namespace RED.UI
             this.pnlIconDesc.Controls.Add(this.lbColorDoNotTouch);
             this.pnlIconDesc.Controls.Add(this.pnlColorDoNoTouch);
             this.pnlIconDesc.Controls.Add(this.lbIconDesc);
-            this.pnlIconDesc.Enabled = false;
+            this.pnlIconDesc.Enabled = true;
             this.pnlIconDesc.Location = new System.Drawing.Point(519, 45);
             this.pnlIconDesc.Name = "pnlIconDesc";
             this.pnlIconDesc.Size = new System.Drawing.Size(126, 385);

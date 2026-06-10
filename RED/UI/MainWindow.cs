@@ -27,6 +27,10 @@ namespace RED.UI
         private bool AutoSearchOnStart = false;
         private readonly Queue<string> pendingScanPaths = new Queue<string>();
 
+        // True while a queued multi-path scan is continuing: results and tree roots
+        // append instead of replacing the previous root's output.
+        private bool multiRootContinuation = false;
+
         #region Init methods
 
         /// <summary>
@@ -346,7 +350,9 @@ namespace RED.UI
             RunData.StartFolder = selectedDirectory;
             UpdateRuntimeDataObject();
 
-            TreeMgr.OnSearchStart(RunData.StartFolder, pendingScanPaths.Count > 0);
+            RunData.AppendScanResults = multiRootContinuation;
+            TreeMgr.OnSearchStart(RunData.StartFolder, multiRootContinuation);
+            multiRootContinuation = false;
 
             RunData.AddLogSpacer();
             SetStatusAndLogMessage(TXT.Translate("Searching For Empty Directories..."));
@@ -411,6 +417,7 @@ namespace RED.UI
             {
                 string nextPath = pendingScanPaths.Dequeue();
                 txtSearchDirectory.Text = nextPath;
+                multiRootContinuation = true;
                 btnSearch.PerformClick();
             }
         }
@@ -500,7 +507,7 @@ namespace RED.UI
             errorDialog.SetPath(e.Path);
             errorDialog.SetErrorMessage(e.ErrorMessage);
 
-            DialogResult dialogResult = errorDialog.ShowDialog();
+            DialogResult dialogResult = errorDialog.ShowDialog(this);
 
             errorDialog.Dispose();
 
@@ -630,7 +637,12 @@ namespace RED.UI
 
             TreeMgr.ProtectSelected();
             RedConfig.Filters.AddDirectoryToIgnore("+|P|" + ((DirectoryInfo)tvSearchResults.SelectedNode.Tag).FullName);
+
+            // ConfigToUI rewrites the path box from the saved config — keep what
+            // the user is currently working with
+            string currentPath = txtSearchDirectory.Text;
             ConfigToUI();
+            txtSearchDirectory.Text = currentPath;
 
             // Focus Directories to Ignore Filter tab
             tcMain.SelectedTab = tabFilters;
@@ -816,6 +828,11 @@ namespace RED.UI
         /// </summary>
         private void MainWindow_DragDrop(object sender, DragEventArgs e)
         {
+            if (UiIsBusy())
+            {
+                return;
+            }
+
             string[] paths = (string[])e.Data.GetData(DataFormats.FileDrop, false);
             var validPaths = new List<string>();
             foreach (string p in paths)
@@ -831,6 +848,12 @@ namespace RED.UI
             pendingScanPaths.Clear();
             for (int i = 1; i < validPaths.Count; i++)
                 pendingScanPaths.Enqueue(validPaths[i]);
+
+            // Dropping folders is an explicit action — start scanning right away
+            if (btnSearch.Enabled)
+            {
+                btnSearch.PerformClick();
+            }
         }
 
         /// <summary>
@@ -869,14 +892,18 @@ namespace RED.UI
         /// </summary>
         private void btnSearchDirectoryBrowseFor_Click(object sender, EventArgs e)
         {
-            txtSearchDirectory.Text = SystemFunctions.ChooseDirectoryDialog(RedConfig.Runtime.Volatile.LastUsedDirectory);
+            // Start browsing from whatever is currently in the path box
+            string startFrom = !string.IsNullOrWhiteSpace(txtSearchDirectory.Text)
+                ? txtSearchDirectory.Text
+                : RedConfig.Runtime.Volatile.LastUsedDirectory;
+            txtSearchDirectory.Text = SystemFunctions.ChooseDirectoryDialog(startFrom);
         }
 
         private void mnuShowLog_Click(object sender, EventArgs e)
         {
             LogWindow logWindow = new LogWindow();
             logWindow.SetLog(Core.GetLogMessages());
-            logWindow.ShowDialog();
+            logWindow.ShowDialog(this);
             logWindow.Dispose();
         }
 
@@ -1161,12 +1188,18 @@ namespace RED.UI
             cbIgnore0kbFiles.Checked = RedConfig.Options.IgnoreEmptyFiles;
             cbIgnoreHiddenFolders.Checked = RedConfig.Options.IgnoreHiddenDirectories;
             cbIgnoreSystemFolders.Checked = RedConfig.Options.IgnoreSystemDirectories;
-            cbDeleteMode.SelectedIndex = (int)RedConfig.Options.DeleteMode;
 
-            nuFolderAge.Value = RedConfig.Options.MinDirectoryAgeHours;
-            nuInfiniteLoopDetectionCount.Value = RedConfig.Options.InfiniteLoopDetectionCount;
-            nuMaxDepth.Value = RedConfig.Options.MaxDirectoryDepth;
-            nuPause.Value = RedConfig.Options.PauseBetweenDeletions;
+            // Clamp values from the config file — a hand-edited or corrupt entry
+            // must degrade to a sane default instead of crashing at startup
+            int deleteModeIndex = (int)RedConfig.Options.DeleteMode;
+            cbDeleteMode.SelectedIndex = (deleteModeIndex >= 0 && deleteModeIndex < cbDeleteMode.Items.Count)
+                ? deleteModeIndex
+                : (int)DeleteModes.RecycleBin;
+
+            nuFolderAge.Value = ClampToRange(nuFolderAge, RedConfig.Options.MinDirectoryAgeHours);
+            nuInfiniteLoopDetectionCount.Value = ClampToRange(nuInfiniteLoopDetectionCount, RedConfig.Options.InfiniteLoopDetectionCount);
+            nuMaxDepth.Value = ClampToRange(nuMaxDepth, RedConfig.Options.MaxDirectoryDepth);
+            nuPause.Value = ClampToRange(nuPause, RedConfig.Options.PauseBetweenDeletions);
 
             flIgnoreFolders.Populate(RedConfig.Filters.DirectoriesToIgnore, RedMatchFilterType.Directory);
             flNeverEmptyFolders.Populate(RedConfig.Filters.DirectoriesNeverEmpty, RedMatchFilterType.Directory);
@@ -1192,6 +1225,13 @@ namespace RED.UI
                 btnResetConfig.Enabled = false;
             }
             btnHelp.Enabled = File.Exists(RedConfig.Runtime.HelpFile);
+        }
+
+        private static decimal ClampToRange(NumericUpDown nud, decimal value)
+        {
+            if (value < nud.Minimum) return nud.Minimum;
+            if (value > nud.Maximum) return nud.Maximum;
+            return value;
         }
 
         private void ConfigRestoreWindowDetails()
@@ -1255,7 +1295,10 @@ namespace RED.UI
                 RedConfig.Options.RememberDeletionStats = cbRememberDeletionStats.Checked;
                 if (RedConfig.Options.RememberDeletionStats)
                 {
+                    // Fold the session counter in exactly once — ConfigFromUI runs on
+                    // every scan, and re-adding would inflate the statistics
                     unchecked { RedConfig.Volatile.CountOfDeletions += RedConfig.Runtime.Volatile.CountOfDeletions; }
+                    RedConfig.Runtime.Volatile.CountOfDeletions = 0;
                 }
 
                 // Save UI details if required

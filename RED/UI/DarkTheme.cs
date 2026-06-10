@@ -107,6 +107,11 @@ namespace RED.UI
             else if (control is TabControl tc)
             {
                 tc.BackColor = Base;
+                // Tab headers ignore BackColor/ForeColor — owner-draw them so the
+                // header strip doesn't stay system light-gray on the dark theme
+                tc.DrawMode = TabDrawMode.OwnerDrawFixed;
+                tc.DrawItem -= TabControl_DrawItem;
+                tc.DrawItem += TabControl_DrawItem;
             }
             else if (control is TabPage tp)
             {
@@ -152,6 +157,49 @@ namespace RED.UI
             {
                 ApplyToControl(child);
             }
+        }
+
+        private static void TabControl_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            var tc = (TabControl)sender;
+            if (e.Index < 0 || e.Index >= tc.TabPages.Count)
+            {
+                return;
+            }
+
+            TabPage page = tc.TabPages[e.Index];
+            bool selected = (e.Index == tc.SelectedIndex);
+            Rectangle r = tc.GetTabRect(e.Index);
+
+            using (var brush = new SolidBrush(selected ? Surface1 : Mantle))
+            {
+                e.Graphics.FillRectangle(brush, r);
+            }
+
+            Image img = null;
+            if (tc.ImageList != null)
+            {
+                if (!string.IsNullOrEmpty(page.ImageKey) && tc.ImageList.Images.ContainsKey(page.ImageKey))
+                {
+                    img = tc.ImageList.Images[page.ImageKey];
+                }
+                else if (page.ImageIndex >= 0 && page.ImageIndex < tc.ImageList.Images.Count)
+                {
+                    img = tc.ImageList.Images[page.ImageIndex];
+                }
+            }
+
+            Rectangle textRect = r;
+            if (img != null)
+            {
+                int iconY = r.Y + (r.Height - img.Height) / 2;
+                e.Graphics.DrawImage(img, r.X + 4, iconY);
+                textRect = new Rectangle(r.X + 4 + img.Width, r.Y, r.Width - img.Width - 8, r.Height);
+            }
+
+            TextRenderer.DrawText(e.Graphics, page.Text, tc.Font, textRect,
+                selected ? Text : Subtext0,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
         }
 
         private static void ApplyToContextMenu(ContextMenuStrip cms)
