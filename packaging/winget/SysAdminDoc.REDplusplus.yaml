@@ -1,5 +1,5 @@
 PackageIdentifier: SysAdminDoc.REDplusplus
-PackageVersion: 1.4.0
+PackageVersion: 1.5.0
 PackageName: RED++
 Publisher: SysAdminDoc
 License: LGPL-3.0-or-later
@@ -10,7 +10,7 @@ Commands:
   - RED+
 Installers:
   - Architecture: x86
-    InstallerUrl: https://github.com/SysAdminDoc/REDplusplus/releases/download/v1.4.0/RED++_v1.4.0.zip
+    InstallerUrl: https://github.com/SysAdminDoc/REDplusplus/releases/download/v1.5.0/RED++_v1.5.0.zip
     InstallerSha256:
     NestedInstallerType: portable
     NestedInstallerFiles:
