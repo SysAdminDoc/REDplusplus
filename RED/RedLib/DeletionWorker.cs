@@ -45,6 +45,7 @@ namespace RED
 			bool stopNow = false;
 			string errorMessage = string.Empty;
 			this.ErrorInfo = null;
+			var deletedParents = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 			while (this.ListPos < this.Data.ScanResults.Count)
 			{
@@ -57,8 +58,23 @@ namespace RED
 				DirectoryDeletionStatusTypes status = DirectoryDeletionStatusTypes.Ignored;
 				Match.RedScanResultItem scanResult = this.Data.ScanResults[this.ListPos];
 
+				bool alreadyDeletedByParent = false;
+				foreach (string parentPath in deletedParents)
+				{
+					if (scanResult.FullPath.StartsWith(parentPath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+					{
+						alreadyDeletedByParent = true;
+						break;
+					}
+				}
+
+				if (alreadyDeletedByParent)
+				{
+					status = DirectoryDeletionStatusTypes.Deleted;
+					this.DeletedCount++;
+				}
 				// Do not delete one time protected folders
-				if (!this.Data.ProtectedFolderList.ContainsKey(scanResult.FullPath))
+				else if (!this.Data.ProtectedFolderList.ContainsKey(scanResult.FullPath))
 				{
 					try
 					{
@@ -67,6 +83,7 @@ namespace RED
 						this.Data.AddLogMessage(TXT.Translate("Successfully deleted directory: {0}", RedAssist.DQuote(scanResult.FullPath)));
 						status = DirectoryDeletionStatusTypes.Deleted;
 						this.DeletedCount++;
+						deletedParents.Add(scanResult.FullPath);
 					}
 					catch (REDPermissionDeniedException ex)
 					{
