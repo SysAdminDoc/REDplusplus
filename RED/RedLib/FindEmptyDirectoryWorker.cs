@@ -31,12 +31,23 @@ namespace RED
 			WorkerSupportsCancellation = true;
 		}
 
+		private GitIgnoreParser gitIgnoreParser;
+
 		protected override void OnDoWork(DoWorkEventArgs e)
 		{
 			DirectoryInfo startFolder = (DirectoryInfo)e.Argument;
 
 			this.PossibleEndlessLoop = 0;
 			this.RunData.ScanResults.Clear();
+
+			if (this.RunData.RespectGitIgnore)
+			{
+				gitIgnoreParser = GitIgnoreParser.LoadFromAncestors(startFolder.FullName);
+			}
+			else
+			{
+				gitIgnoreParser = null;
+			}
 
 			try
 			{
@@ -233,6 +244,20 @@ namespace RED
 						if (!this.RunData.HideIgnoredDirectories)
 						{
 							this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(curDir, DirectorySearchStatusTypes.Ignore));
+						}
+					}
+
+					if (!ignoreSubDirectory && gitIgnoreParser != null && gitIgnoreParser.HasRules)
+					{
+						string relativePath = curDir.FullName.Substring(this.RunData.StartFolder.FullName.Length);
+						if (gitIgnoreParser.IsIgnored(curDir.Name, relativePath))
+						{
+							this.RunData.AddLogMessage(TXT.Translate("Aborted scan of {0} because it is on the ignore list", RedAssist.DQuote(curDir.FullName)));
+							ignoreSubDirectory = true;
+							if (!this.RunData.HideIgnoredDirectories)
+							{
+								this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(curDir, DirectorySearchStatusTypes.Ignore));
+							}
 						}
 					}
 

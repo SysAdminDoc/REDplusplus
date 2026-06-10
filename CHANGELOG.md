@@ -25,6 +25,11 @@
 - Custom ToolStrip/ContextMenu renderer, UCMenuButton arrow glyph, DataGridView cell styles
 - Fast-mode TreeView background uses Catppuccin Surface0/Mantle
 
+### Features (continued)
+- Add .gitignore-aware scan filter — when enabled, directories matching .gitignore patterns are skipped during scan (first GUI empty-dir tool with this capability)
+- New GitIgnoreParser loads rules from ancestor .gitignore files up to the .git root
+- New RespectGitIgnore config option (default off, persisted in RED++.cfg)
+
 ### Safety
 - Write JSON undo manifest (RED++.undo.json) after each deletion run recording paths, mode, and move targets
 
