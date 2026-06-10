@@ -88,6 +88,9 @@ namespace RED
 				return 1;
 			}
 
+			// Never show dialogs in headless mode — a modal prompt would hang Task Scheduler
+			ConfigAssist.SilentMode = true;
+
 			RedConfiguration config = null;
 			ConfigAssist.ConfigLoad(ref config, "RemoveEmptyDirectories");
 
@@ -114,6 +117,7 @@ namespace RED
 
 			var core = new REDCore(runData);
 			var scanDone = new ManualResetEvent(false);
+			var deleteDone = new ManualResetEvent(false);
 			int emptyCount = 0;
 			int failed = 0;
 			bool hadErrors = false;
@@ -123,18 +127,26 @@ namespace RED
 				emptyCount = e.EmptyFolderCount;
 				scanDone.Set();
 			};
-			core.OnCancelled += (s, e) => scanDone.Set();
-			core.OnAborted += (s, e) => { hadErrors = true; scanDone.Set(); };
-			core.OnError += (s, e) => { hadErrors = true; logMsg("Error: " + e.Message); scanDone.Set(); };
+			core.OnCancelled += (s, e) => { scanDone.Set(); deleteDone.Set(); };
+			core.OnAborted += (s, e) => { hadErrors = true; scanDone.Set(); deleteDone.Set(); };
+			// An unexpected worker error can fire during either phase —
+			// release both waits or the process would hang forever
+			core.OnError += (s, e) => { hadErrors = true; logMsg("Error: " + e.Message); scanDone.Set(); deleteDone.Set(); };
 
 			core.SearchingForEmptyDirectories();
 			scanDone.WaitOne();
 
 			logMsg(string.Format("Found {0} empty directories", emptyCount));
 
-			if (emptyCount > 0)
+			// Honor the same default as the GUI: protect the start folder itself
+			// so a fully-empty target tree is cleaned out but not removed
+			if (config.Options.AutoProtectRoot)
 			{
-				var deleteDone = new ManualResetEvent(false);
+				core.AddProtectedFolder(startDir.FullName);
+			}
+
+			if (emptyCount > 0 && !hadErrors)
+			{
 				int deleted = 0;
 
 				core.OnDeleteProcessFinished += (s, e) =>
@@ -143,8 +155,7 @@ namespace RED
 					failed = e.FailedFolderCount;
 					deleteDone.Set();
 				};
-				core.OnDeleteError += (s, e) => deleteDone.Set();
-				core.OnCancelled += (s, e) => deleteDone.Set();
+				core.OnDeleteError += (s, e) => { hadErrors = true; deleteDone.Set(); };
 
 				core.StartDeleteProcess();
 				deleteDone.WaitOne();
