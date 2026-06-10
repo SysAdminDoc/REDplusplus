@@ -125,8 +125,10 @@ namespace RED.UI
             }
 
             AddRestoreMenuItem();
+            AddThemeMenu();
 
             SetAccessibleNames();
+            DarkTheme.SetMode((ThemeMode)RedConfig.UI.ThemeMode);
             DarkTheme.Apply(this);
         }
 
@@ -143,6 +145,43 @@ namespace RED.UI
             cmMenuExtras.Items.Insert(0, mnuItemRestore);
             cmMenuExtras.Items.Insert(1, new ToolStripSeparator());
             cmMenuExtras.Opening += (s, e) => mnuItemRestore.Enabled = UndoManager.HasManifest;
+        }
+
+        /// <summary>
+        /// Theme submenu (Dark / Light / System) in the Extras menu. Switching
+        /// re-themes every open form live and persists the choice.
+        /// </summary>
+        private void AddThemeMenu()
+        {
+            var themeRoot = new ToolStripMenuItem(TXT.Translate("&Theme"));
+            var dark = new ToolStripMenuItem(TXT.Translate("Dark")) { Tag = ThemeMode.Dark };
+            var light = new ToolStripMenuItem(TXT.Translate("Light")) { Tag = ThemeMode.Light };
+            var system = new ToolStripMenuItem(TXT.Translate("System")) { Tag = ThemeMode.System };
+
+            EventHandler pick = (s, e) =>
+            {
+                var picked = (ThemeMode)((ToolStripMenuItem)s).Tag;
+                RedConfig.UI.ThemeMode = (int)picked;
+                DarkTheme.SetMode(picked);
+                foreach (Form f in Application.OpenForms)
+                {
+                    DarkTheme.Apply(f);
+                }
+                dark.Checked = picked == ThemeMode.Dark;
+                light.Checked = picked == ThemeMode.Light;
+                system.Checked = picked == ThemeMode.System;
+            };
+            dark.Click += pick; light.Click += pick; system.Click += pick;
+
+            var current = (ThemeMode)RedConfig.UI.ThemeMode;
+            dark.Checked = current == ThemeMode.Dark;
+            light.Checked = current == ThemeMode.Light;
+            system.Checked = current == ThemeMode.System;
+
+            themeRoot.DropDownItems.Add(dark);
+            themeRoot.DropDownItems.Add(light);
+            themeRoot.DropDownItems.Add(system);
+            cmMenuExtras.Items.Insert(2, themeRoot);
         }
 
         private void mnuItemRestoreLastDeletion_Click(object sender, EventArgs e)
