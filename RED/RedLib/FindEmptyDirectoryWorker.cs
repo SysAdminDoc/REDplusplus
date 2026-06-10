@@ -41,6 +41,16 @@ namespace RED
 
 			try
 			{
+				if ((startFolder.Attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
+				{
+					string emsg = TXT.Translate("The start folder is a reparse point (junction, symlink, or mount point) and cannot be scanned: {0}", RedAssist.DQuote(startFolder.FullName));
+					this.RunData.AddLogMessage(emsg);
+					this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startFolder, DirectorySearchStatusTypes.Error, emsg));
+					e.Cancel = true;
+					this.ErrorInfo = new DeletionErrorEventArgs(startFolder.FullName, emsg);
+					return;
+				}
+
 				DirectorySearchStatusTypes rootStatusType = this.CheckIfDirectoryEmpty(startFolder, 1);
 
 				this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startFolder, rootStatusType));
@@ -150,16 +160,26 @@ namespace RED
 						for (int f = 0; (f < fileList.Length && !containsFiles); f++)
 						{
 							FileInfo file = null;
-							int filesize = 0;
+							long filesize = 0;
 
 							try
 							{
 								file = fileList[f];
-								filesize = (int)file.Length;
+								filesize = file.Length;
 							}
 							catch
 							{
 								// keep folder if there is a strange file that triggers an exception:
+								containsFiles = true;
+								break;
+							}
+
+							// Cloud-only placeholder files (OneDrive, iCloud) are real content
+							const int FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS = 0x00400000;
+							const int FILE_ATTRIBUTE_RECALL_ON_OPEN = 0x00040000;
+							int rawAttribs = (int)file.Attributes;
+							if ((rawAttribs & FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS) != 0 || (rawAttribs & FILE_ATTRIBUTE_RECALL_ON_OPEN) != 0)
+							{
 								containsFiles = true;
 								break;
 							}
@@ -245,8 +265,7 @@ namespace RED
 						}
 						else
 						{
-							string fmt = string.Format(TXT.Translate("Directory {0} skipped because creation time [{1}] is < {2} hours old"));
-							this.RunData.AddLogMessage(string.Format(fmt, RedAssist.DQuote(curDir.FullName), curDir.CreationTime.ToString(), this.RunData.MinFolderAgeHours.ToString()));
+							this.RunData.AddLogMessage(TXT.Translate("Directory {0} skipped because creation time [{1}] is < {2} hours old", RedAssist.DQuote(curDir.FullName), curDir.CreationTime.ToString(), this.RunData.MinFolderAgeHours.ToString()));
 						}
 
 						// Report status to the GUI
