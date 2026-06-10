@@ -22,7 +22,8 @@ namespace RED
 				DeleteModes.RecycleBinShowErrors,
 				DeleteModes.RecycleBinWithQuestion,
 				DeleteModes.Direct,
-				DeleteModes.Simulate
+				DeleteModes.Simulate,
+				DeleteModes.MoveToFolder
 			};
 		}
 
@@ -45,7 +46,8 @@ namespace RED
 				case DeleteModes.Simulate:
 					return TXT.Translate("Simulate Deletion (Just pretend to delete, for testing)");
 
-				// TODO: Idea -> Move files instead of deleting?
+				case DeleteModes.MoveToFolder:
+					return TXT.Translate("Move to specified folder (preserves directories for review)");
 
 				default:
 					throw new Exception(TXT.Translate("Unknown delete mode"));
