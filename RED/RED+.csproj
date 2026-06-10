@@ -112,6 +112,7 @@
     <Compile Include="RedLib\SystemFunctions.cs" />
     <Compile Include="RedLib\UndoManager.cs" />
     <Compile Include="RedLib\RecycleBinOperation.cs" />
+    <Compile Include="RedLib\RedKeepMarker.cs" />
     <Compile Include="RedLib\TreeManager.cs" />
     <Compile Include="RedLib\DeleteModeItem.cs" />
     <Compile Include="NotBob\NBExtensions.cs" />

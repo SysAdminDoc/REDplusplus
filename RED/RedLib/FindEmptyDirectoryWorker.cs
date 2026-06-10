@@ -153,6 +153,20 @@ namespace RED
 
 				bool containsFiles = false;
 
+				// A .redkeep marker file protects its directory (and everything below
+				// it) from deletion — it travels with the folder across copies and
+				// shares, unlike the per-config filter lists.
+				if (RedKeepMarker.HasMarker(startDir))
+				{
+					string msg = TXT.Translate("Directory is protected by a {0} marker file: {1}", RedKeepMarker.MarkerFileName, RedAssist.DQuote(startDir.FullName));
+					this.RunData.AddLogMessage(msg);
+					if (!this.RunData.HideIgnoredDirectories)
+					{
+						this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startDir, DirectorySearchStatusTypes.NeverEmpty, msg));
+					}
+					return DirectorySearchStatusTypes.NotEmpty;
+				}
+
 				// NotBob - If this directory is on the NeverEmpty list treat it as if it contains files
 				if (this.RunData.NeverEmptyDirectoryList.IsOnList(startDir))
 				{

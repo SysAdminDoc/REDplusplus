@@ -489,6 +489,15 @@ namespace RED
             if (fullPath != null)
             {
                 var dirInfo = new DirectoryInfo(fullPath);
+                if (RedKeepMarker.HasMarker(dirInfo))
+                {
+                    if (!runData.HideIgnoredDirectories && worker != null)
+                    {
+                        worker.ReportProgress(0, new FoundEmptyDirInfoEventArgs(dirInfo, DirectorySearchStatusTypes.NeverEmpty,
+                            TXT.Translate("Directory is protected by a {0} marker file: {1}", RedKeepMarker.MarkerFileName, RedAssist.DQuote(fullPath))));
+                    }
+                    return false;
+                }
                 if (runData.NeverEmptyDirectoryList.IsOnList(dirInfo))
                 {
                     if (!runData.HideIgnoredDirectories && worker != null)

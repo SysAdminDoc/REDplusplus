@@ -19,7 +19,9 @@ RED++ finds, displays, and deletes empty directories recursively below a given s
 - Can detect directories with empty files as empty
 - Detects OneDrive/cloud-only placeholder files as real content
 - Handle-based reparse-point safety (junctions, symlinks, mount points)
-- Opt-in MFT turbo scan for whole-NTFS-volume scans in seconds (admin required)
+- One-click restore of the last deletion (GUI button or `-undo`)
+- `.redkeep` marker file protects a folder (and its subtree) anywhere it travels
+- Opt-in MFT turbo scan for whole-volume scans in seconds — NTFS and ReFS/Dev Drive (admin required)
 - Fully portable (local config file, no %APPDATA% required)
 - Extended directory and file name matching with sophisticated filter syntax
 - Dedicated grid for display and editing of filter rules
