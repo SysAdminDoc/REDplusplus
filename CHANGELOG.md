@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0 (2026-06-10)
+
+### Bug Fixes
+- Fix headless CLI exit code — was always 0; now returns 1 on scan/delete errors
+- Correct OS requirement to Windows 10 20H2+ (4.8.1 does not support Windows 7/8.1)
+
 ## 1.2.0 (2026-06-10)
 
 ### Removed Dependencies
