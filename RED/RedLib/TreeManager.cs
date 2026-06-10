@@ -80,17 +80,19 @@ namespace RED
 			}
 		}
 
-		public void OnSearchStart(DirectoryInfo directory)
+		public void OnSearchStart(DirectoryInfo directory, bool multiRoot = false)
 		{
-			this.resetTree();
+			if (!multiRoot || this.rootNode == null)
+			{
+				this.resetTree();
+			}
 
-			// Disable UI updates when fast mode is enabled
 			if (this.fastMode)
 			{
 				suspendTreeViewForFastMode();
 			}
 
-			this.createRootNode(directory, DirectoryIcons.home);
+			this.createRootNode(directory, DirectoryIcons.home, multiRoot);
 		}
 
 		public void OnSearchFinished()
@@ -167,7 +169,7 @@ namespace RED
 			this.treeView.Nodes.Clear();
 		}
 
-		private void createRootNode(DirectoryInfo directory, DirectoryIcons imageKey)
+		private void createRootNode(DirectoryInfo directory, DirectoryIcons imageKey, bool append = false)
 		{
 			this.rootPath = directory.FullName.Trim(Path.DirectorySeparatorChar);
 
@@ -176,24 +178,25 @@ namespace RED
 			rootNode.ImageKey = imageKey.ToString();
 			rootNode.SelectedImageKey = imageKey.ToString();
 
-			directoryToTreeNodeMapping = new Dictionary<String, TreeNode>();
-			directoryToTreeNodeMapping.Add(directory.FullName, rootNode);
+			if (!append)
+			{
+				directoryToTreeNodeMapping = new Dictionary<String, TreeNode>();
+			}
+			directoryToTreeNodeMapping[directory.FullName] = rootNode;
 
 			if (!this.fastMode)
 			{
-				// During fast mode the root node will be added after the search finished
 				addRootNode();
 			}
 		}
 
 		private void addRootNode()
 		{
-			if (rootNode == null || (treeView.Nodes.Count == 1 && treeView.Nodes[0] == rootNode))
+			if (rootNode == null || treeView.Nodes.Contains(rootNode))
 			{
 				return;
 			}
 
-			this.treeView.Nodes.Clear();
 			this.treeView.Nodes.Add(rootNode);
 		}
 

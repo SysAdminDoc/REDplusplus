@@ -25,6 +25,7 @@ namespace RED.UI
         private RedConfiguration RedConfig = null;
         private readonly Stopwatch RuntimeWatch = new Stopwatch();
         private bool AutoSearchOnStart = false;
+        private readonly Queue<string> pendingScanPaths = new Queue<string>();
 
         #region Init methods
 
@@ -345,7 +346,7 @@ namespace RED.UI
             RunData.StartFolder = selectedDirectory;
             UpdateRuntimeDataObject();
 
-            TreeMgr.OnSearchStart(RunData.StartFolder);
+            TreeMgr.OnSearchStart(RunData.StartFolder, pendingScanPaths.Count > 0);
 
             RunData.AddLogSpacer();
             SetStatusAndLogMessage(TXT.Translate("Searching For Empty Directories..."));
@@ -405,6 +406,13 @@ namespace RED.UI
             btnDelete.Enabled = (e.EmptyFolderCount > 0);
 
             TreeMgr.OnSearchFinished();
+
+            if (pendingScanPaths.Count > 0)
+            {
+                string nextPath = pendingScanPaths.Dequeue();
+                txtSearchDirectory.Text = nextPath;
+                btnSearch.PerformClick();
+            }
         }
 
         #endregion Step 1: Scan for empty directories
@@ -808,16 +816,21 @@ namespace RED.UI
         /// </summary>
         private void MainWindow_DragDrop(object sender, DragEventArgs e)
         {
-            string[] s = (string[])e.Data.GetData(DataFormats.FileDrop, false);
-            string dirname = s.Length == 1 ? s[0].Trim() : null;
-            if (!string.IsNullOrWhiteSpace(dirname) && Directory.Exists(dirname))
+            string[] paths = (string[])e.Data.GetData(DataFormats.FileDrop, false);
+            var validPaths = new List<string>();
+            foreach (string p in paths)
             {
-                txtSearchDirectory.Text = dirname;
+                string trimmed = p.Trim();
+                if (!string.IsNullOrWhiteSpace(trimmed) && Directory.Exists(trimmed))
+                    validPaths.Add(trimmed);
             }
-            else
-            {
-                UiAssist.MsgBoxError(this, TXT.Translate("Only one directory can be accepted"));
-            }
+
+            if (validPaths.Count == 0) return;
+
+            txtSearchDirectory.Text = validPaths[0];
+            pendingScanPaths.Clear();
+            for (int i = 1; i < validPaths.Count; i++)
+                pendingScanPaths.Enqueue(validPaths[i]);
         }
 
         /// <summary>
