@@ -107,6 +107,20 @@ namespace SecondLanguage
 				throw new IOException("Unsupported revision number " + revision.ToString() + ".");
 			}
 
+			// Validate the offset tables against the actual file size before looping.
+			// A crafted .mo dropped next to the portable exe could otherwise declare a
+			// huge stringCount (pathological loop) or out-of-range table offsets; both
+			// must fail fast so the loader falls back to untranslated English.
+			long fileLen = _buffer.LongLength;
+			long idTableEnd = (long)_offsetOfMsgidTable + (long)stringCount * 8;
+			long strTableEnd = (long)_offsetOfMsgstrTable + (long)stringCount * 8;
+			if (stringCount > (fileLen / 8) ||
+				_offsetOfMsgidTable > fileLen || idTableEnd > fileLen ||
+				_offsetOfMsgstrTable > fileLen || strTableEnd > fileLen)
+			{
+				throw new IOException("Corrupt .mo file: string table out of range.");
+			}
+
 			for (uint i = 0; i < stringCount; i++)
 			{
 				string msgid, msgstr;
@@ -230,10 +244,18 @@ namespace SecondLanguage
 		private string ExtractString(uint offsetOfTable, uint i)
 		{
 			int offsetOfEntry = checked((int)(offsetOfTable + i * 8));
-			int offsetOfString = (int)ParseUInt32(offsetOfEntry + 4);
-			int lengthOfString = (int)ParseUInt32(offsetOfEntry + 0);
-			string str = Encoding.GetString(_buffer, offsetOfString, lengthOfString);
-			return str;
+			long offsetOfString = ParseUInt32(offsetOfEntry + 4);
+			long lengthOfString = ParseUInt32(offsetOfEntry + 0);
+
+			// Bounds-check the (offset, length) pair from the untrusted table against
+			// the buffer so a crafted entry cannot read out of range
+			if (offsetOfString < 0 || lengthOfString < 0 ||
+				offsetOfString + lengthOfString > _buffer.LongLength)
+			{
+				throw new IOException("Corrupt .mo file: string entry out of range.");
+			}
+
+			return Encoding.GetString(_buffer, (int)offsetOfString, (int)lengthOfString);
 		}
 
 		private uint ParseUInt32(int offset)

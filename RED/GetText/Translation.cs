@@ -88,9 +88,23 @@ namespace SecondLanguage
 			AboutToChange();
 			Throw.If.Null(stream, "stream");
 
+			// A translation catalog beside a portable exe is attacker-influenceable;
+			// cap the size so a multi-GB file cannot exhaust memory before parsing.
+			const long MaxCatalogBytes = 32 * 1024 * 1024;
+			if (stream.Length > MaxCatalogBytes)
+			{
+				throw new IOException("Translation catalog is too large.");
+			}
+
 			byte[] buffer = new byte[stream.Length];
 			stream.Seek(0, SeekOrigin.Begin);
-			stream.Read(buffer, 0, buffer.Length);
+			int read = 0;
+			while (read < buffer.Length)
+			{
+				int n = stream.Read(buffer, read, buffer.Length - read);
+				if (n == 0) { break; }
+				read += n;
+			}
 			Load(buffer);
 		}
 
