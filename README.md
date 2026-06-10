@@ -81,6 +81,16 @@ Works with UNC paths directly — no mapped drive needed:
 RED+.exe -silent -path "\\server\share\folder" -log "cleanup.log"
 ```
 
+### Undo
+
+Every deletion run writes an undo manifest (`RED++.undo.json`). Restore the last run's directories with one click (Extras menu → Restore Last Deletion) or headlessly:
+
+```
+RED+.exe -undo [-log "restore.log"]
+```
+
+Deleted directories were empty, so recreating them is a complete restore; Move-to-folder deletions are moved back to their original location.
+
 ### Post-Migration Cleanup
 
 After a `robocopy /MIR` or file-server migration, clean up leftover empty directories:

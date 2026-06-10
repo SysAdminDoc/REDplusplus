@@ -23,6 +23,7 @@ namespace RED
 			string silentPath = null;
 			string logFile = null;
 			bool isSilent = false;
+			bool isUndo = false;
 
 			for (int i = 1; i < args.Length; i++)
 			{
@@ -30,6 +31,10 @@ namespace RED
 				if (arg == "-silent" || arg == "--silent")
 				{
 					isSilent = true;
+				}
+				else if (arg == "-undo" || arg == "--undo")
+				{
+					isUndo = true;
 				}
 				else if ((arg == "-path" || arg == "--path") && i + 1 < args.Length)
 				{
@@ -39,6 +44,12 @@ namespace RED
 				{
 					logFile = args[++i];
 				}
+			}
+
+			if (isUndo)
+			{
+				Environment.ExitCode = RunUndo(logFile);
+				return;
 			}
 
 			if (isSilent && !string.IsNullOrWhiteSpace(silentPath))
@@ -67,6 +78,28 @@ namespace RED
 				singleInstanceMutex.ReleaseMutex();
 				singleInstanceMutex.Dispose();
 			}
+		}
+
+		/// <summary>
+		/// Headless restore of the last deletion run from RED++.undo.json.
+		/// Exit 0 = everything restored, 1 = nothing to restore or failures.
+		/// </summary>
+		private static int RunUndo(string logFile)
+		{
+			var log = new StringBuilder();
+			Action<string> logMsg = (msg) =>
+			{
+				msg = RED.Helper.RedAssist.SanitizeDisplay(msg);
+				log.AppendLine(DateTime.Now.ToString("r") + "\t" + msg);
+				Console.WriteLine(msg);
+			};
+
+			int restored, failed;
+			bool ok = UndoManager.Restore(out restored, out failed, logMsg);
+			logMsg(string.Format("Restored: {0}, Failed: {1}", restored, failed));
+
+			WriteLogFile(logFile, log);
+			return ok ? 0 : 1;
 		}
 
 		private static int RunHeadless(string targetPath, string logFile)

@@ -67,6 +67,7 @@
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Transactions" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -110,6 +111,7 @@
     <Compile Include="RedLib\FastDirectoryEnumerator.cs" />
     <Compile Include="RedLib\MftScanner.cs" />
     <Compile Include="RedLib\SystemFunctions.cs" />
+    <Compile Include="RedLib\UndoManager.cs" />
     <Compile Include="RedLib\TreeManager.cs" />
     <Compile Include="RedLib\DeleteModeItem.cs" />
     <Compile Include="NotBob\NBExtensions.cs" />

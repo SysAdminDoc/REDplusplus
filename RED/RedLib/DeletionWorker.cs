@@ -89,13 +89,23 @@ namespace RED
 				{
 					status = DirectoryDeletionStatusTypes.Deleted;
 					this.DeletedCount++;
+					// Children removed by a parent's recursive delete need their own
+					// undo entry or a restore would recreate only the subtree root.
+					// (Move mode: the parent's move-back restores them; the recreate
+					// is then a no-op on the already-existing directory.)
+					undoEntries.Add(new UndoManifestEntry
+					{
+						Path = scanResult.FullPath,
+						Mode = this.Data.DeleteMode.ToString(),
+						MovedTo = null
+					});
 				}
 				// Do not delete one time protected folders
 				else if (!this.Data.ProtectedFolderList.ContainsKey(scanResult.FullPath))
 				{
 					try
 					{
-						this.secureDelete(scanResult.Directory);
+						string movedTo = this.secureDelete(scanResult.Directory);
 						this.Data.AddLogMessage(TXT.Translate("Successfully deleted directory: {0}", RedAssist.DQuote(scanResult.FullPath)));
 						status = DirectoryDeletionStatusTypes.Deleted;
 						this.DeletedCount++;
@@ -104,7 +114,7 @@ namespace RED
 						{
 							Path = scanResult.FullPath,
 							Mode = this.Data.DeleteMode.ToString(),
-							MovedTo = (this.Data.DeleteMode == DeleteModes.MoveToFolder) ? SystemFunctions.MoveToFolderTarget : null
+							MovedTo = movedTo
 						});
 					}
 					catch (REDPermissionDeniedException ex)
@@ -195,7 +205,8 @@ namespace RED
 			return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 		}
 
-		private void secureDelete(DirectoryInfo emptyDirectory)
+		/// <returns>The actual MoveToFolder destination, null for other modes.</returns>
+		private string secureDelete(DirectoryInfo emptyDirectory)
 		{
 			//var emptyDirectory = new DirectoryInfo(path);
 
@@ -249,7 +260,9 @@ namespace RED
 			// End cleanup
 
 			// This function will ensure that the directory is really empty before it gets deleted
-			SystemFunctions.SecureDeleteDirectory(emptyDirectory.FullName, this.Data.DeleteMode);
+			string movedTo;
+			SystemFunctions.SecureDeleteDirectory(emptyDirectory.FullName, this.Data.DeleteMode, out movedTo);
+			return movedTo;
 		}
 	}
 
