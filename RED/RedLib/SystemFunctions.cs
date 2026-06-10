@@ -306,6 +306,19 @@ namespace RED
 
         public static void SecureDeleteDirectory(string path, DeleteModes deleteMode)
         {
+            string ignored;
+            SecureDeleteDirectory(path, deleteMode, out ignored);
+        }
+
+        /// <param name="movedToDestination">
+        /// The actual destination directory for MoveToFolder mode (may carry a _N
+        /// collision suffix), null for every other mode. Recorded in the undo
+        /// manifest so a restore can move the directory back.
+        /// </param>
+        public static void SecureDeleteDirectory(string path, DeleteModes deleteMode, out string movedToDestination)
+        {
+            movedToDestination = null;
+
             if (deleteMode == DeleteModes.Simulate)
             {
                 return;
@@ -363,6 +376,7 @@ namespace RED
                     CopyDirectoryRecursive(path, destPath);
                     Directory.Delete(path, true);
                 }
+                movedToDestination = destPath;
                 return;
             }
 
