@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
 using System.Windows.Forms;
@@ -40,6 +41,124 @@ namespace RED
     public class SystemFunctions
     {
         public static string MoveToFolderTarget { get; set; }
+
+        #region Handle-based reparse safety (CVE-2022-21658 mitigation)
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern IntPtr CreateFileW(
+            string lpFileName, uint dwDesiredAccess, uint dwShareMode,
+            IntPtr lpSecurityAttributes, uint dwCreationDisposition,
+            uint dwFlagsAndAttributes, IntPtr hTemplateFile);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetFileInformationByHandle(IntPtr hFile, out BY_HANDLE_FILE_INFORMATION info);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool SetFileInformationByHandle(IntPtr hFile, int fileInformationClass, ref FILE_DISPOSITION_INFO info, uint dwBufferSize);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool CloseHandle(IntPtr hObject);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct BY_HANDLE_FILE_INFORMATION
+        {
+            public uint dwFileAttributes;
+            public long ftCreationTime;
+            public long ftLastAccessTime;
+            public long ftLastWriteTime;
+            public uint dwVolumeSerialNumber;
+            public uint nFileSizeHigh;
+            public uint nFileSizeLow;
+            public uint nNumberOfLinks;
+            public uint nFileIndexHigh;
+            public uint nFileIndexLow;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct FILE_DISPOSITION_INFO
+        {
+            [MarshalAs(UnmanagedType.Bool)]
+            public bool DeleteFile;
+        }
+
+        private static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
+        private const uint FILE_READ_ATTRIBUTES = 0x0080;
+        private const uint DELETE = 0x00010000;
+        private const uint FILE_SHARE_READ = 0x00000001;
+        private const uint FILE_SHARE_WRITE = 0x00000002;
+        private const uint FILE_SHARE_DELETE = 0x00000004;
+        private const uint OPEN_EXISTING = 3;
+        private const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
+        private const uint FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000;
+        private const uint FILE_ATTRIBUTE_REPARSE_POINT = 0x00000400;
+        private const int FileDispositionInfo = 4;
+
+        private static void VerifyNotReparsePoint(string path)
+        {
+            IntPtr hDir = CreateFileW(path, FILE_READ_ATTRIBUTES,
+                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                IntPtr.Zero, OPEN_EXISTING,
+                FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+                IntPtr.Zero);
+
+            if (hDir == INVALID_HANDLE_VALUE)
+            {
+                int err = Marshal.GetLastWin32Error();
+                throw new IOException(TXT.Translate("Cannot open directory for verification (error {0}): {1}", err, RedAssist.DQuote(path)));
+            }
+
+            try
+            {
+                BY_HANDLE_FILE_INFORMATION info;
+                if (!GetFileInformationByHandle(hDir, out info))
+                    throw new IOException(TXT.Translate("Cannot read directory attributes: {0}", RedAssist.DQuote(path)));
+
+                if ((info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0)
+                    throw new REDPermissionDeniedException(TXT.Translate("Refused to delete directory because it is a reparse point (junction, symlink, or mount point): {0}", RedAssist.DQuote(path)));
+            }
+            finally
+            {
+                CloseHandle(hDir);
+            }
+        }
+
+        private static void DirectDeleteByHandle(string path)
+        {
+            IntPtr hDir = CreateFileW(path, DELETE | FILE_READ_ATTRIBUTES,
+                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                IntPtr.Zero, OPEN_EXISTING,
+                FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+                IntPtr.Zero);
+
+            if (hDir == INVALID_HANDLE_VALUE)
+            {
+                int err = Marshal.GetLastWin32Error();
+                throw new IOException(TXT.Translate("Cannot open directory for deletion (error {0}): {1}", err, RedAssist.DQuote(path)));
+            }
+
+            try
+            {
+                BY_HANDLE_FILE_INFORMATION info;
+                if (!GetFileInformationByHandle(hDir, out info))
+                    throw new IOException(TXT.Translate("Cannot read directory attributes: {0}", RedAssist.DQuote(path)));
+
+                if ((info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0)
+                    throw new REDPermissionDeniedException(TXT.Translate("Refused to delete directory because it is a reparse point (junction, symlink, or mount point): {0}", RedAssist.DQuote(path)));
+
+                var disposition = new FILE_DISPOSITION_INFO { DeleteFile = true };
+                if (!SetFileInformationByHandle(hDir, FileDispositionInfo, ref disposition, (uint)Marshal.SizeOf(disposition)))
+                {
+                    int err = Marshal.GetLastWin32Error();
+                    throw new IOException(TXT.Translate("Failed to delete directory by handle (error {0}): {1}", err, RedAssist.DQuote(path)));
+                }
+            }
+            finally
+            {
+                CloseHandle(hDir);
+            }
+        }
+
+        #endregion Handle-based reparse safety
 
         public static void ManuallyDeleteDirectory(string path, DeleteModes deleteMode)
         {
@@ -112,18 +231,15 @@ namespace RED
                 return;
             }
 
-            var dirInfo = new DirectoryInfo(path);
-            if ((dirInfo.Attributes & System.IO.FileAttributes.ReparsePoint) == System.IO.FileAttributes.ReparsePoint)
-            {
-                throw new REDPermissionDeniedException(TXT.Translate("Refused to delete directory because it is a reparse point (junction, symlink, or mount point): {0}", RedAssist.DQuote(path)));
-            }
+            // Handle-based atomic reparse check (CVE-2022-21658 mitigation)
+            VerifyNotReparsePoint(path);
 
             if (deleteMode == DeleteModes.Direct)
             {
                 var di = new DirectoryInfo(path);
                 if (di.Attributes.HasFlag(FileAttributes.ReadOnly))
                     di.Attributes &= ~FileAttributes.ReadOnly;
-                di.Delete(false);
+                DirectDeleteByHandle(path);
                 return;
             }
 
@@ -131,7 +247,7 @@ namespace RED
             {
                 if (string.IsNullOrWhiteSpace(MoveToFolderTarget))
                     throw new Exception(TXT.Translate("Move-to-folder target has not been set"));
-                string relativePath = dirInfo.Name;
+                string relativePath = new DirectoryInfo(path).Name;
                 string destPath = Path.Combine(MoveToFolderTarget, relativePath);
                 int counter = 1;
                 while (Directory.Exists(destPath))
@@ -142,7 +258,7 @@ namespace RED
                 return;
             }
 
-            // Last security check before deletion
+            // Last security check before recycle-bin deletion
             if (Directory.GetFiles(path).Length == 0 && Directory.GetDirectories(path).Length == 0)
             {
                 if (deleteMode == DeleteModes.RecycleBin || deleteMode == DeleteModes.RecycleBinShowErrors)
