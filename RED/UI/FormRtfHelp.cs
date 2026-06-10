@@ -28,9 +28,8 @@ namespace RED.UI
 		private void FormRedMatchHelp_Load(object sender, EventArgs e)
 		{
 			this.Icon = Properties.Resources.iconProject;
-			// Ensure the Cancel button is 'off screen'
-			// Allows use of in-built ESC = Cancel to close the form without any special handlers
 			this.btnHelp1Cancel.Left = this.btnHelp1Cancel.Width * -2;
+			DarkTheme.Apply(this);
 		}
 
 		private void FormRtfHelp_Shown(object sender, EventArgs e)

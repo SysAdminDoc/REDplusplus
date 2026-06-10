@@ -43,15 +43,16 @@ namespace RED.UI
 				int arrowX = ClientRectangle.Width - 14;
 				int arrowY = ClientRectangle.Height / 2 - 1;
 
-				Brush arrowBrush = Enabled ? SystemBrushes.ControlText : SystemBrushes.ButtonShadow;
-				Point[] arrows = new[] { new Point(arrowX, arrowY), new Point(arrowX + 7, arrowY), new Point(arrowX + 3, arrowY + 4) };
-				pevent.Graphics.FillPolygon(arrowBrush, arrows);
+				using (var arrowBrush = new SolidBrush(Enabled ? DarkTheme.Text : DarkTheme.Surface2))
+				{
+					Point[] arrows = new[] { new Point(arrowX, arrowY), new Point(arrowX + 7, arrowY), new Point(arrowX + 3, arrowY + 4) };
+					pevent.Graphics.FillPolygon(arrowBrush, arrows);
+				}
 
-				// Draw a dashed separator on the left of the arrow
 				int lineX = ClientRectangle.Width - this.SplitWidth;
 				int lineYFrom = arrowY - 4;
 				int lineYTo = arrowY + 8;
-				using (Pen separatorPen = new Pen(Brushes.DarkGray) { DashStyle = DashStyle.Dot })
+				using (Pen separatorPen = new Pen(DarkTheme.Surface2) { DashStyle = DashStyle.Dot })
 				{
 					pevent.Graphics.DrawLine(separatorPen, lineX, lineYFrom, lineX, lineYTo);
 				}

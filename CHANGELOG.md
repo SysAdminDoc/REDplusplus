@@ -18,6 +18,13 @@
 - Add default NeverEmpty list: AUDIO_TS, VIDEO_TS, .git, .svn, .hg
 - Annotate tree nodes with status text for screen readers (Empty, Ignored, Protected)
 
+### Theme
+- Catppuccin Mocha dark theme applied by default across all forms (MainWindow, DeletionError, LogWindow, FormLanguage, FormRtfHelp, NBMsgBox)
+- Dark title bar via DwmSetWindowAttribute (Win10 1809+)
+- TreeView status colors updated for dark backgrounds (Catppuccin Red, Blue, Subtext0)
+- Custom ToolStrip/ContextMenu renderer, UCMenuButton arrow glyph, DataGridView cell styles
+- Fast-mode TreeView background uses Catppuccin Surface0/Mantle
+
 ### Safety
 - Write JSON undo manifest (RED++.undo.json) after each deletion run recording paths, mode, and move targets
 
