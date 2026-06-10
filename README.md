@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-1.4.0-blue)
+![Version](https://img.shields.io/badge/version-1.5.0-blue)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2B-lightgrey)
 
@@ -57,7 +57,7 @@ RED++ finds, displays, and deletes empty directories recursively below a given s
 Every release ships a `SHA256SUMS` file and a signed build-provenance attestation. To verify the zip really came from this repository's CI:
 
 ```
-gh attestation verify RED++_v1.4.0.zip -R SysAdminDoc/REDplusplus
+gh attestation verify RED++_v1.5.0.zip -R SysAdminDoc/REDplusplus
 ```
 
 ## Usage
