@@ -16,9 +16,38 @@ namespace RED
 	{
 		private static Mutex singleInstanceMutex;
 
+		[System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+		private static extern bool SetDefaultDllDirectories(uint directoryFlags);
+
+		[System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+		private static extern bool SetDllDirectoryW(string lpPathName);
+
+		private const uint LOAD_LIBRARY_SEARCH_SYSTEM32 = 0x00000800;
+
+		/// <summary>
+		/// A portable exe is often launched from Downloads, where an attacker-
+		/// planted DLL sits in the default search path. Restrict unmanaged DLL
+		/// resolution to System32 and drop the current directory before any
+		/// further P/Invoke (Microsoft DLL-security guidance).
+		/// </summary>
+		private static void HardenDllSearchPath()
+		{
+			try
+			{
+				SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32);
+				SetDllDirectoryW(string.Empty);
+			}
+			catch
+			{
+				// Hardening only — never block startup
+			}
+		}
+
 		[STAThread]
 		private static void Main()
 		{
+			HardenDllSearchPath();
+
 			string[] args = Environment.GetCommandLineArgs();
 			string silentPath = null;
 			string logFile = null;
