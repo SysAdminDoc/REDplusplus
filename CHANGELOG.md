@@ -25,6 +25,10 @@
 - Custom ToolStrip/ContextMenu renderer, UCMenuButton arrow glyph, DataGridView cell styles
 - Fast-mode TreeView background uses Catppuccin Surface0/Mantle
 
+### Features (multi-path)
+- Multi-path drag-and-drop: drop multiple folders onto RED++ to scan them sequentially with results under separate root nodes
+- TreeManager supports multi-root append mode for sequential scans
+
 ### Performance (continued)
 - Replace Directory.GetFiles/GetDirectories with FindFirstFileExW + FindExInfoBasic + FIND_FIRST_EX_LARGE_FETCH P/Invoke enumerator — significantly faster scan on large directory trees
 
