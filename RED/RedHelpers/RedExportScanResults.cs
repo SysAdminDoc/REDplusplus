@@ -30,29 +30,81 @@ namespace RED.Helper
             {
                 if (v != null && v.Count > 0)
                 {
-                    List<string> exportData = GetExportText(v);
                     if (toClipboard)
                     {
+                        List<string> exportData = GetExportText(v);
                         Clipboard.SetText(string.Join(Environment.NewLine, exportData.ToArray()), TextDataFormat.UnicodeText);
                     }
                     else
                     {
-                        string filename = RedAssist.BrowseForSaveAsFilename("RED_EmptyDirectoryList+.txt");
-                        if (!string.IsNullOrWhiteSpace(filename))
-                        {
-                            File.WriteAllLines(filename, exportData, Encoding.UTF8);
-                        }
+                        ExportScanResultsToFile(v);
                     }
                 }
                 else
                 {
-                    MessageBox.Show("No Data To Export", "RED", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("No Data To Export", "RED++", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error trying to export treeview data:" + Environment.NewLine + ex.Message, "RED error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Error trying to export data:" + Environment.NewLine + ex.Message, "RED++ error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void ExportScanResultsToFile(RedScanResultItemList v)
+        {
+            using (SaveFileDialog dlg = new SaveFileDialog())
+            {
+                dlg.Title = "Export Scan Results";
+                dlg.Filter = "Text Files|*.txt|CSV Files|*.csv|JSON Files|*.json|All Files|*.*";
+                dlg.FilterIndex = 1;
+                dlg.DefaultExt = "txt";
+                dlg.FileName = "RED++_EmptyDirectories";
+                dlg.OverwritePrompt = true;
+
+                if (dlg.ShowDialog() != DialogResult.OK || string.IsNullOrWhiteSpace(dlg.FileName))
+                    return;
+
+                string ext = Path.GetExtension(dlg.FileName).ToLowerInvariant();
+                if (ext == ".csv")
+                {
+                    WriteCsv(v, dlg.FileName);
+                }
+                else if (ext == ".json")
+                {
+                    WriteJson(v, dlg.FileName);
+                }
+                else
+                {
+                    File.WriteAllLines(dlg.FileName, GetExportText(v), Encoding.UTF8);
+                }
+            }
+        }
+
+        private void WriteCsv(RedScanResultItemList v, string filename)
+        {
+            var lines = new List<string> { "\"Path\",\"Status\"" };
+            for (int i = 0; i < v.Count; i++)
+            {
+                string escapedPath = v[i].FullPath.Replace("\"", "\"\"");
+                lines.Add(string.Format("\"{0}\",\"{1}\"", escapedPath, v[i].SearchStatus));
+            }
+            File.WriteAllLines(filename, lines, Encoding.UTF8);
+        }
+
+        private void WriteJson(RedScanResultItemList v, string filename)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("[");
+            for (int i = 0; i < v.Count; i++)
+            {
+                string escapedPath = v[i].FullPath.Replace("\\", "\\\\").Replace("\"", "\\\"");
+                sb.AppendFormat("  {{ \"path\": \"{0}\", \"status\": \"{1}\" }}", escapedPath, v[i].SearchStatus);
+                if (i < v.Count - 1) sb.Append(",");
+                sb.AppendLine();
+            }
+            sb.AppendLine("]");
+            File.WriteAllText(filename, sb.ToString(), Encoding.UTF8);
         }
 
         private List<string> GetExportText(RedScanResultItemList v)
@@ -61,8 +113,6 @@ namespace RED.Helper
             for (int i = 0; i < v.Count; i++)
             {
                 respx.Add(v[i].FullPath);
-                //respx.Add($"{v[i].FullPath} |{{{v[i].SearchStatusOriginal}}}");
-                //respx.Add(string.Format("{0}{1}", v[i].FullPath, v[i].FileCount > 0 ? $" |Files={v[i].FileCount}" : ""));
             }
             return respx;
         }
@@ -104,7 +154,7 @@ namespace RED.Helper
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error trying to export data:" + Environment.NewLine + ex.Message, "RED error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Error trying to export data:" + Environment.NewLine + ex.Message, "RED++ error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -115,7 +165,7 @@ namespace RED.Helper
 
         public void ExportToClipboard(TreeView tv)
         {
-            Export(tv, toClipboard: false);
+            Export(tv, toClipboard: true);
         }
 
         private void Export(TreeView tv, bool toClipboard)
@@ -127,7 +177,7 @@ namespace RED.Helper
                 {
                     if (toClipboard)
                     {
-
+                        Clipboard.SetText(string.Join(Environment.NewLine, exportData.ToArray()), TextDataFormat.UnicodeText);
                     }
                     else
                     {
@@ -140,12 +190,12 @@ namespace RED.Helper
                 }
                 else
                 {
-                    MessageBox.Show("No Data To Export", "RED", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("No Data To Export", "RED++", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error trying to export treeview data:" + Environment.NewLine + ex.Message, "RED error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Error trying to export treeview data:" + Environment.NewLine + ex.Message, "RED++ error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
