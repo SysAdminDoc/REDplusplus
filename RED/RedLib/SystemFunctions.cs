@@ -57,6 +57,9 @@ namespace RED
         private static extern bool SetFileInformationByHandle(IntPtr hFile, int fileInformationClass, ref FILE_DISPOSITION_INFO info, uint dwBufferSize);
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool SetFileInformationByHandle(IntPtr hFile, int fileInformationClass, ref FILE_DISPOSITION_INFO_EX info, uint dwBufferSize);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool CloseHandle(IntPtr hObject);
 
         // FILETIME fields must be 4-byte aligned (two DWORDs) — `long` would insert
@@ -83,6 +86,12 @@ namespace RED
             public bool DeleteFile;
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        private struct FILE_DISPOSITION_INFO_EX
+        {
+            public uint Flags;
+        }
+
         private static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
         private const uint FILE_READ_ATTRIBUTES = 0x0080;
         private const uint DELETE = 0x00010000;
@@ -94,10 +103,17 @@ namespace RED
         private const uint FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000;
         private const uint FILE_ATTRIBUTE_REPARSE_POINT = 0x00000400;
         private const int FileDispositionInfo = 4;
+        private const int FileDispositionInfoEx = 21;
+        private const uint FILE_DISPOSITION_FLAG_DELETE = 0x00000001;
+        private const uint FILE_DISPOSITION_FLAG_POSIX_SEMANTICS = 0x00000002;
+        private const uint FILE_DISPOSITION_FLAG_IGNORE_READONLY_ATTRIBUTE = 0x00000010;
+        private const int ERROR_INVALID_FUNCTION = 1;
+        private const int ERROR_NOT_SUPPORTED = 50;
+        private const int ERROR_INVALID_PARAMETER = 87;
 
         private static void VerifyNotReparsePoint(string path)
         {
-            IntPtr hDir = CreateFileW(path, FILE_READ_ATTRIBUTES,
+            IntPtr hDir = CreateFileW(FastDirectoryEnumerator.ToExtendedLengthPath(path), FILE_READ_ATTRIBUTES,
                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                 IntPtr.Zero, OPEN_EXISTING,
                 FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
@@ -126,7 +142,7 @@ namespace RED
 
         private static void DirectDeleteByHandle(string path)
         {
-            IntPtr hDir = CreateFileW(path, DELETE | FILE_READ_ATTRIBUTES,
+            IntPtr hDir = CreateFileW(FastDirectoryEnumerator.ToExtendedLengthPath(path), DELETE | FILE_READ_ATTRIBUTES,
                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                 IntPtr.Zero, OPEN_EXISTING,
                 FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
@@ -147,6 +163,27 @@ namespace RED
                 if ((info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0)
                     throw new REDPermissionDeniedException(TXT.Translate("Refused to delete directory because it is a reparse point (junction, symlink, or mount point): {0}", RedAssist.DQuote(path)));
 
+                // Tier 1: POSIX delete semantics (NTFS, Win10 1607+) — removes the name
+                // immediately even with open handles, and ignores the read-only attribute.
+                var dispositionEx = new FILE_DISPOSITION_INFO_EX
+                {
+                    Flags = FILE_DISPOSITION_FLAG_DELETE |
+                            FILE_DISPOSITION_FLAG_POSIX_SEMANTICS |
+                            FILE_DISPOSITION_FLAG_IGNORE_READONLY_ATTRIBUTE
+                };
+                if (SetFileInformationByHandle(hDir, FileDispositionInfoEx, ref dispositionEx, (uint)Marshal.SizeOf(dispositionEx)))
+                {
+                    return;
+                }
+
+                int exErr = Marshal.GetLastWin32Error();
+                if (exErr != ERROR_INVALID_PARAMETER && exErr != ERROR_NOT_SUPPORTED && exErr != ERROR_INVALID_FUNCTION)
+                {
+                    throw new IOException(TXT.Translate("Failed to delete directory by handle (error {0}): {1}", exErr, RedAssist.DQuote(path)));
+                }
+
+                // Tier 2: legacy delete-on-close for filesystems without Ex support
+                // (FAT32/exFAT, SMB shares, pre-1607 volumes)
                 var disposition = new FILE_DISPOSITION_INFO { DeleteFile = true };
                 if (!SetFileInformationByHandle(hDir, FileDispositionInfo, ref disposition, (uint)Marshal.SizeOf(disposition)))
                 {
@@ -198,12 +235,26 @@ namespace RED
 
             foreach (DirectoryInfo sub in listing.Directories)
             {
-                if ((sub.Attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
-                {
-                    throw new REDPermissionDeniedException(TXT.Translate("Refused to delete directory because it is a reparse point (junction, symlink, or mount point): {0}", RedAssist.DQuote(sub.FullName)));
-                }
+                // Handle-based check (throws REDPermissionDeniedException on reparse
+                // points) — works past MAX_PATH where DirectoryInfo.Attributes cannot
+                VerifyNotReparsePoint(sub.FullName);
                 VerifySubtreeHasNoFiles(sub.FullName);
             }
+        }
+
+        /// <summary>
+        /// Bottom-up handle-based delete of a verified-empty subtree. Unlike
+        /// DirectoryInfo.Delete(true) this works past MAX_PATH regardless of the
+        /// OS LongPathsEnabled policy, and every level gets the same reparse-point
+        /// re-check as a single-directory delete.
+        /// </summary>
+        private static void DeleteEmptySubtreeByHandle(string path)
+        {
+            foreach (DirectoryInfo sub in FastDirectoryEnumerator.GetDirectories(new DirectoryInfo(path)))
+            {
+                DeleteEmptySubtreeByHandle(sub.FullName);
+            }
+            DirectDeleteByHandle(path);
         }
 
         public static bool IsDirLocked(string path)
@@ -284,7 +335,7 @@ namespace RED
                     // Recursive delete of a wholly-empty subtree: re-verify every level
                     // first — direct deletion is unrecoverable and the scan may be stale.
                     VerifySubtreeHasNoFiles(path);
-                    di.Delete(true);
+                    DeleteEmptySubtreeByHandle(path);
                 }
                 return;
             }
