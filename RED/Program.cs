@@ -104,6 +104,7 @@ namespace RED
 			runData.DeleteMode = (DeleteModes)config.Options.DeleteMode;
 			runData.PauseTime = config.Options.PauseBetweenDeletions;
 			runData.HideIgnoredDirectories = config.Options.HideIgnoredDirectories;
+			runData.RespectGitIgnore = config.Options.RespectGitIgnore;
 			runData.IgnoreFileNameList.Transform(config.Filters.FilesToIgnore);
 			runData.IgnoreDirectoryNameList.Transform(config.Filters.DirectoriesToIgnore);
 			runData.NeverEmptyDirectoryList.Transform(config.Filters.DirectoriesNeverEmpty);
