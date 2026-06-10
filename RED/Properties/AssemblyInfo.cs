@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 
-[assembly: AssemblyTitle("Remove Empty Directories +")]
+[assembly: AssemblyTitle("Remove Empty Directories ++")]
 [assembly: AssemblyDescription("Searches and deletes empty directories recursively below the specified starting folder")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Robert 'NotBob' Bookerby")]
-[assembly: AssemblyProduct("Remove Empty Directories Plus")]
-[assembly: AssemblyCopyright("Copyright © Jonas John & Robert Bookerby (Released under LGPL)")]
+[assembly: AssemblyCompany("SysAdminDoc")]
+[assembly: AssemblyProduct("Remove Empty Directories ++")]
+[assembly: AssemblyCopyright("Copyright © Jonas John, Robert Bookerby, SysAdminDoc (Released under LGPL)")]
 [assembly: AssemblyTrademark("The GNU Lesser General Public License (LGPL)")]
 [assembly: AssemblyCulture("")]
 
@@ -32,5 +32,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("25.0.0.480")]
-[assembly: AssemblyFileVersion("25.3.0.0")]
+[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyFileVersion("1.0.0.0")]
