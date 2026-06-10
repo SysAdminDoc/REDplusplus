@@ -239,7 +239,18 @@ namespace RED
                 var di = new DirectoryInfo(path);
                 if (di.Attributes.HasFlag(FileAttributes.ReadOnly))
                     di.Attributes &= ~FileAttributes.ReadOnly;
-                DirectDeleteByHandle(path);
+                if (di.GetFiles().Length == 0 && di.GetDirectories().Length == 0)
+                {
+                    DirectDeleteByHandle(path);
+                }
+                else if (di.GetFiles().Length == 0)
+                {
+                    di.Delete(true);
+                }
+                else
+                {
+                    throw new Exception(TXT.Translate("Aborted deletion of the directory because it is no longer empty. This can happen if RED previously failed to delete an empty (trash) file: {0}", RedAssist.DQuote(path)));
+                }
                 return;
             }
 
@@ -258,8 +269,9 @@ namespace RED
                 return;
             }
 
-            // Last security check before recycle-bin deletion
-            if (Directory.GetFiles(path).Length == 0 && Directory.GetDirectories(path).Length == 0)
+            // Last security check before recycle-bin deletion — allow empty subdirectories
+            // (they are part of the same wholly-empty subtree being processed parent-first)
+            if (Directory.GetFiles(path).Length == 0)
             {
                 if (deleteMode == DeleteModes.RecycleBin || deleteMode == DeleteModes.RecycleBinShowErrors)
                 {

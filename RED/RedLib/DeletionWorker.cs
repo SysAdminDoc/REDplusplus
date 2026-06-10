@@ -47,6 +47,8 @@ namespace RED
 			this.ErrorInfo = null;
 			var deletedParents = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+			this.Data.ScanResults.Items.Sort((a, b) => a.FullPath.Length.CompareTo(b.FullPath.Length));
+
 			while (this.ListPos < this.Data.ScanResults.Count)
 			{
 				if (CancellationPending)
