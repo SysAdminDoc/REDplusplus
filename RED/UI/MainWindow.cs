@@ -124,8 +124,42 @@ namespace RED.UI
                 txtSearchDirectory.Text = RedConfig.Runtime.Volatile.LastUsedDirectory;
             }
 
+            AddRestoreMenuItem();
+
             SetAccessibleNames();
             DarkTheme.Apply(this);
+        }
+
+        /// <summary>
+        /// "Restore Last Deletion" lives in the Extras menu and is enabled only
+        /// while an undo manifest exists. Deleted dirs were empty, so restore is a
+        /// lossless recreate (Move mode entries are moved back).
+        /// </summary>
+        private void AddRestoreMenuItem()
+        {
+            var mnuItemRestore = new ToolStripMenuItem(TXT.Translate("&Restore Last Deletion"));
+            mnuItemRestore.AccessibleName = "Restore directories from the last deletion";
+            mnuItemRestore.Click += mnuItemRestoreLastDeletion_Click;
+            cmMenuExtras.Items.Insert(0, mnuItemRestore);
+            cmMenuExtras.Items.Insert(1, new ToolStripSeparator());
+            cmMenuExtras.Opening += (s, e) => mnuItemRestore.Enabled = UndoManager.HasManifest;
+        }
+
+        private void mnuItemRestoreLastDeletion_Click(object sender, EventArgs e)
+        {
+            int restored, failed;
+            UndoManager.Restore(out restored, out failed, msg => RunData.AddLogMessage(msg));
+
+            string summary = TXT.Translate("Restored {0} directories (Failed: {1})", restored, failed);
+            SetStatusAndLogMessage(summary);
+            if (failed > 0)
+            {
+                UiAssist.MsgBoxError(summary + RedGetText.CrLf2 + TXT.Translate("See the log for details. The undo manifest was kept so you can retry."));
+            }
+            else
+            {
+                UiAssist.MsgBoxInfo(summary);
+            }
         }
 
         private void SetAccessibleNames()
