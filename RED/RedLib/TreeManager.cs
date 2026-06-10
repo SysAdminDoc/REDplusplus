@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
-using Alphaleonis.Win32.Filesystem;
 using RED.Match;
-using FileAttributes = System.IO.FileAttributes;
 using TXT = RED.RedGetText;
 
 namespace RED

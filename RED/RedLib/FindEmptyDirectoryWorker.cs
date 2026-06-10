@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using Alphaleonis.Win32.Filesystem;
+using System.IO;
 using RED.Helper;
-using FileAttributes = System.IO.FileAttributes;
 using TXT = RED.RedGetText;
 
 namespace RED

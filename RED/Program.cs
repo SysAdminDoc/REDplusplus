@@ -80,7 +80,7 @@ namespace RED
 			};
 
 			targetPath = Environment.ExpandEnvironmentVariables(targetPath);
-			var startDir = new Alphaleonis.Win32.Filesystem.DirectoryInfo(targetPath);
+			var startDir = new System.IO.DirectoryInfo(targetPath);
 			if (!startDir.Exists)
 			{
 				logMsg("Error: directory does not exist: " + targetPath);
