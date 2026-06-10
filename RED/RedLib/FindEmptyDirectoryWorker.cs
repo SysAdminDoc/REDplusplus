@@ -144,7 +144,7 @@ namespace RED
 					// some directories could trigger an exception:
 					try
 					{
-						fileList = startDir.GetFiles();
+						fileList = FastDirectoryEnumerator.GetFiles(startDir);
 					}
 					catch
 					{
@@ -206,7 +206,7 @@ namespace RED
 				List<DirectoryInfo> subFolderList = new List<DirectoryInfo>();
 				try
 				{
-					subFolderList.AddRange(startDir.GetDirectories());
+					subFolderList.AddRange(FastDirectoryEnumerator.GetDirectories(startDir));
 				}
 				catch
 				{

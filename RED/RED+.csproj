@@ -107,6 +107,7 @@
     </Compile>
     <Compile Include="RedLib\RuntimeData.cs" />
     <Compile Include="RedLib\GitIgnoreParser.cs" />
+    <Compile Include="RedLib\FastDirectoryEnumerator.cs" />
     <Compile Include="RedLib\SystemFunctions.cs" />
     <Compile Include="RedLib\TreeManager.cs" />
     <Compile Include="RedLib\DeleteModeItem.cs" />
