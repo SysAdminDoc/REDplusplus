@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0 (2026-06-10)
+
+### Removed Dependencies
+- Remove AlphaFS — all filesystem operations now use native System.IO with longPathAware manifest
+
+### Accessibility
+- Set AccessibleName on 25+ interactive controls for screen reader support (Narrator, NVDA)
+
+### Infrastructure
+- UNC/network share paths work natively (System.IO handles these with graceful error reporting)
+
 ## 1.1.0 (2026-06-10)
 
 ### Safety Fixes (P0)
