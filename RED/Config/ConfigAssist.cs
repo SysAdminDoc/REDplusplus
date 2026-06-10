@@ -1,8 +1,7 @@
 using System;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
-
-using Alphaleonis.Win32.Filesystem;
 
 using NotBob.Lib;
 
@@ -30,7 +29,7 @@ namespace NotBob.Config
                 filename = ConfigAssist.GetConfigFilename(cfgName, appName, Application.ExecutablePath);
                 if (!string.IsNullOrEmpty(filename))
                 {
-                    while (File.Exists(filename) && File.GetSize(filename) > 0)
+                    while (File.Exists(filename) && new FileInfo(filename).Length > 0)
                     {
                         config = ConfigAssist.Load<RedConfiguration>(filename);
 
@@ -60,12 +59,12 @@ namespace NotBob.Config
                     {
                         // The config may already have its ReadOnly flag set.
                         // This is an extra check to see if the file itself is set to ReadOnly
-                        if (File.GetAttributes(filename).HasFlag(System.IO.FileAttributes.ReadOnly))
+                        if (File.GetAttributes(filename).HasFlag(FileAttributes.ReadOnly))
                         {
                             config.IsReadOnly = true;
                         }
                         // If the file is zero length, then the config needs to be created
-                        if (File.GetSize(filename) == 0)
+                        if (new FileInfo(filename).Length == 0)
                         {
                             createConfig = true;
                         }

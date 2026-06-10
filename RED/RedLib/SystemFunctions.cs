@@ -1,16 +1,12 @@
 using System;
 using System.Diagnostics;
-using System.Security.Permissions;
+using System.IO;
 using System.Security.Principal;
 using System.Text;
 using System.Windows.Forms;
-using Alphaleonis.Win32.Filesystem;
 using Microsoft.VisualBasic.FileIO;
 using Microsoft.Win32;
 using RED.Helper;
-using FileAccess = System.IO.FileAccess;
-using FileMode = System.IO.FileMode;
-using FileShare = System.IO.FileShare;
 using TXT = RED.RedGetText;
 
 namespace RED
@@ -124,7 +120,10 @@ namespace RED
 
             if (deleteMode == DeleteModes.Direct)
             {
-                Directory.Delete(path, recursive: false, ignoreReadOnly: true); //throws IOException if not empty anymore
+                var di = new DirectoryInfo(path);
+                if (di.Attributes.HasFlag(FileAttributes.ReadOnly))
+                    di.Attributes &= ~FileAttributes.ReadOnly;
+                di.Delete(false);
                 return;
             }
 
@@ -189,7 +188,8 @@ namespace RED
             {
                 // Was used for testing the error handling:
                 // if (SystemFunctions.random.NextDouble() > 0.5) throw new Exception("Test error");
-                file.Delete(ignoreReadOnly: true);
+                if (file.IsReadOnly) file.IsReadOnly = false;
+                file.Delete();
             }
             else
             {

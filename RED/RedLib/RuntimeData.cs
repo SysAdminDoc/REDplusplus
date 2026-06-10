@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
-using Alphaleonis.Win32.Filesystem;
 using RED.Match;
 
 namespace RED
 {
 	public class RuntimeData
 	{
-		private System.IO.StreamWriter _logWriter;
+		private StreamWriter _logWriter;
 
 		public RuntimeData()
 		{
@@ -18,8 +18,8 @@ namespace RED
 
 			try
 			{
-				string logPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath), "RED++.log");
-				_logWriter = new System.IO.StreamWriter(logPath, append: true, encoding: Encoding.UTF8) { AutoFlush = true };
+				string logPath = Path.Combine(Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath), "RED++.log");
+				_logWriter = new StreamWriter(logPath, append: true, encoding: Encoding.UTF8) { AutoFlush = true };
 			}
 			catch
 			{
