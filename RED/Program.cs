@@ -60,6 +60,13 @@ namespace RED
 			bool isJson = false;
 			bool emptyFiles = false;
 			bool quiet = false;
+			string parseError = null;
+			uint? minAgeOverride = null;
+			int? maxDepthOverride = null;
+			bool? respectGitIgnoreOverride = null;
+			bool? useMftScanOverride = null;
+			bool? ignoreHiddenOverride = null;
+			bool? ignoreSystemOverride = null;
 
 			for (int i = 1; i < args.Length; i++)
 			{
@@ -91,6 +98,72 @@ namespace RED
 					case "-emptyfiles":
 					case "--emptyfiles":
 						emptyFiles = true;
+						break;
+					case "-minage":
+					case "--minage":
+						if (i + 1 >= args.Length)
+						{
+							parseError = "Error: -minage requires a non-negative whole number of hours";
+						}
+						else
+						{
+							uint parsedMinAge;
+							if (!uint.TryParse(args[++i], out parsedMinAge))
+								parseError = "Error: -minage requires a non-negative whole number of hours";
+							else
+								minAgeOverride = parsedMinAge;
+						}
+						break;
+					case "-maxdepth":
+					case "--maxdepth":
+						if (i + 1 >= args.Length)
+						{
+							parseError = "Error: -maxdepth requires -1 or a positive whole number";
+						}
+						else
+						{
+							int parsedMaxDepth;
+							if (!int.TryParse(args[++i], out parsedMaxDepth) || parsedMaxDepth < -1)
+								parseError = "Error: -maxdepth requires -1 or a positive whole number";
+							else
+								maxDepthOverride = parsedMaxDepth;
+						}
+						break;
+					case "-gitignore":
+					case "--gitignore":
+						respectGitIgnoreOverride = true;
+						break;
+					case "-no-gitignore":
+					case "--no-gitignore":
+						respectGitIgnoreOverride = false;
+						break;
+					case "-mft":
+					case "--mft":
+						useMftScanOverride = true;
+						break;
+					case "-no-mft":
+					case "--no-mft":
+						useMftScanOverride = false;
+						break;
+					case "-hidden":
+					case "--hidden":
+					case "-include-hidden":
+					case "--include-hidden":
+						ignoreHiddenOverride = false;
+						break;
+					case "-ignore-hidden":
+					case "--ignore-hidden":
+						ignoreHiddenOverride = true;
+						break;
+					case "-system":
+					case "--system":
+					case "-include-system":
+					case "--include-system":
+						ignoreSystemOverride = false;
+						break;
+					case "-ignore-system":
+					case "--ignore-system":
+						ignoreSystemOverride = true;
 						break;
 					case "-path":
 					case "--path":
@@ -137,6 +210,17 @@ namespace RED
 				}
 			}
 
+			if (parseError != null)
+			{
+				if (!quiet)
+				{
+					Console.Error.WriteLine(parseError);
+					PrintUsage();
+				}
+				Environment.ExitCode = 1;
+				return;
+			}
+
 			if (isUndo)
 			{
 				Environment.ExitCode = RunUndo(logFile, quiet);
@@ -155,7 +239,8 @@ namespace RED
 					Environment.ExitCode = 1;
 					return;
 				}
-				Environment.ExitCode = RunHeadless(paths, logFile, exportFile, modeOverride, moveTarget, isDryRun, isJson, emptyFiles, quiet);
+				Environment.ExitCode = RunHeadless(paths, logFile, exportFile, modeOverride, moveTarget, isDryRun, isJson, emptyFiles, quiet,
+					minAgeOverride, maxDepthOverride, respectGitIgnoreOverride, useMftScanOverride, ignoreHiddenOverride, ignoreSystemOverride);
 				return;
 			}
 
@@ -214,7 +299,8 @@ namespace RED
 				{ "dryrun", DeleteModes.Simulate },
 			};
 
-		private static int RunHeadless(List<string> paths, string logFile, string exportFile, string modeOverride, string moveTarget, bool dryRun, bool jsonOutput, bool emptyFiles, bool quiet)
+		private static int RunHeadless(List<string> paths, string logFile, string exportFile, string modeOverride, string moveTarget, bool dryRun, bool jsonOutput, bool emptyFiles, bool quiet,
+			uint? minAgeOverride, int? maxDepthOverride, bool? respectGitIgnoreOverride, bool? useMftScanOverride, bool? ignoreHiddenOverride, bool? ignoreSystemOverride)
 		{
 			var log = new StringBuilder();
 			Action<string> logMsg = (msg) =>
@@ -287,16 +373,16 @@ namespace RED
 				runData.HideScanErrors = config.Options.HideScanErrors;
 				runData.HideDeletionErrors = true;
 				runData.IgnoreEmptyFiles = config.Options.IgnoreEmptyFiles;
-				runData.IgnoreHiddenFolders = config.Options.IgnoreHiddenDirectories;
-				runData.IgnoreSystemFolders = config.Options.IgnoreSystemDirectories;
-				runData.MinFolderAgeHours = config.Options.MinDirectoryAgeHours;
-				runData.MaxDepth = config.Options.MaxDirectoryDepth;
+				runData.IgnoreHiddenFolders = ignoreHiddenOverride.HasValue ? ignoreHiddenOverride.Value : config.Options.IgnoreHiddenDirectories;
+				runData.IgnoreSystemFolders = ignoreSystemOverride.HasValue ? ignoreSystemOverride.Value : config.Options.IgnoreSystemDirectories;
+				runData.MinFolderAgeHours = minAgeOverride.HasValue ? minAgeOverride.Value : config.Options.MinDirectoryAgeHours;
+				runData.MaxDepth = maxDepthOverride.HasValue ? maxDepthOverride.Value : config.Options.MaxDirectoryDepth;
 				runData.InfiniteLoopDetectionCount = config.Options.InfiniteLoopDetectionCount;
 				runData.DeleteMode = deleteMode;
 				runData.PauseTime = config.Options.PauseBetweenDeletions;
 				runData.HideIgnoredDirectories = config.Options.HideIgnoredDirectories;
-				runData.RespectGitIgnore = config.Options.RespectGitIgnore;
-				runData.UseMftScan = config.Options.UseMftScan;
+				runData.RespectGitIgnore = respectGitIgnoreOverride.HasValue ? respectGitIgnoreOverride.Value : config.Options.RespectGitIgnore;
+				runData.UseMftScan = useMftScanOverride.HasValue ? useMftScanOverride.Value : config.Options.UseMftScan;
 				runData.DeleteEmptyFiles = config.Options.DeleteEmptyFiles || emptyFiles;
 				runData.IgnoreFileNameList.Transform(config.Filters.FilesToIgnore);
 				runData.IgnoreDirectoryNameList.Transform(config.Filters.DirectoriesToIgnore);
@@ -475,6 +561,16 @@ Options:
   -emptyfiles      Also delete standalone zero-byte files (sister mode, opt-in).
   -mode <mode>     Override delete mode: recycle | direct | move | simulate.
   -moveto <dir>    Required with -mode move; move directories/files to <dir>.
+  -minage <hours>  Override minimum directory age for this run.
+  -maxdepth <n>    Override maximum scan depth for this run (-1 = infinite).
+  -gitignore       Respect .gitignore rules for this run.
+  -no-gitignore    Ignore .gitignore rules for this run.
+  -mft             Try the MFT turbo scan for this run (admin required).
+  -no-mft          Disable the MFT turbo scan for this run.
+  -hidden          Include hidden directories for this run.
+  -ignore-hidden   Ignore hidden directories for this run.
+  -system          Include system directories for this run.
+  -ignore-system   Ignore system directories for this run.
   -export <file>   Write results to .txt / .csv / .json (by extension).
   -json            Emit NDJSON to stdout (meta record, then result records).
   -quiet           Suppress stdout/stderr; use the process exit code/log file.
