@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.10 (2026-06-12)
+
+### Review Imports
+- Add an Extras-menu import flow for saved dry-run JSON/NDJSON results so operators can review automation output in the GUI before acting.
+- Keep imported non-empty/ignored/error rows review-only and load only `Empty` rows into the deletion queue.
+- Re-check Move-to-folder deletions for stale files before moving, matching the final safety gate already used by direct and Recycle Bin modes.
+
 ## 1.5.9 (2026-06-12)
 
 ### Release Packaging

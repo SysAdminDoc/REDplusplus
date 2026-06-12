@@ -494,3 +494,54 @@ msgstr ""
 
 msgid "«ignored files: {0}»"
 msgstr ""
+
+msgid "&Import Saved Dry-Run Results..."
+msgstr ""
+
+msgid "Import saved dry-run results for review"
+msgstr ""
+
+msgid "Import Saved Dry-Run Results"
+msgstr ""
+
+msgid "RED++ Results (*.json;*.jsonl;*.ndjson)|*.json;*.jsonl;*.ndjson|All Files (*.*)|*.*"
+msgstr ""
+
+msgid "Imported {0} review records from {1}; {2} empty directories are eligible for deletion."
+msgstr ""
+
+msgid "Could not import saved dry-run results"
+msgstr ""
+
+msgid "Import filename is empty"
+msgstr ""
+
+msgid "Import file was not found"
+msgstr ""
+
+msgid "The import file does not contain any scan results."
+msgstr ""
+
+msgid "The import file is empty."
+msgstr ""
+
+msgid "Line {0} is not valid RED++ NDJSON: {1}"
+msgstr ""
+
+msgid "Unknown RED++ import record type: {0}"
+msgstr ""
+
+msgid "A scan result is missing its path."
+msgstr ""
+
+msgid "Import paths must be absolute: {0}"
+msgstr ""
+
+msgid "Import path is not valid: {0}"
+msgstr ""
+
+msgid "Scan result is missing status: {0}"
+msgstr ""
+
+msgid "Unknown scan result status for {0}: {1}"
+msgstr ""
