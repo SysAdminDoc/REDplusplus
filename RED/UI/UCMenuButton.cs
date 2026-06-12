@@ -45,30 +45,32 @@ namespace RED.UI
 
 			if (Menu != null)
 			{
+				pevent.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 				// Draw the arrow glyph on the right side of the button
-				int arrowX = ClientRectangle.Width - 14;
+				int effectiveSplitWidth = SplitWidth > 0 ? SplitWidth : 26;
+				int arrowX = ClientRectangle.Width - 17;
 				int arrowY = ClientRectangle.Height / 2 - 1;
 
-				using (var arrowBrush = new SolidBrush(Enabled ? DarkTheme.Text : DarkTheme.Surface2))
+				using (var arrowBrush = new SolidBrush(Enabled ? ForeColor : DarkTheme.DisabledText))
 				{
-					Point[] arrows = new[] { new Point(arrowX, arrowY), new Point(arrowX + 7, arrowY), new Point(arrowX + 3, arrowY + 4) };
+					Point[] arrows = new[] { new Point(arrowX, arrowY), new Point(arrowX + 8, arrowY), new Point(arrowX + 4, arrowY + 5) };
 					pevent.Graphics.FillPolygon(arrowBrush, arrows);
 				}
 
-				if (SplitWidth > 0)
+				int lineX = ClientRectangle.Width - effectiveSplitWidth;
+				int lineYFrom = 7;
+				int lineYTo = ClientRectangle.Height - 7;
+				using (Pen separatorPen = new Pen(DarkTheme.Surface2))
 				{
-					int lineX = ClientRectangle.Width - this.SplitWidth;
-					int lineYFrom = arrowY - 4;
-					int lineYTo = arrowY + 8;
-					using (Pen separatorPen = new Pen(DarkTheme.Surface2) { DashStyle = DashStyle.Dot })
-					{
-						pevent.Graphics.DrawLine(separatorPen, lineX, lineYFrom, lineX, lineYTo);
-					}
+					pevent.Graphics.DrawLine(separatorPen, lineX, lineYFrom, lineX, lineYTo);
 				}
 
 				if (Focused && ShowFocusCues)
 				{
-					ControlPaint.DrawFocusRectangle(pevent.Graphics, Rectangle.Inflate(ClientRectangle, -4, -4), ForeColor, BackColor);
+					using (Pen focusPen = new Pen(DarkTheme.Focus))
+					{
+						pevent.Graphics.DrawRectangle(focusPen, 2, 2, ClientRectangle.Width - 5, ClientRectangle.Height - 5);
+					}
 				}
 			}
 		}

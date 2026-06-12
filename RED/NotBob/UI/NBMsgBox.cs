@@ -230,6 +230,13 @@ namespace NotBob.UI
 		/// <param name="e"></param>
 		private void NBMsgBox_Shown(object sender, EventArgs e)
 		{
+			Font = DarkTheme.UiFont;
+			UxMessageText.MaximumSize = new Size(560, 0);
+			UxMessageText.ForeColor = DarkTheme.Text;
+			UxButton1.MinimumSize = new Size(96, 30);
+			UxButton2.MinimumSize = new Size(96, 30);
+			UxButton3.MinimumSize = new Size(96, 30);
+			UxButton4.MinimumSize = new Size(96, 30);
 			DarkTheme.Apply(this);
 			BuildForm();
 		}
@@ -527,9 +534,9 @@ namespace NotBob.UI
 				{
 					throw new ArgumentOutOfRangeException("buttonIndex", "Button index must be between 1 and " + BUTTON_MAX.ToString());
 				}
-				if (string.IsNullOrEmpty(buttonText) && buttonText.Length > 20)
+				if (!string.IsNullOrEmpty(buttonText) && buttonText.Length > 32)
 				{
-					throw new ArgumentOutOfRangeException("buttonText", "Button text must be less than 20 characters.");
+					throw new ArgumentOutOfRangeException("buttonText", "Button text must be less than 32 characters.");
 				}
 
 				// Button 1 is always enabled

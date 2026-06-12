@@ -55,6 +55,7 @@ namespace RED
 			string modeOverride = null;
 			string moveTarget = null;
 			bool isSilent = false;
+			bool isAutoSearch = false;
 			bool isUndo = false;
 			bool isDryRun = false;
 			bool isJson = false;
@@ -76,6 +77,10 @@ namespace RED
 					case "-silent":
 					case "--silent":
 						isSilent = true;
+						break;
+					case "-autosearch":
+					case "--autosearch":
+						isAutoSearch = true;
 						break;
 					case "-undo":
 					case "--undo":
@@ -227,7 +232,7 @@ namespace RED
 				return;
 			}
 
-			if (isSilent || paths.Count > 0)
+			if (!isAutoSearch && (isSilent || paths.Count > 0))
 			{
 				if (paths.Count == 0)
 				{
