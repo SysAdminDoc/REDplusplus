@@ -90,10 +90,6 @@ namespace NotBob.Config
                     RedConfiguration obj = new RedConfiguration();
                     obj.SetToDefaults();
                     config = obj;
-                    if (!SilentMode)
-                    {
-                        UiAssist.MsgBoxInfo(TXT.Translate("Settings have been set to their defaults"));
-                    }
                     if (string.IsNullOrWhiteSpace(filename) || SilentMode)
                     {
                         config.IsReadOnly = true;
@@ -245,13 +241,16 @@ namespace NotBob.Config
         private static bool AskUserForConfigPortableOrAppData(int defaultButton)
         {
             bool respx = false;
-            using (NotBob.UI.NBMsgBox mbox = new NotBob.UI.NBMsgBox("RED: No Config File Found", MessageBoxIcon.Question))
+            using (NotBob.UI.NBMsgBox mbox = new NotBob.UI.NBMsgBox(TXT.Translate("Choose RED++ settings location"), MessageBoxIcon.Question))
             {
                 mbox.ControlBox = true;
                 mbox.Icon = RED.Properties.Resources.iconProject;
-                mbox.SetMessage(TXT.Translate("Do you want to use Portable Mode or %APPDATA%?"));
-                mbox.SetButton(1, "Portable Mode", DialogResult.Yes, isDefault: true);
-                mbox.SetButton(2, "%APPDATA%", DialogResult.No);
+                mbox.SetMinSize(520, 150);
+                mbox.SetMessage(TXT.Translate("Where should RED++ store settings?") + RedGetText.CrLf2
+                    + TXT.Translate("Portable file: stores RED+.cfg beside RED+.exe.") + RedGetText.CrLf1
+                    + TXT.Translate("AppData: best for Program Files or managed installs."));
+                mbox.SetButton(1, TXT.Translate("Use portable file"), DialogResult.Yes, isDefault: defaultButton == 1);
+                mbox.SetButton(2, TXT.Translate("Use AppData"), DialogResult.No, isDefault: defaultButton == 2);
                 mbox.ShowDialog();
                 switch (mbox.DialogExitButton)
                 {
