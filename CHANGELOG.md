@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.3 (2026-06-12)
+
+### Reliability and Accessibility
+- Rotate the persistent `RED++.log` at 5 MB with one retained `.1` generation so scheduled/headless runs do not grow logs without bound
+- Localize the remaining settings read-only status string and the main accessibility labels, including a descriptive Search tab name for screen readers
+
 ## 1.5.2 (2026-06-12)
 
 ### Release Hardening

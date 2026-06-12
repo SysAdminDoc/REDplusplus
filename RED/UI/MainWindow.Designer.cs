@@ -241,8 +241,8 @@ namespace RED.UI
             // 
             // tabSearch
             // 
-            this.tabSearch.AccessibleDescription = "";
-            this.tabSearch.AccessibleName = "";
+            this.tabSearch.AccessibleDescription = "Search for empty directories and empty files";
+            this.tabSearch.AccessibleName = "Search";
             this.tabSearch.Controls.Add(this.gbFind);
             this.tabSearch.Controls.Add(this.lblPickAFolder);
             this.tabSearch.ImageKey = "search";
@@ -1795,4 +1795,3 @@ namespace RED.UI
         private System.Windows.Forms.CheckBox chkExplorerIntegrateAutoSearch;
     }
 }
-

@@ -141,7 +141,7 @@ namespace RED.UI
         private void AddRestoreMenuItem()
         {
             var mnuItemRestore = new ToolStripMenuItem(TXT.Translate("&Restore Last Deletion"));
-            mnuItemRestore.AccessibleName = "Restore directories from the last deletion";
+            mnuItemRestore.AccessibleName = TXT.Translate("Restore directories from the last deletion");
             mnuItemRestore.Click += mnuItemRestoreLastDeletion_Click;
             cmMenuExtras.Items.Insert(0, mnuItemRestore);
             cmMenuExtras.Items.Insert(1, new ToolStripSeparator());
@@ -196,7 +196,7 @@ namespace RED.UI
                 CheckOnClick = true,
                 Checked = RedConfig.Options.DeleteEmptyFiles
             };
-            item.AccessibleName = "Also delete standalone zero-byte files";
+            item.AccessibleName = TXT.Translate("Also delete standalone zero-byte files");
             item.CheckedChanged += (s, e) => RedConfig.Options.DeleteEmptyFiles = item.Checked;
             cmMenuExtras.Items.Insert(3, item);
         }
@@ -220,31 +220,33 @@ namespace RED.UI
 
         private void SetAccessibleNames()
         {
-            txtSearchDirectory.AccessibleName = "Search directory path";
-            btnSearch.AccessibleName = "Search for empty directories";
-            btnDelete.AccessibleName = "Delete empty directories";
-            btnCancel.AccessibleName = "Cancel current operation";
-            btnExit.AccessibleName = "Exit application";
-            btnSearchDirectoryBrowseFor.AccessibleName = "Browse for directory";
-            tvSearchResults.AccessibleName = "Search results tree";
-            cbDeleteMode.AccessibleName = "Delete mode selection";
-            btnHelp.AccessibleName = "Open help";
-            btnCopyDebugInfo.AccessibleName = "Copy debug information to clipboard";
-            btnResetConfig.AccessibleName = "Reset settings to defaults";
-            btnResetFilters.AccessibleName = "Reset filters to defaults";
-            btnExplorerIntegrate.AccessibleName = "Add Explorer context menu integration";
-            btnExplorerRemove.AccessibleName = "Remove Explorer context menu integration";
-            cbFastSearchMode.AccessibleName = "Enable fast search mode";
-            cbSavePrompt.AccessibleName = "Prompt to save settings on exit";
-            cbIgnore0kbFiles.AccessibleName = "Treat directories with empty files as empty";
-            cbIgnoreHiddenFolders.AccessibleName = "Ignore hidden directories";
-            cbIgnoreSystemFolders.AccessibleName = "Ignore system directories";
-            cbHideScanErrors.AccessibleName = "Hide errors during search";
-            cbHideDeletionErrors.AccessibleName = "Hide errors during deletion";
-            cbHideIgnoredFolders.AccessibleName = "Hide ignored directories from results";
-            cbAutoProtectRoot.AccessibleName = "Automatically protect the starting directory";
-            cbClipboardDetection.AccessibleName = "Detect paths in the clipboard";
-            pbProgressStatus.AccessibleName = "Operation progress";
+            tabSearch.AccessibleName = TXT.Translate("Search");
+            tabSearch.AccessibleDescription = TXT.Translate("Search for empty directories and empty files");
+            txtSearchDirectory.AccessibleName = TXT.Translate("Search directory path");
+            btnSearch.AccessibleName = TXT.Translate("Search for empty directories");
+            btnDelete.AccessibleName = TXT.Translate("Delete empty directories");
+            btnCancel.AccessibleName = TXT.Translate("Cancel current operation");
+            btnExit.AccessibleName = TXT.Translate("Exit application");
+            btnSearchDirectoryBrowseFor.AccessibleName = TXT.Translate("Browse for directory");
+            tvSearchResults.AccessibleName = TXT.Translate("Search results tree");
+            cbDeleteMode.AccessibleName = TXT.Translate("Delete mode selection");
+            btnHelp.AccessibleName = TXT.Translate("Open help");
+            btnCopyDebugInfo.AccessibleName = TXT.Translate("Copy debug information to clipboard");
+            btnResetConfig.AccessibleName = TXT.Translate("Reset settings to defaults");
+            btnResetFilters.AccessibleName = TXT.Translate("Reset filters to defaults");
+            btnExplorerIntegrate.AccessibleName = TXT.Translate("Add Explorer context menu integration");
+            btnExplorerRemove.AccessibleName = TXT.Translate("Remove Explorer context menu integration");
+            cbFastSearchMode.AccessibleName = TXT.Translate("Enable fast search mode");
+            cbSavePrompt.AccessibleName = TXT.Translate("Prompt to save settings on exit");
+            cbIgnore0kbFiles.AccessibleName = TXT.Translate("Treat directories with empty files as empty");
+            cbIgnoreHiddenFolders.AccessibleName = TXT.Translate("Ignore hidden directories");
+            cbIgnoreSystemFolders.AccessibleName = TXT.Translate("Ignore system directories");
+            cbHideScanErrors.AccessibleName = TXT.Translate("Hide errors during search");
+            cbHideDeletionErrors.AccessibleName = TXT.Translate("Hide errors during deletion");
+            cbHideIgnoredFolders.AccessibleName = TXT.Translate("Hide ignored directories from results");
+            cbAutoProtectRoot.AccessibleName = TXT.Translate("Automatically protect the starting directory");
+            cbClipboardDetection.AccessibleName = TXT.Translate("Detect paths in the clipboard");
+            pbProgressStatus.AccessibleName = TXT.Translate("Operation progress");
         }
 
         /// <summary>
@@ -1076,7 +1078,7 @@ namespace RED.UI
                 if (RedConfig != null && RedConfig.IsReadOnly)
                 {
                     btnResetConfig.Enabled = false;
-                    lbStatus.Text = "Settings are ReadOnly and cannot be changed";
+                    lbStatus.Text = TXT.Translate("Settings are read-only and cannot be changed");
                 }
             }
             else
