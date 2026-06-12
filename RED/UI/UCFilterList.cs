@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows.Forms;
+using RED.Helper;
 using RED.Match;
 using TXT = RED.RedGetText;
 
@@ -13,14 +14,29 @@ namespace RED.UI
         {
             InitializeComponent();
             MatchList = new RedMatchItemList();
+            ApplyPremiumPolish();
+        }
+
+        private void ApplyPremiumPolish()
+        {
+            grdFilter.AccessibleName = TXT.Translate("Filter rules");
+            grdFilter.AccessibleDescription = TXT.Translate("Each row controls whether a path or filename is treated as ignored or kept.");
+            grdFilter.ShowCellToolTips = true;
+            grdFilter.RowTemplate.Height = 24;
+            grdFilter.BorderStyle = BorderStyle.None;
+            grdFilter.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+            tsbFilterAdd.ToolTipText = TXT.Translate("Add a filter rule");
+            tsbFilterDelete.ToolTipText = TXT.Translate("Delete the selected filter rule");
+            tsbFilterEdit.ToolTipText = TXT.Translate("Edit the selected filter text");
+            tsbCancelEdit.ToolTipText = TXT.Translate("Cancel the current edit");
+            tsbFilterHelp.ToolTipText = TXT.Translate("Show filter syntax help");
         }
 
         private void grdFilter_DataError(object sender, DataGridViewDataErrorEventArgs e)
         {
             e.ThrowException = false;
-            _ = MessageBox.Show(
-                TXT.Translate("This filter entry could not be applied:") + "\r\n\r\n" + e.Exception.Message,
-                "RED++", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            UiAssist.MsgBoxWarning(this,
+                TXT.Translate("This filter entry could not be applied.") + "\r\n\r\n" + e.Exception.Message);
         }
 
         private RedMatchItemList MatchList { get; set; }
@@ -282,7 +298,7 @@ namespace RED.UI
         {
             int rowno = grdFilter.Rows.Add();
             DataGridViewRow row = grdFilter.Rows[rowno];
-            RedMatchItem item = new RedMatchItem(RedMatchMethodType.NameExact, "matchtext", true);
+            RedMatchItem item = new RedMatchItem(RedMatchMethodType.NameExact, string.Empty, true);
             DataGridViewCheckBoxCell chk = (DataGridViewCheckBoxCell)row.Cells[colMatchEnabled.Index];
             chk.Value = item.Enabled ? chk.TrueValue : chk.FalseValue;
             row.Cells[colMatchMethod.Index].Value = RedGetText.MatchMethodDescription(item.MatchMethod);
@@ -339,37 +355,37 @@ namespace RED.UI
             helptxt.AppendLine(@"01010c0d0e0f10111213140301151617010101020304050607080708090a0b0101010101010101");
             helptxt.AppendLine(@"01010101010101010101040000002701ffff030000000000}");
 
-            helptxt.AppendFormat(" {0}}}", TXT.Translate("Right-Click on the Filter image at the start of a row to display a context menu"));
+            helptxt.AppendFormat(" {0}}}", TXT.Translate("Right-click the filter icon at the start of a row to open row actions."));
 
             AppendRtfHorzLine(helptxt);
             AppendRtfSubHeader(helptxt, TXT.Translate("Match Method"));
-            AppendRtfParagraph(helptxt, TXT.Translate("Right-Click or Double-Click on the Method to change its value. A menu will be displayed from which you can select the required method."));
+            AppendRtfParagraph(helptxt, TXT.Translate("Right-click or double-click the Method cell to choose how RED++ compares the text."));
 
             AppendRtfHorzLine(helptxt);
             AppendRtfSubHeader(helptxt, TXT.Translate("Match Text"));
 
             if (MatchList.FilterType == RedMatchFilterType.Files)
             {
-                AppendRtfParagraph(helptxt, TXT.Translate("Files: The text is ONLY checked against the filename.No path details are included"));
+                AppendRtfParagraph(helptxt, TXT.Translate("Files: match text is checked against the filename only. Path details are not included."));
             }
             if (MatchList.FilterType == RedMatchFilterType.Directory)
             {
-                AppendRtfParagraph(helptxt, TXT.Translate("Directories: Contains, Endswith and Startswith\r\nIf the text includes the path seperator the match will be against the entire path. Otherwise it will be against the name only.\r\neg Method=Contains with Text=ab\\\\cd would match D:\\\\xyzab\\\\cdefg"));
+                AppendRtfParagraph(helptxt, TXT.Translate("Directories: Contains, Endswith and Startswith\r\nIf the text includes the path separator, RED++ matches against the full path. Otherwise it matches against the directory name only.\r\neg Method=Contains with Text=ab\\\\cd would match D:\\\\xyzab\\\\cdefg"));
                 helptxt.AppendLine("\\par ");
-                AppendRtfParagraph(helptxt, TXT.Translate("Directories: Path (Exact)\r\nThe text must match the FULL pathname exactly, including the drive letter"));
+                AppendRtfParagraph(helptxt, TXT.Translate("Directories: Path (Exact)\r\nThe text must match the full path exactly, including the drive letter."));
             }
             helptxt.AppendLine(@"}");
 
             AppendRtfHorzLine(helptxt);
             AppendRtfSubHeader(helptxt, TXT.Translate("Regular Expressions"));
-            AppendRtfParagraph(helptxt, TXT.Translate("Simple Wildcard expressions (asterisk only)\r\n *.tmp will match all files with the ending .tmp like dummy.tmp or empty.tmp etc"));
+            AppendRtfParagraph(helptxt, TXT.Translate("Simple wildcard expressions use an asterisk only.\r\n*.tmp matches files ending in .tmp, such as dummy.tmp or empty.tmp."));
             helptxt.AppendLine("{\\par }");
-            AppendRtfParagraph(helptxt, TXT.Translate("RegEx\r\n ^tmp\\.[0-9]+ will match all files that are named like tmp.001 or tmp.002 etc"));
+            AppendRtfParagraph(helptxt, TXT.Translate("RegEx\r\n^tmp\\.[0-9]+ matches names such as tmp.001 or tmp.002."));
             helptxt.AppendLine("\\par}");
             if (MatchList.FilterType == RedMatchFilterType.Directory)
             {
-                AppendRtfParagraph(helptxt, TXT.Translate("RegEx Name matches against the directory name only"));
-                AppendRtfParagraph(helptxt, TXT.Translate("RegEx Path matches against the full pathname"));
+                AppendRtfParagraph(helptxt, TXT.Translate("RegEx Name matches against the directory name only."));
+                AppendRtfParagraph(helptxt, TXT.Translate("RegEx Path matches against the full path."));
             }
 
             helptxt.AppendLine(@"}}");
