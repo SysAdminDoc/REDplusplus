@@ -8,6 +8,7 @@ namespace RED
 {
 	public class RuntimeData : IDisposable
 	{
+		private const long MaxLogBytes = 5L * 1024L * 1024L;
 		private StreamWriter _logWriter;
 		private bool _disposed;
 
@@ -19,7 +20,15 @@ namespace RED
 
 			try
 			{
-				_logWriter = new StreamWriter(GetWritableDataFilePath("RED++.log"), append: true, encoding: Encoding.UTF8) { AutoFlush = true };
+				string logPath = GetWritableDataFilePath("RED++.log");
+				string rotatedPath;
+				bool rotated = RotateLogIfNeeded(logPath, out rotatedPath);
+
+				_logWriter = new StreamWriter(logPath, append: true, encoding: Encoding.UTF8) { AutoFlush = true };
+				if (rotated)
+				{
+					_logWriter.WriteLine(DateTime.Now.ToString("r") + "\t" + "Rotated log file to " + rotatedPath);
+				}
 			}
 			catch
 			{
@@ -49,6 +58,35 @@ namespace RED
 					"NotBob", "RemoveEmptyDirectories");
 				Directory.CreateDirectory(appData);
 				return Path.Combine(appData, fileName);
+			}
+		}
+
+		private static bool RotateLogIfNeeded(string logPath, out string rotatedPath)
+		{
+			rotatedPath = logPath + ".1";
+			try
+			{
+				var info = new FileInfo(logPath);
+				if (!info.Exists || info.Length <= MaxLogBytes)
+				{
+					return false;
+				}
+
+				if (File.Exists(rotatedPath))
+				{
+					File.Delete(rotatedPath);
+				}
+				File.Move(logPath, rotatedPath);
+				return true;
+			}
+			catch
+			{
+				try
+				{
+					using (new FileStream(logPath, FileMode.Create, FileAccess.Write, FileShare.Read)) { }
+				}
+				catch { }
+				return false;
 			}
 		}
 

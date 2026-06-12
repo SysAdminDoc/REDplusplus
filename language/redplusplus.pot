@@ -111,7 +111,130 @@ msgstr ""
 msgid "Searching For Empty Directories..."
 msgstr ""
 
-msgid "Empty Directories Found: {0} (Checked: {1} / Runtime: {2})"
+msgid "Search for empty directories and empty files"
+msgstr ""
+
+msgid "Search directory path"
+msgstr ""
+
+msgid "Search for empty directories"
+msgstr ""
+
+msgid "Delete empty directories"
+msgstr ""
+
+msgid "Cancel current operation"
+msgstr ""
+
+msgid "Exit application"
+msgstr ""
+
+msgid "Browse for directory"
+msgstr ""
+
+msgid "Search results tree"
+msgstr ""
+
+msgid "Delete mode selection"
+msgstr ""
+
+msgid "Open help"
+msgstr ""
+
+msgid "Copy debug information to clipboard"
+msgstr ""
+
+msgid "Reset settings to defaults"
+msgstr ""
+
+msgid "Reset filters to defaults"
+msgstr ""
+
+msgid "Add Explorer context menu integration"
+msgstr ""
+
+msgid "Remove Explorer context menu integration"
+msgstr ""
+
+msgid "Enable fast search mode"
+msgstr ""
+
+msgid "Prompt to save settings on exit"
+msgstr ""
+
+msgid "Treat directories with empty files as empty"
+msgstr ""
+
+msgid "Ignore hidden directories"
+msgstr ""
+
+msgid "Ignore system directories"
+msgstr ""
+
+msgid "Hide errors during search"
+msgstr ""
+
+msgid "Hide errors during deletion"
+msgstr ""
+
+msgid "Hide ignored directories from results"
+msgstr ""
+
+msgid "Automatically protect the starting directory"
+msgstr ""
+
+msgid "Detect paths in the clipboard"
+msgstr ""
+
+msgid "Operation progress"
+msgstr ""
+
+msgid "Restore directories from the last deletion"
+msgstr ""
+
+msgid "Also delete standalone zero-byte files"
+msgstr ""
+
+msgid "&Restore Last Deletion"
+msgstr ""
+
+msgid "&Theme"
+msgstr ""
+
+msgid "Dark"
+msgstr ""
+
+msgid "Light"
+msgstr ""
+
+msgid "System"
+msgstr ""
+
+msgid "Delete empty &files too"
+msgstr ""
+
+msgid "Restored {0} directories (Failed: {1})"
+msgstr ""
+
+msgid "See the log for details. The undo manifest was kept so you can retry."
+msgstr ""
+
+msgid "Settings are read-only and cannot be changed"
+msgstr ""
+
+msgid "Empty Directories Found: {0}; Empty Files Found: {1} (Checked: {2} / Runtime: {3})"
+msgstr ""
+
+msgid "Select the folder where empty directories and empty files will be moved to"
+msgstr ""
+
+msgid "Move {0} empty directories and {1} empty files?"
+msgstr ""
+
+msgid "Delete {0} empty directories and {1} empty files?"
+msgstr ""
+
+msgid "Deleted {0} empty directories and {1} empty files (Failed directories: {2}, Failed files: {3}, Skipped directories: {4}, Runtime: {5})"
 msgstr ""
 
 msgid "Checking directory: {0}"
