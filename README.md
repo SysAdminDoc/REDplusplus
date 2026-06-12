@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-1.5.9-blue)
+![Version](https://img.shields.io/badge/version-1.5.10-blue)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2B-lightgrey)
 
@@ -26,7 +26,7 @@ RED++ finds, displays, and deletes empty directories recursively below a given s
 - Extended directory and file name matching with sophisticated filter syntax
 - Dedicated grid for display and editing of filter rules
 - Translation-ready via .po files (template included, community translations welcome)
-- Export scan results to TXT, CSV, or JSON
+- Export scan results to TXT, CSV, or JSON; import saved dry-run results for GUI review
 - Headless CLI mode for scripted/scheduled operation
 - Keyboard shortcuts (Enter to scan, Del to delete selected)
 - Single-instance enforcement
@@ -57,7 +57,7 @@ RED++ finds, displays, and deletes empty directories recursively below a given s
 Every release ships a `SHA256SUMS` file and a signed build-provenance attestation. To verify the zip really came from this repository's CI:
 
 ```
-gh attestation verify RED++_v1.5.9.zip -R SysAdminDoc/REDplusplus
+gh attestation verify RED++_v1.5.10.zip -R SysAdminDoc/REDplusplus
 ```
 
 ## Usage
@@ -68,6 +68,8 @@ If the config file (**RED+.cfg**) isn't found, you'll be prompted to create one:
 - **Portable Mode** stores the config in the same folder as the executable
 - **%APPDATA%** stores the config in a subfolder of Windows %APPDATA%
 - If RED++ is in a protected folder (Program Files, etc.), select %APPDATA% instead
+
+Dry-run JSON from the CLI can be reviewed later in the GUI with **Extras -> Import Saved Dry-Run Results**. Import shows every valid record in the tree, but only `Empty` records are eligible for deletion; destructive modes still re-check that directories are file-free and not reparse points before deleting or moving them.
 
 ### CLI / Headless Mode
 
