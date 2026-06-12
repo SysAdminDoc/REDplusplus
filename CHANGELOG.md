@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.9 (2026-06-12)
+
+### Release Packaging
+- Generate the final winget manifest during the release workflow after the zip SHA256 exists, validate it when `winget` is available, and attach it to the GitHub release
+
 ## 1.5.8 (2026-06-12)
 
 ### CLI Automation
