@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.4 (2026-06-12)
+
+### CLI Automation
+- Add `-quiet` for scheduler-friendly headless runs that suppress stdout/stderr while preserving exit codes and optional log files
+- Add a versioned NDJSON `meta` record before result records and document the schema-bearing output contract
+- Return exit code 11 when simulate/dry-run succeeds and finds empty directories or files, while keeping successful deletion runs at exit code 0
+
 ## 1.5.3 (2026-06-12)
 
 ### Reliability and Accessibility
