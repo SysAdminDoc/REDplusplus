@@ -86,7 +86,9 @@ namespace RED
 			{
 				if ((startFolder.Attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
 				{
-					string emsg = TXT.Translate("The start folder is a reparse point (junction, symlink, or mount point) and cannot be scanned: {0}", RedAssist.DQuote(startFolder.FullName));
+					string emsg = SystemFunctions.IsCloudPlaceholderDirectory(startFolder.FullName)
+						? TXT.Translate("The start folder is a cloud placeholder directory and cannot be scanned safely: {0}", RedAssist.DQuote(startFolder.FullName))
+						: TXT.Translate("The start folder is a reparse point (junction, symlink, or mount point) and cannot be scanned: {0}", RedAssist.DQuote(startFolder.FullName));
 					this.RunData.AddLogMessage(emsg);
 					this.ReportDirectoryStatus(startFolder, DirectorySearchStatusTypes.Error, emsg);
 					e.Cancel = true;
@@ -367,8 +369,16 @@ namespace RED
 
 					if (!ignoreSubDirectory && (attribs & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
 					{
-						this.RunData.AddLogMessage(TXT.Translate("Aborted scan of {0} because it is a symbolic link", RedAssist.DQuote(curDir.FullName)));
-						this.ReportDirectoryStatus(curDir, DirectorySearchStatusTypes.Error, TXT.Translate("Aborted because directory is a symbolic link"));
+						if (SystemFunctions.IsCloudPlaceholderDirectory(curDir.FullName))
+						{
+							this.RunData.AddLogMessage(TXT.Translate("Skipped cloud placeholder directory: {0}", RedAssist.DQuote(curDir.FullName)));
+							this.ReportDirectoryStatus(curDir, DirectorySearchStatusTypes.NeverEmpty, TXT.Translate("cloud placeholder directory"));
+						}
+						else
+						{
+							this.RunData.AddLogMessage(TXT.Translate("Aborted scan of {0} because it is a symbolic link", RedAssist.DQuote(curDir.FullName)));
+							this.ReportDirectoryStatus(curDir, DirectorySearchStatusTypes.Error, TXT.Translate("Aborted because directory is a symbolic link"));
+						}
 						ignoreSubDirectory = true;
 					}
 
