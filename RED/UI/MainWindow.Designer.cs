@@ -82,6 +82,9 @@ namespace RED.UI
             this.cbDeleteMode = new System.Windows.Forms.ComboBox();
             this.tabSettings2 = new System.Windows.Forms.TabPage();
             this.gbSettings2a = new System.Windows.Forms.GroupBox();
+            this.cbRespectGitIgnore = new System.Windows.Forms.CheckBox();
+            this.cbUseMftScan = new System.Windows.Forms.CheckBox();
+            this.lbUseMftScan = new System.Windows.Forms.Label();
             this.gbSettings2r = new System.Windows.Forms.GroupBox();
             this.cbRememberDeletionStats = new System.Windows.Forms.CheckBox();
             this.cbRememberLastUsedDirectory = new System.Windows.Forms.CheckBox();
@@ -775,6 +778,9 @@ namespace RED.UI
             // 
             // gbSettings2a
             // 
+            this.gbSettings2a.Controls.Add(this.lbUseMftScan);
+            this.gbSettings2a.Controls.Add(this.cbUseMftScan);
+            this.gbSettings2a.Controls.Add(this.cbRespectGitIgnore);
             this.gbSettings2a.Controls.Add(this.gbSettings2r);
             this.gbSettings2a.Controls.Add(this.lbnuPause2);
             this.gbSettings2a.Controls.Add(this.lbFolderAge2);
@@ -793,7 +799,36 @@ namespace RED.UI
             this.gbSettings2a.Size = new System.Drawing.Size(636, 283);
             this.gbSettings2a.TabIndex = 0;
             this.gbSettings2a.TabStop = false;
-            // 
+            //
+            // cbRespectGitIgnore
+            //
+            this.cbRespectGitIgnore.AutoSize = true;
+            this.cbRespectGitIgnore.Location = new System.Drawing.Point(6, 224);
+            this.cbRespectGitIgnore.Name = "cbRespectGitIgnore";
+            this.cbRespectGitIgnore.Size = new System.Drawing.Size(212, 17);
+            this.cbRespectGitIgnore.TabIndex = 27;
+            this.cbRespectGitIgnore.Text = "Respect .gitignore rules during scans";
+            this.cbRespectGitIgnore.UseVisualStyleBackColor = true;
+            //
+            // cbUseMftScan
+            //
+            this.cbUseMftScan.AutoSize = true;
+            this.cbUseMftScan.Location = new System.Drawing.Point(6, 247);
+            this.cbUseMftScan.Name = "cbUseMftScan";
+            this.cbUseMftScan.Size = new System.Drawing.Size(219, 17);
+            this.cbUseMftScan.TabIndex = 28;
+            this.cbUseMftScan.Text = "Use MFT turbo scan (administrator only)";
+            this.cbUseMftScan.UseVisualStyleBackColor = true;
+            //
+            // lbUseMftScan
+            //
+            this.lbUseMftScan.ForeColor = System.Drawing.SystemColors.GrayText;
+            this.lbUseMftScan.Location = new System.Drawing.Point(23, 266);
+            this.lbUseMftScan.Name = "lbUseMftScan";
+            this.lbUseMftScan.Size = new System.Drawing.Size(401, 13);
+            this.lbUseMftScan.TabIndex = 29;
+            this.lbUseMftScan.Text = "Requires administrator rights; falls back to standard scan when unavailable";
+            //
             // gbSettings2r
             // 
             this.gbSettings2r.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
@@ -1785,6 +1820,9 @@ namespace RED.UI
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;
         private System.Windows.Forms.ToolStripMenuItem mnuItemLanguage;
         private System.Windows.Forms.GroupBox gbSettings2r;
+        private System.Windows.Forms.CheckBox cbRespectGitIgnore;
+        private System.Windows.Forms.CheckBox cbUseMftScan;
+        private System.Windows.Forms.Label lbUseMftScan;
         private System.Windows.Forms.CheckBox cbRememberDeletionStats;
         private System.Windows.Forms.CheckBox cbRememberLastUsedDirectory;
         private System.Windows.Forms.CheckBox cbSavePrompt;

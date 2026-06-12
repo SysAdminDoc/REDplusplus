@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.5 (2026-06-12)
+
+### UX
+- Add Advanced Settings checkboxes for respecting `.gitignore` rules and enabling the MFT turbo scan so both previously config-file-only scan options are discoverable in the GUI
+- Preserve an existing MFT config value when the GUI is not elevated and disables the checkbox, avoiding accidental config loss during ordinary settings edits
+
 ## 1.5.4 (2026-06-12)
 
 ### CLI Automation

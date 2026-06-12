@@ -183,6 +183,18 @@ msgstr ""
 msgid "Automatically protect the starting directory"
 msgstr ""
 
+msgid "Respect .gitignore rules during scans"
+msgstr ""
+
+msgid "Use MFT turbo scan"
+msgstr ""
+
+msgid "Use MFT turbo scan (administrator only)"
+msgstr ""
+
+msgid "Requires administrator rights; falls back to standard scan when unavailable"
+msgstr ""
+
 msgid "Detect paths in the clipboard"
 msgstr ""
 
