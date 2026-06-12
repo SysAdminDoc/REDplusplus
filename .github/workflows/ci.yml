@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build Release
+        run: msbuild "!RED+.sln" /p:Configuration=Release /p:Platform="Any CPU"
+
+      - name: Headless safety smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Join-Path $PWD 'bin\Release\RED+.exe'
+          if (!(Test-Path $exe)) { throw "Missing RED+.exe at $exe" }
+
+          $root = Join-Path $env:RUNNER_TEMP ("redpp-ci-" + [guid]::NewGuid().ToString("N"))
+          $junctionTarget = $root + '-junction-target'
+          New-Item -ItemType Directory -Path $root | Out-Null
+          try {
+            $emptyDir = Join-Path $root 'empty-child'
+            $nonEmpty = Join-Path $root 'non-empty'
+            $junction = Join-Path $root 'junction'
+            $deny = Join-Path $root 'deny-access'
+
+            New-Item -ItemType Directory -Path $emptyDir, $nonEmpty, $junctionTarget, $deny | Out-Null
+            Set-Content -Path (Join-Path $nonEmpty 'keep.txt') -Value 'content' -NoNewline
+            New-Item -ItemType File -Path (Join-Path $root 'empty-file.txt') | Out-Null
+            cmd /c mklink /J "$junction" "$junctionTarget"
+
+            $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+            $denyAcl = $currentUser + ':(OI)(CI)(R)'
+            icacls "$deny" /deny "$denyAcl" | Out-Null
+            try {
+              & $exe -silent -path $root -emptyfiles -mode direct | Tee-Object -Variable output
+              if ($LASTEXITCODE -ne 0) { throw "RED++ exited with $LASTEXITCODE`n$output" }
+            }
+            finally {
+              icacls "$deny" /remove:d "$currentUser" | Out-Null
+            }
+
+            $joinedOutput = $output -join [Environment]::NewLine
+            if ($joinedOutput -notmatch 'Found 1 empty directories') { throw "Unexpected found-directory count:`n$joinedOutput" }
+            if (!(Test-Path $root)) { throw 'Root directory was deleted despite AutoProtectRoot' }
+            if (Test-Path $emptyDir) { throw 'Empty child directory was not deleted' }
+            if (!(Test-Path (Join-Path $nonEmpty 'keep.txt'))) { throw 'Non-empty directory payload was deleted' }
+            if (!(Test-Path $junction)) { throw 'Junction was deleted' }
+            if (!(Test-Path $junctionTarget)) { throw 'Junction target outside the scan root was deleted' }
+            if (!(Test-Path $deny)) { throw 'Deny-ACL directory was deleted' }
+            if (Test-Path (Join-Path $root 'empty-file.txt')) { throw 'Empty file was not deleted' }
+          }
+          finally {
+            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -LiteralPath $junctionTarget -Recurse -Force -ErrorAction SilentlyContinue
+          }

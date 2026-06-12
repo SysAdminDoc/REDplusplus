@@ -66,12 +66,7 @@ namespace RED
 		{
 			if (e.UserState is FoundEmptyDirInfoEventArgs info)
 			{
-				if (info.ScanResult.SearchStatus == DirectorySearchStatusTypes.Empty)
-				{
-					// Found an empty dir, add it to the list
-					RunData.ScanResults.AddItem(info.ScanResult);
-				}
-				else if (info.ScanResult.SearchStatus == DirectorySearchStatusTypes.Error && RunData.HideScanErrors)
+				if (info.ScanResult.SearchStatus == DirectorySearchStatusTypes.Error && RunData.HideScanErrors)
 				{
 					return;
 				}

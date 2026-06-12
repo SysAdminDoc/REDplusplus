@@ -1,20 +1,21 @@
 PackageIdentifier: SysAdminDoc.REDplusplus
-PackageVersion: 1.5.1
+PackageVersion: 1.5.2
+PackageLocale: en-US
 PackageName: RED++
 Publisher: SysAdminDoc
 License: LGPL-3.0-or-later
 ShortDescription: Find, display, and delete empty directories with filters, CLI mode, and reparse-point safety
 PackageUrl: https://github.com/SysAdminDoc/REDplusplus
-InstallerType: portable
+InstallerType: zip
 Commands:
-  - RED+
+  - red++
 Installers:
   - Architecture: x86
-    InstallerUrl: https://github.com/SysAdminDoc/REDplusplus/releases/download/v1.5.1/RED++_v1.5.1.zip
+    InstallerUrl: https://github.com/SysAdminDoc/REDplusplus/releases/download/v1.5.2/RED++_v1.5.2.zip
     InstallerSha256:
     NestedInstallerType: portable
     NestedInstallerFiles:
       - RelativeFilePath: RED+.exe
-        PortableCommandAlias: RED+
+        PortableCommandAlias: red++
 ManifestType: singleton
 ManifestVersion: 1.6.0
