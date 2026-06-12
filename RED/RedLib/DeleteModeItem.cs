@@ -32,22 +32,22 @@ namespace RED
 			switch (this.DeleteMode)
 			{
 				case DeleteModes.RecycleBin:
-					return TXT.Translate("Delete to Recycle Bin, Ignore Errors (Safer but slower. Default Setting)");
+					return TXT.Translate("Recycle Bin, ignore errors (default; safest)");
 
 				case DeleteModes.RecycleBinShowErrors:
-					return TXT.Translate("Delete to Recycle Bin, Show Errors");
+					return TXT.Translate("Recycle Bin, show errors");
 
 				case DeleteModes.RecycleBinWithQuestion:
-					return TXT.Translate("Delete to Recycle Bin, Ask Before Every Deletion (can be annoying)");
+					return TXT.Translate("Recycle Bin, ask before each item");
 
 				case DeleteModes.Direct:
-					return TXT.Translate("Bypass Recycle Bin. Directly Delete Directories (more dangerous but faster)");
+					return TXT.Translate("Direct delete (bypasses Recycle Bin; least recoverable)");
 
 				case DeleteModes.Simulate:
-					return TXT.Translate("Simulate Deletion (Just pretend to delete, for testing)");
+					return TXT.Translate("Simulate only (scan and log without changing files)");
 
 				case DeleteModes.MoveToFolder:
-					return TXT.Translate("Move to specified folder (preserves directories for review)");
+					return TXT.Translate("Move to folder (preserve results for review)");
 
 				default:
 					throw new Exception(TXT.Translate("Unknown delete mode"));

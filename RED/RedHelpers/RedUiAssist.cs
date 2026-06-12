@@ -143,7 +143,7 @@ namespace RED.Helper
 
         internal static void ToDo(string text, string caption)
         {
-            MessageBox.Show(text, string.Format("{0}:TODO: {1}", Application.ProductName, caption), MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(text, string.Format("{0}: {1}", Application.ProductName, caption), MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         internal static bool BAskYesNo(string text, MessageBoxDefaultButton defaultButton)

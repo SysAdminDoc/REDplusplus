@@ -19,6 +19,7 @@ namespace RED.UI
         public Color Text, Subtext0, Subtext1;
         public Color Blue, Red, Green, Yellow, Lavender, Peach;
         public bool IsDark;
+        public bool IsHighContrast;
     }
 
     internal static class DarkTheme
@@ -68,6 +69,28 @@ namespace RED.UI
             Peach = Color.FromArgb(254, 100, 11),
         };
 
+        private static readonly ThemePalette HighContrast = new ThemePalette
+        {
+            IsDark = true,
+            IsHighContrast = true,
+            Base = SystemColors.Window,
+            Mantle = SystemColors.Window,
+            Crust = SystemColors.Control,
+            Surface0 = SystemColors.Control,
+            Surface1 = SystemColors.Highlight,
+            Surface2 = SystemColors.HotTrack,
+            Overlay0 = SystemColors.GrayText,
+            Text = SystemColors.WindowText,
+            Subtext0 = SystemColors.ControlText,
+            Subtext1 = SystemColors.ControlText,
+            Blue = SystemColors.HotTrack,
+            Red = SystemColors.Highlight,
+            Green = SystemColors.Highlight,
+            Yellow = SystemColors.InfoText,
+            Lavender = SystemColors.HotTrack,
+            Peach = SystemColors.Highlight,
+        };
+
         internal static ThemePalette Active = Mocha;
 
         internal static Color Base => Active.Base;
@@ -86,6 +109,12 @@ namespace RED.UI
         internal static Color Yellow => Active.Yellow;
         internal static Color Lavender => Active.Lavender;
         internal static Color Peach => Active.Peach;
+        internal static bool IsHighContrast => Active.IsHighContrast;
+        internal static bool IsDark => Active.IsDark;
+        internal static Color Eligible => Active.IsHighContrast ? SystemColors.Highlight : Red;
+        internal static Color Protected => Active.IsHighContrast ? SystemColors.HotTrack : Blue;
+        internal static Color Kept => Active.IsHighContrast ? SystemColors.GrayText : Subtext0;
+        internal static Color Warning => Active.IsHighContrast ? SystemColors.HighlightText : Yellow;
 
         /// <summary>
         /// Selects the active palette. System reads the Windows app-theme registry
@@ -93,6 +122,12 @@ namespace RED.UI
         /// </summary>
         internal static void SetMode(ThemeMode mode)
         {
+            if (SystemInformation.HighContrast)
+            {
+                Active = HighContrast;
+                return;
+            }
+
             bool light;
             switch (mode)
             {
@@ -138,6 +173,11 @@ namespace RED.UI
 
         private static void SetTitleBar(IntPtr handle)
         {
+            if (Active.IsHighContrast)
+            {
+                return;
+            }
+
             try
             {
                 int value = Active.IsDark ? 1 : 0;
@@ -167,7 +207,11 @@ namespace RED.UI
                 btn.BackColor = Surface0;
                 btn.ForeColor = Text;
                 btn.FlatStyle = FlatStyle.Flat;
+                btn.UseVisualStyleBackColor = false;
+                btn.MinimumSize = new Size(0, Math.Max(25, btn.MinimumSize.Height));
+                btn.Padding = new Padding(5, 1, 5, 1);
                 btn.FlatAppearance.BorderColor = Surface1;
+                btn.FlatAppearance.BorderSize = 1;
                 btn.FlatAppearance.MouseOverBackColor = Surface1;
                 btn.FlatAppearance.MouseDownBackColor = Surface2;
             }
@@ -185,26 +229,37 @@ namespace RED.UI
             else if (control is CheckBox chk)
             {
                 chk.ForeColor = Text;
+                chk.FlatStyle = FlatStyle.Standard;
             }
             else if (control is TreeView tv)
             {
                 tv.BackColor = Mantle;
                 tv.ForeColor = Text;
                 tv.LineColor = Surface2;
+                tv.HideSelection = false;
+                tv.FullRowSelect = true;
+                tv.ShowNodeToolTips = true;
             }
             else if (control is DataGridView dgv)
             {
                 dgv.BackgroundColor = Mantle;
                 dgv.GridColor = Surface1;
+                dgv.BorderStyle = BorderStyle.None;
+                dgv.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
                 dgv.DefaultCellStyle.BackColor = Base;
                 dgv.DefaultCellStyle.ForeColor = Text;
                 dgv.DefaultCellStyle.SelectionBackColor = Surface1;
                 dgv.DefaultCellStyle.SelectionForeColor = Text;
+                dgv.AlternatingRowsDefaultCellStyle.BackColor = Active.IsHighContrast ? Base : Mantle;
+                dgv.AlternatingRowsDefaultCellStyle.ForeColor = Text;
                 dgv.ColumnHeadersDefaultCellStyle.BackColor = Surface0;
                 dgv.ColumnHeadersDefaultCellStyle.ForeColor = Text;
+                dgv.ColumnHeadersDefaultCellStyle.SelectionBackColor = Surface1;
+                dgv.ColumnHeadersDefaultCellStyle.SelectionForeColor = Text;
                 dgv.RowHeadersDefaultCellStyle.BackColor = Surface0;
                 dgv.RowHeadersDefaultCellStyle.ForeColor = Text;
                 dgv.EnableHeadersVisualStyles = false;
+                dgv.RowTemplate.Height = Math.Max(22, dgv.RowTemplate.Height);
             }
             else if (control is TabControl tc)
             {
@@ -248,6 +303,12 @@ namespace RED.UI
             {
                 pnl.BackColor = Base;
                 pnl.ForeColor = Text;
+            }
+            else if (control is StatusStrip ss)
+            {
+                ss.BackColor = Surface0;
+                ss.ForeColor = Text;
+                ss.Renderer = new DarkToolStripRenderer();
             }
 
             if (control.ContextMenuStrip != null)
@@ -326,6 +387,13 @@ namespace RED.UI
                     ApplyToToolStripItem(child);
                 }
             }
+            else if (item is ToolStripMenuItem mi)
+            {
+                foreach (ToolStripItem child in mi.DropDownItems)
+                {
+                    ApplyToToolStripItem(child);
+                }
+            }
         }
 
         private static Color GetBackColor(Control c)
@@ -353,7 +421,15 @@ namespace RED.UI
 
             protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
             {
-                var color = e.Item.Selected ? Surface1 : Surface0;
+                Color color = Surface0;
+                if (e.Item.Pressed)
+                {
+                    color = Surface2;
+                }
+                else if (e.Item.Selected)
+                {
+                    color = Surface1;
+                }
                 using (var brush = new SolidBrush(color))
                     e.Graphics.FillRectangle(brush, new Rectangle(Point.Empty, e.Item.Size));
             }
@@ -373,7 +449,7 @@ namespace RED.UI
 
             protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
             {
-                e.TextColor = Text;
+                e.TextColor = e.Item.Enabled ? Text : Overlay0;
                 base.OnRenderItemText(e);
             }
         }

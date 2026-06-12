@@ -30,6 +30,8 @@ namespace RED.UI
         // True while a queued multi-path scan is continuing: results and tree roots
         // append instead of replacing the previous root's output.
         private bool multiRootContinuation = false;
+        private Label treeEmptyStateLabel;
+        private bool premiumPolishEventsAttached = false;
 
         #region Init methods
 
@@ -130,8 +132,11 @@ namespace RED.UI
             AddImportResultsMenuItem();
 
             SetAccessibleNames();
+            ApplyPremiumPolish();
             DarkTheme.SetMode((ThemeMode)RedConfig.UI.ThemeMode);
             DarkTheme.Apply(this);
+            RefreshThemeDependentUi();
+            UpdateTreeEmptyState();
         }
 
         /// <summary>
@@ -168,6 +173,10 @@ namespace RED.UI
                 foreach (Form f in Application.OpenForms)
                 {
                     DarkTheme.Apply(f);
+                    if (f is MainWindow main)
+                    {
+                        main.RefreshThemeDependentUi();
+                    }
                 }
                 dark.Checked = picked == ThemeMode.Dark;
                 light.Checked = picked == ThemeMode.Light;
@@ -259,6 +268,255 @@ namespace RED.UI
             cbUseMftScan.AccessibleName = TXT.Translate("Use MFT turbo scan");
             cbClipboardDetection.AccessibleName = TXT.Translate("Detect paths in the clipboard");
             pbProgressStatus.AccessibleName = TXT.Translate("Operation progress");
+            tvSearchResults.AccessibleDescription = TXT.Translate("Shows every reviewed directory and why it will be deleted, kept, or skipped.");
+            lbStatus.AccessibleName = TXT.Translate("Detailed status");
+            lbUiStatus.AccessibleName = TXT.Translate("Application state");
+        }
+
+        private void ApplyPremiumPolish()
+        {
+            gbFind.Text = TXT.Translate("Search and review");
+            lbIconDesc.Text = TXT.Translate("Result legend");
+            lbColorDoNotTouch.Text = TXT.Translate("Kept");
+            lbColorToBeDeleted.Text = TXT.Translate("Eligible");
+            lbColorProtected.Text = TXT.Translate("Protected");
+            lbFastModeInfo.Text = TXT.Translate("Fast mode is on. Results appear when the scan finishes.");
+
+            btnSearch.Text = TXT.Translate("&Scan");
+            btnDelete.Text = TXT.Translate("&Review && Delete");
+            btnCancel.Text = TXT.Translate("&Cancel");
+            btnExit.Text = TXT.Words.Exit;
+            uxMenuButtonExtras.Text = TXT.Translate("E&xtras");
+            cbIgnore0kbFiles.Text = TXT.Translate("Treat zero-byte files as empty");
+            lbIgnore0kbFiles.Text = TXT.Translate("Directories containing only zero-byte files can be treated as empty.");
+            cbIgnoreSystemFolders.Text = TXT.Translate("Ignore system directories (recommended)");
+            cbIgnoreHiddenFolders.Text = TXT.Translate("Ignore hidden directories");
+            cbHideDeletionErrors.Text = TXT.Translate("Continue past deletion errors");
+            cbHideScanErrors.Text = TXT.Translate("Hide scan errors in the result tree");
+            cbHideIgnoredFolders.Text = TXT.Translate("Hide ignored directories from results");
+            cbAutoProtectRoot.Text = TXT.Translate("Protect the starting directory");
+            cbFastSearchMode.Text = TXT.Translate("Fast result rendering");
+            cbClipboardDetection.Text = TXT.Translate("Detect folder paths in the clipboard");
+            cbSavePrompt.Text = TXT.Translate("Ask before saving");
+            gbDeleteMode.Text = TXT.Translate("Deletion mode");
+            cbRespectGitIgnore.Text = TXT.Translate("Respect .gitignore rules during scans");
+            cbUseMftScan.Text = TXT.Translate("Use MFT turbo scan (administrator only)");
+            lbUseMftScan.Text = TXT.Translate("Requires administrator rights; standard scan is used when unavailable.");
+            lbPause1.Text = TXT.Translate("Pause between deletion steps (milliseconds)");
+            lbnuPause2.Text = TXT.Translate("Useful for long runs when you may need time to cancel.");
+            lbMaxDepth1.Text = TXT.Translate("Maximum scan depth (-1 = unlimited)");
+            lbFolderAge1.Text = TXT.Translate("Minimum folder age before eligibility");
+            lbInfiniteLoopDetectionCount.Text = TXT.Translate("Stop after this many loop-detection errors");
+            gbExplorerIntegration.Text = TXT.Translate("Explorer integration");
+            lbExplorerIntegration1.Text = TXT.Translate("Add RED++ to the Explorer folder context menu.");
+            chkExplorerIntegrateAutoSearch.Text = TXT.Translate("Scan immediately");
+            btnExplorerIntegrate.Text = TXT.Translate("Add to Explorer");
+            btnExplorerRemove.Text = TXT.Translate("Remove");
+            btnCopyDebugInfo.Text = TXT.Translate("Copy debug info");
+            btnResetFilters.Text = TXT.Translate("Reset filters");
+            btnResetConfig.Text = TXT.Translate("Reset settings");
+            lbIgnoreFiles2.Text = TXT.Translate("Caution: ignored-file rules can make folders eligible for deletion. Keep patterns narrow.");
+            lbIgnoreFiles2.MaximumSize = new Size(220, 0);
+            lbFastSearchMode.MaximumSize = new Size(585, 0);
+            lbClipboardDetection.MaximumSize = new Size(585, 0);
+            lbUseMftScan.MaximumSize = new Size(420, 0);
+            lblExplorerIntegrationInfo.MaximumSize = new Size(340, 0);
+
+            EnsureComfortableWindowBounds();
+
+            tvSearchResults.BorderStyle = BorderStyle.FixedSingle;
+            tvSearchResults.HideSelection = false;
+            tvSearchResults.FullRowSelect = true;
+            tvSearchResults.ShowNodeToolTips = true;
+            lblPickAFolder.Visible = false;
+            stausStripMain.SizingGrip = false;
+            lbUiStatus.Size = new Size(82, lbUiStatus.Height);
+
+            uxToolTips.SetToolTip(btnSearch, TXT.Translate("Scan the selected folder and show reviewable results before anything is deleted."));
+            uxToolTips.SetToolTip(btnDelete, TXT.Translate("Change only eligible results after RED++ re-checks them for safety."));
+            uxToolTips.SetToolTip(btnCancel, TXT.Translate("Cancel the current scan or deletion."));
+            uxToolTips.SetToolTip(uxMenuButtonExtras, TXT.Translate("Open restore, import, export, log, language, and theme actions."));
+            uxToolTips.SetToolTip(tvSearchResults, TXT.Translate("Right-click a result to open it, protect it, add it to filters, or delete one eligible branch."));
+            uxToolTips.SetToolTip(txtSearchDirectory, TXT.Translate("Paste, type, browse, or drop one or more folders to scan."));
+
+            if (!premiumPolishEventsAttached)
+            {
+                gbFind.Resize += (s, e) => AdjustSearchLayout();
+                Resize += (s, e) =>
+                {
+                    LayoutMainChrome();
+                    AdjustSearchLayout();
+                };
+                premiumPolishEventsAttached = true;
+            }
+
+            EnsureTreeEmptyStateLabel();
+            LayoutMainChrome();
+            AdjustSearchLayout();
+        }
+
+        private void LayoutMainChrome()
+        {
+            if (ClientSize.Width <= 0 || ClientSize.Height <= 0)
+            {
+                return;
+            }
+
+            int statusHeight = Math.Max(24, stausStripMain.PreferredSize.Height);
+            int actionHeight = Math.Max(34, pnlActions.Height);
+            int actionsTop = Math.Max(0, ClientSize.Height - statusHeight - actionHeight);
+
+            tcMain.Dock = DockStyle.None;
+            pnlActions.Dock = DockStyle.None;
+            stausStripMain.Dock = DockStyle.None;
+
+            tcMain.Bounds = new Rectangle(0, 0, ClientSize.Width, Math.Max(120, actionsTop));
+            pnlActions.Bounds = new Rectangle(0, actionsTop, ClientSize.Width, actionHeight);
+            stausStripMain.Bounds = new Rectangle(0, actionsTop + actionHeight, ClientSize.Width, statusHeight);
+        }
+
+        private void EnsureComfortableWindowBounds()
+        {
+            Rectangle workingArea = Screen.FromControl(this).WorkingArea;
+            int minWidth = Math.Min(1120, workingArea.Width);
+            int minHeight = Math.Min(600, workingArea.Height);
+            MinimumSize = new Size(Math.Max(MinimumSize.Width, minWidth), Math.Max(MinimumSize.Height, minHeight));
+
+            if (Width < MinimumSize.Width)
+            {
+                Width = MinimumSize.Width;
+            }
+            if (Height < MinimumSize.Height)
+            {
+                Height = MinimumSize.Height;
+            }
+
+            if (Right > workingArea.Right)
+            {
+                Left = Math.Max(workingArea.Left, workingArea.Right - Width);
+            }
+            if (Bottom > workingArea.Bottom)
+            {
+                Top = Math.Max(workingArea.Top, workingArea.Bottom - Height);
+            }
+        }
+
+        private void EnsureTreeEmptyStateLabel()
+        {
+            if (treeEmptyStateLabel != null)
+            {
+                return;
+            }
+
+            treeEmptyStateLabel = new Label
+            {
+                Name = "lbTreeEmptyState",
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleCenter,
+                TabStop = false,
+                Text = TXT.Translate("Choose a folder, then scan.\r\nRED++ shows reviewable results before anything is deleted.")
+            };
+            treeEmptyStateLabel.Click += (s, e) => txtSearchDirectory.Focus();
+            gbFind.Controls.Add(treeEmptyStateLabel);
+            treeEmptyStateLabel.BringToFront();
+            tvSearchResults.LocationChanged += (s, e) => PositionTreeEmptyStateLabel();
+            tvSearchResults.SizeChanged += (s, e) => PositionTreeEmptyStateLabel();
+            PositionTreeEmptyStateLabel();
+        }
+
+        private void PositionTreeEmptyStateLabel()
+        {
+            if (treeEmptyStateLabel == null)
+            {
+                return;
+            }
+
+            treeEmptyStateLabel.Bounds = new Rectangle(
+                tvSearchResults.Left + 24,
+                tvSearchResults.Top + 24,
+                Math.Max(160, tvSearchResults.Width - 48),
+                Math.Max(80, tvSearchResults.Height - 48));
+        }
+
+        private void AdjustSearchLayout()
+        {
+            if (gbFind.ClientSize.Width <= 0 || gbFind.ClientSize.Height <= 0)
+            {
+                return;
+            }
+
+            const int margin = 8;
+            const int gap = 6;
+            int sideWidth = Math.Max(112, pnlIconDesc.Width);
+            bool showLegend = gbFind.ClientSize.Width >= 560;
+
+            pnlIconDesc.Visible = showLegend;
+            if (showLegend)
+            {
+                pnlIconDesc.Left = gbFind.ClientSize.Width - sideWidth - margin;
+                pnlIconDesc.Width = sideWidth;
+                pnlIconDesc.Top = tvSearchResults.Top;
+                pnlIconDesc.Height = Math.Max(120, gbFind.ClientSize.Height - pnlIconDesc.Top - margin);
+                btnSearchDirectoryBrowseFor.Width = sideWidth;
+                btnSearchDirectoryBrowseFor.Left = pnlIconDesc.Left;
+            }
+            else
+            {
+                btnSearchDirectoryBrowseFor.Width = Math.Min(96, Math.Max(80, btnSearchDirectoryBrowseFor.Width));
+                btnSearchDirectoryBrowseFor.Left = gbFind.ClientSize.Width - btnSearchDirectoryBrowseFor.Width - margin;
+            }
+
+            txtSearchDirectory.Width = Math.Max(120, btnSearchDirectoryBrowseFor.Left - txtSearchDirectory.Left - gap);
+
+            int treeRight = showLegend ? pnlIconDesc.Left - gap : gbFind.ClientSize.Width - margin;
+            tvSearchResults.Width = Math.Max(160, treeRight - tvSearchResults.Left);
+            tvSearchResults.Height = Math.Max(120, gbFind.ClientSize.Height - tvSearchResults.Top - margin);
+            txtSearchDirectory.BringToFront();
+            btnSearchDirectoryBrowseFor.BringToFront();
+            pnlIconDesc.BringToFront();
+            tvSearchResults.SendToBack();
+            PositionTreeEmptyStateLabel();
+            treeEmptyStateLabel?.BringToFront();
+        }
+
+        private void RefreshThemeDependentUi()
+        {
+            if (treeEmptyStateLabel != null)
+            {
+                treeEmptyStateLabel.BackColor = DarkTheme.Mantle;
+                treeEmptyStateLabel.ForeColor = DarkTheme.Subtext0;
+                treeEmptyStateLabel.Font = new Font(Font, FontStyle.Regular);
+            }
+
+            pnlIconDesc.BackColor = DarkTheme.Surface0;
+            lbHorzLine1.BackColor = DarkTheme.Surface2;
+            pnlColorDoNoTouch.BackColor = TreeManager.ColorDoNotTouch;
+            pnlColorToBeDeleted.BackColor = TreeManager.ColortoBeDeleted;
+            pnlColorProtected.BackColor = TreeManager.ColorProtected;
+            pnlColorDoNoTouch.BorderStyle = BorderStyle.FixedSingle;
+            pnlColorToBeDeleted.BorderStyle = BorderStyle.FixedSingle;
+            pnlColorProtected.BorderStyle = BorderStyle.FixedSingle;
+            lbFastModeInfo.BackColor = DarkTheme.Surface0;
+            lbFastModeInfo.ForeColor = DarkTheme.Subtext0;
+            lbUiStatus.ForeColor = UiIsBusy() ? DarkTheme.Warning : DarkTheme.Green;
+            lbStatus.ForeColor = DarkTheme.Text;
+            TreeMgr?.RefreshTheme();
+            UpdateTreeEmptyState();
+        }
+
+        private void UpdateTreeEmptyState()
+        {
+            if (treeEmptyStateLabel == null)
+            {
+                return;
+            }
+
+            bool shouldShow = !UiIsBusy() && tvSearchResults.Nodes.Count == 0;
+            treeEmptyStateLabel.Visible = shouldShow;
+            if (shouldShow)
+            {
+                treeEmptyStateLabel.BringToFront();
+            }
         }
 
         /// <summary>
@@ -409,12 +667,7 @@ namespace RED.UI
                 ypos += Icon.Height + 6;
             }
 
-            pnlColorDoNoTouch.ForeColor = TreeManager.ColorDoNotTouch;
-            pnlColorDoNoTouch.BackColor = DarkTheme.Base;
-            pnlColorProtected.ForeColor = TreeManager.ColorProtected;
-            pnlColorProtected.BackColor = DarkTheme.Base;
-            pnlColorToBeDeleted.ForeColor = TreeManager.ColortoBeDeleted;
-            pnlColorToBeDeleted.BackColor = DarkTheme.Base;
+            RefreshThemeDependentUi();
 
             #endregion Set and display folder status icons
         }
@@ -436,7 +689,7 @@ namespace RED.UI
 
                 if (!selectedDirectory.Exists)
                 {
-                    UiAssist.MsgBoxError(this, TXT.Translate("The path you picked is not a directory, or does not exist"));
+                    UiAssist.MsgBoxError(this, TXT.Translate("Choose an existing local, UNC, or network folder before scanning."));
                     return;
                 }
             }
@@ -448,6 +701,7 @@ namespace RED.UI
 
             SetProcessActiveLock(true);
             UiProgressBar(true);
+            UpdateTreeEmptyState();
             btnDelete.Enabled = false;
             UpdateContextMenu(cmTreeview, false);
 
@@ -459,7 +713,7 @@ namespace RED.UI
             multiRootContinuation = false;
 
             RunData.AddLogSpacer();
-            SetStatusAndLogMessage(TXT.Translate("Searching For Empty Directories..."));
+            SetStatusAndLogMessage(TXT.Translate("Scanning for empty directories..."));
 
             RuntimeWatch.Reset();
             RuntimeWatch.Start();
@@ -501,7 +755,10 @@ namespace RED.UI
 
             RuntimeWatch.Stop();
             string runtime = string.Format("{0:D2}:{1:D2}.{2:D2}", RuntimeWatch.Elapsed.Minutes, RuntimeWatch.Elapsed.Seconds, RuntimeWatch.Elapsed.Milliseconds);
-            SetStatusAndLogMessage(TXT.Translate("Empty Directories Found: {0}; Empty Files Found: {1} (Checked: {2} / Runtime: {3})", e.EmptyFolderCount, e.EmptyFileCount, e.FolderCount, runtime));
+            string scanSummary = (e.EmptyFolderCount + e.EmptyFileCount) == 0
+                ? TXT.Translate("Scan complete: no eligible empty directories or empty files found. Checked {0} directories in {1}.", e.FolderCount, runtime)
+                : TXT.Translate("Scan complete: {0} empty directories and {1} empty files eligible. Checked {2} directories in {3}.", e.EmptyFolderCount, e.EmptyFileCount, e.FolderCount, runtime);
+            SetStatusAndLogMessage(scanSummary);
 
             if (RedConfig.Options.AutoProtectRoot)
             {
@@ -516,6 +773,7 @@ namespace RED.UI
             btnDelete.Enabled = (e.EmptyFolderCount > 0 || e.EmptyFileCount > 0);
 
             TreeMgr.OnSearchFinished();
+            UpdateTreeEmptyState();
 
             if (pendingScanPaths.Count > 0)
             {
@@ -553,24 +811,23 @@ namespace RED.UI
                 int deleteCount = totalCount - protectedCount;
                 int fileDeleteCount = RunData.EmptyFileResults.Count;
 
-                string action = (RunData.DeleteMode == DeleteModes.MoveToFolder)
-                    ? TXT.Translate("Move {0} empty directories and {1} empty files?", deleteCount, fileDeleteCount)
-                    : TXT.Translate("Delete {0} empty directories and {1} empty files?", deleteCount, fileDeleteCount);
+                string action = BuildDeleteConfirmationMessage(deleteCount, fileDeleteCount);
                 if (protectedCount > 0)
                 {
-                    action += "\n" + TXT.Translate("({0} protected directories will be skipped)", protectedCount);
+                    action += RedGetText.CrLf1 + TXT.Translate("{0} protected directories will be skipped.", protectedCount);
                 }
 
-                if (DialogResult.No == UiAssist.MsgBoxYesNo(this, action))
+                if (DialogResult.No == UiAssist.MsgBoxYesNo(this, action, MessageBoxDefaultButton.Button2))
                 {
                     return;
                 }
             }
 
             RunData.AddLogSpacer();
-            SetStatusAndLogMessage(TXT.Translate("Started Deletion Process..."));
+            SetStatusAndLogMessage(TXT.Translate("Deletion started. RED++ will re-check each item before changing it."));
 
             UiProgressBar(true, true, Math.Max(1, RunData.ScanResults.Count + RunData.EmptyFileResults.Count));
+            UpdateTreeEmptyState();
             UpdateContextMenu(cmTreeview, false);
             SetProcessActiveLock(true);
             btnSearch.Enabled = false;
@@ -589,7 +846,7 @@ namespace RED.UI
             switch (e.Status)
             {
                 case DirectoryDeletionStatusTypes.Deleted:
-                    lbStatus.Text = string.Format("{0} ({1} of {2})", TXT.Translate("Deleting Empty Directories"), e.ProgressStatus + 1, e.FolderCount);
+                    lbStatus.Text = string.Format("{0} ({1} of {2})", TXT.Translate("Deleting eligible results"), e.ProgressStatus + 1, e.FolderCount);
                     TreeMgr.UpdateItemIcon(e.ScanResult, DirectoryIcons.deleted);
                     break;
 
@@ -636,7 +893,7 @@ namespace RED.UI
         {
             RuntimeWatch.Stop();
             string runtime = string.Format("{0:D2}:{1:D2})", RuntimeWatch.Elapsed.Minutes, RuntimeWatch.Elapsed.Seconds);
-            SetStatusAndLogMessage(string.Format(TXT.Translate("Deleted {0} empty directories and {1} empty files (Failed directories: {2}, Failed files: {3}, Skipped directories: {4}, Runtime: {5})"), e.DeletedFolderCount, e.DeletedFileCount, e.FailedFolderCount, e.FailedFileCount, e.ProtectedCount, runtime));
+            SetStatusAndLogMessage(string.Format(TXT.Translate("Deletion complete: {0} directories and {1} files changed; {2} directory failures, {3} file failures, {4} skipped. Runtime: {5}"), e.DeletedFolderCount, e.DeletedFileCount, e.FailedFolderCount, e.FailedFileCount, e.ProtectedCount, runtime));
 
             UiProgressBar(false);
             SetProcessActiveLock(false);
@@ -648,6 +905,34 @@ namespace RED.UI
             lblRedStats.Text = string.Format("{0}: {1}", TXT.Words.DeletedSoFar, RedConfig.Volatile.CountOfDeletions + RedConfig.Runtime.Volatile.CountOfDeletions);
 
             TreeMgr.OnDeletionProcessFinished();
+            UpdateTreeEmptyState();
+        }
+
+        private string BuildDeleteConfirmationMessage(int deleteCount, int fileDeleteCount)
+        {
+            string countSummary = TXT.Translate("{0} empty directories and {1} empty files are eligible.", deleteCount, fileDeleteCount);
+            string safety = TXT.Translate("RED++ will re-check every item immediately before changing it.");
+            switch (RunData.DeleteMode)
+            {
+                case DeleteModes.MoveToFolder:
+                    return TXT.Translate("Move eligible results to the selected folder?")
+                        + RedGetText.CrLf2
+                        + countSummary + RedGetText.CrLf1
+                        + safety + RedGetText.CrLf1
+                        + TXT.Translate("Move target: {0}", SystemFunctions.MoveToFolderTarget);
+                case DeleteModes.Direct:
+                    return TXT.Translate("Permanently delete eligible results?")
+                        + RedGetText.CrLf2
+                        + countSummary + RedGetText.CrLf1
+                        + TXT.Translate("Direct mode bypasses the Recycle Bin.") + RedGetText.CrLf1
+                        + safety;
+                default:
+                    return TXT.Translate("Recycle eligible results?")
+                        + RedGetText.CrLf2
+                        + countSummary + RedGetText.CrLf1
+                        + TXT.Translate("Windows will move items to the Recycle Bin when available.") + RedGetText.CrLf1
+                        + safety;
+            }
         }
 
         #endregion Step 2: Delete empty directories
@@ -672,6 +957,7 @@ namespace RED.UI
             btnDelete.Enabled = (RunData.ScanResults.Count > 0 || RunData.EmptyFileResults.Count > 0);
 
             TreeMgr.OnProcessCancelled();
+            UpdateTreeEmptyState();
         }
 
         private void Core_OnAborted(object sender, EventArgs e)
@@ -692,12 +978,14 @@ namespace RED.UI
             btnDelete.Enabled = (RunData.ScanResults.Count > 0 || RunData.EmptyFileResults.Count > 0);
 
             TreeMgr.OnProcessCancelled();
+            UpdateTreeEmptyState();
         }
 
         private void Core_OnError(object sender, ErrorEventArgs e)
         {
             UiProgressBar(false);
             UiAssist.MsgBoxError(this, string.Format("{0}:{1}{2}", TXT.Words.Error, RedGetText.CrLf2, e.Message));
+            UpdateTreeEmptyState();
         }
 
         #endregion Process core events / callbacks
@@ -793,8 +1081,9 @@ namespace RED.UI
 
                 // Remove root node
                 TreeMgr.RemoveNode(deletePath);
+                UpdateTreeEmptyState();
 
-                RunData.AddLogMessage(TXT.Translate("Manually deleted: \"{0}\" including all subdirectories", deletePath));
+                SetStatusAndLogMessage(TXT.Translate("Deleted selected eligible branch: \"{0}\"", deletePath));
 
                 // Disable the delete button because the user has to re-scan after he manually deleted a directory
                 btnDelete.Enabled = false;
@@ -866,15 +1155,17 @@ namespace RED.UI
                     btnDelete.Enabled = RunData.ScanResults.Count > 0;
 
                     SetStatusAndLogMessage(TXT.Translate(
-                        "Imported {0} review records from {1}; {2} empty directories are eligible for deletion.",
+                        "Imported {0} review records from {1}. {2} empty directories are eligible after safety checks.",
                         imported.ReviewCount,
                         Path.GetFileName(dlg.FileName),
                         RunData.ScanResults.Count));
+                    UpdateTreeEmptyState();
                 }
                 catch (Exception ex)
                 {
                     UiAssist.MsgBoxException(this, TXT.Translate("Could not import saved dry-run results"), ex);
                     btnDelete.Enabled = RunData.ScanResults.Count > 0;
+                    UpdateTreeEmptyState();
                 }
             }
         }
@@ -920,10 +1211,12 @@ namespace RED.UI
             if (isBusy)
             {
                 lbUiStatus.Text = TXT.Words.Busy;
+                lbUiStatus.ForeColor = DarkTheme.Warning;
             }
             else
             {
                 lbUiStatus.Text = TXT.Words.Ready;
+                lbUiStatus.ForeColor = DarkTheme.Green;
             }
         }
 
@@ -1009,6 +1302,7 @@ namespace RED.UI
             {
                 btnSearch.PerformClick();
             }
+            UpdateTreeEmptyState();
         }
 
         /// <summary>
@@ -1073,7 +1367,7 @@ namespace RED.UI
             else
             {
                 e.Cancel = true;
-                UiAssist.MsgBoxWarning(this, TXT.Translate("RED+ is busy, cannot close."));
+                UiAssist.MsgBoxWarning(this, TXT.Translate("A scan or deletion is still running. Cancel it before closing RED++."));
             }
         }
 
@@ -1098,6 +1392,13 @@ namespace RED.UI
         private void MainWindow_Shown(object sender, EventArgs e)
         {
             UiBusy(false);
+            AdjustSearchLayout();
+            RefreshThemeDependentUi();
+            BeginInvoke((Action)(() =>
+            {
+                AdjustSearchLayout();
+                RefreshThemeDependentUi();
+            }));
             if (AutoSearchOnStart && txtSearchDirectory.Text.Length > 0)
             {
                 AutoSearchOnStart = false;
@@ -1107,6 +1408,7 @@ namespace RED.UI
             {
                 UiClipboardCheck();
             }
+            UpdateTreeEmptyState();
         }
 
         private void lbUiStatus_DoubleClick(object sender, EventArgs e)
@@ -1412,11 +1714,29 @@ namespace RED.UI
             {
                 RedConfig.UI.WinMainSize = Size;
             }
-            RedConfig.UI.WinMainLocation = RedAssist.GetScreenValidLocation(RedConfig.UI.WinMainLocation);
+            Size restoredSize = RedConfig.UI.WinMainSize;
+            restoredSize.Width = Math.Max(MinimumSize.Width, restoredSize.Width);
+            restoredSize.Height = Math.Max(MinimumSize.Height, restoredSize.Height);
 
-            // Restore saved values
-            Location = RedConfig.UI.WinMainLocation;
-            Size = RedConfig.UI.WinMainSize;
+            Rectangle workingArea = Screen.GetWorkingArea(RedConfig.UI.WinMainLocation);
+            restoredSize.Width = Math.Min(restoredSize.Width, workingArea.Width);
+            restoredSize.Height = Math.Min(restoredSize.Height, workingArea.Height);
+
+            Point restoredLocation = RedAssist.GetScreenValidLocation(RedConfig.UI.WinMainLocation);
+            if (restoredLocation.X + restoredSize.Width > workingArea.Right)
+            {
+                restoredLocation.X = Math.Max(workingArea.Left, workingArea.Right - restoredSize.Width);
+            }
+            if (restoredLocation.Y + restoredSize.Height > workingArea.Bottom)
+            {
+                restoredLocation.Y = Math.Max(workingArea.Top, workingArea.Bottom - restoredSize.Height);
+            }
+
+            RedConfig.UI.WinMainLocation = restoredLocation;
+            RedConfig.UI.WinMainSize = restoredSize;
+
+            Location = restoredLocation;
+            Size = restoredSize;
 
             tcMain.SelectedTab = tabSearch;
         }
@@ -1503,7 +1823,8 @@ namespace RED.UI
                 {
                     ConfigLanguage(frm.Language);
                     SetAccessibleNames();
-                    btnExit.Text = RedGetText.Words.Exit;
+                    ApplyPremiumPolish();
+                    RefreshThemeDependentUi();
                     UiAssist.MsgBoxInfo(this, TXT.Words.RestartRequired);
                 }
             }

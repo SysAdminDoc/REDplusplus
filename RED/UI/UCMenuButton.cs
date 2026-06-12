@@ -20,7 +20,7 @@ namespace RED.UI
 			if (Menu != null)
 			{
 				Point menuLocation;
-				Point screenPoint = this.PointToScreen(new Point(this.Left, this.Bottom));
+				Point screenPoint = this.PointToScreen(new Point(0, this.Height));
 				if (screenPoint.Y + Menu.Size.Height > Screen.PrimaryScreen.WorkingArea.Height)
 				{
 					menuLocation = new Point(0, -Menu.Size.Height);
@@ -31,6 +31,12 @@ namespace RED.UI
 				}
 				Menu.Show(this, menuLocation);
 			}
+		}
+
+		protected override void OnEnabledChanged(EventArgs e)
+		{
+			base.OnEnabledChanged(e);
+			Invalidate();
 		}
 
 		protected override void OnPaint(PaintEventArgs pevent)
@@ -49,12 +55,20 @@ namespace RED.UI
 					pevent.Graphics.FillPolygon(arrowBrush, arrows);
 				}
 
-				int lineX = ClientRectangle.Width - this.SplitWidth;
-				int lineYFrom = arrowY - 4;
-				int lineYTo = arrowY + 8;
-				using (Pen separatorPen = new Pen(DarkTheme.Surface2) { DashStyle = DashStyle.Dot })
+				if (SplitWidth > 0)
 				{
-					pevent.Graphics.DrawLine(separatorPen, lineX, lineYFrom, lineX, lineYTo);
+					int lineX = ClientRectangle.Width - this.SplitWidth;
+					int lineYFrom = arrowY - 4;
+					int lineYTo = arrowY + 8;
+					using (Pen separatorPen = new Pen(DarkTheme.Surface2) { DashStyle = DashStyle.Dot })
+					{
+						pevent.Graphics.DrawLine(separatorPen, lineX, lineYFrom, lineX, lineYTo);
+					}
+				}
+
+				if (Focused && ShowFocusCues)
+				{
+					ControlPaint.DrawFocusRectangle(pevent.Graphics, Rectangle.Inflate(ClientRectangle, -4, -4), ForeColor, BackColor);
 				}
 			}
 		}

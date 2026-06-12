@@ -27,9 +27,9 @@ namespace RED
 	/// </summary>
 	public class TreeManager
 	{
-		public static Color ColorDoNotTouch { get { return Color.FromArgb(166, 173, 200); } }
-		public static Color ColorProtected { get { return Color.FromArgb(137, 180, 250); } }
-		public static Color ColortoBeDeleted { get { return Color.FromArgb(243, 139, 168); } }
+		public static Color ColorDoNotTouch { get { return RED.UI.DarkTheme.Kept; } }
+		public static Color ColorProtected { get { return RED.UI.DarkTheme.Protected; } }
+		public static Color ColortoBeDeleted { get { return RED.UI.DarkTheme.Eligible; } }
 
 		private TreeView treeView = null;
 		private TreeNode rootNode = null;
@@ -115,6 +115,17 @@ namespace RED
 			this.showFastModeResults();
 		}
 
+		public void RefreshTheme()
+		{
+			this.treeView.BackColor = RED.UI.DarkTheme.Mantle;
+			this.treeView.ForeColor = RED.UI.DarkTheme.Text;
+			this.treeView.LineColor = RED.UI.DarkTheme.Surface2;
+			foreach (TreeNode node in this.treeView.Nodes)
+			{
+				refreshNodeTheme(node);
+			}
+		}
+
 		public void OnProcessCancelled()
 		{
 			this.showFastModeResults();
@@ -163,6 +174,39 @@ namespace RED
 		{
 			this.treeView.BackColor = RED.UI.DarkTheme.Mantle;
 			this.fastModeInfoLabel.Visible = false;
+		}
+
+		private void refreshNodeTheme(TreeNode node)
+		{
+			if (node == null)
+			{
+				return;
+			}
+
+			string key = node.ImageKey ?? string.Empty;
+			if (key == "protected_icon" || key == "home_protected")
+			{
+				node.ForeColor = ColorProtected;
+			}
+			else if (key.StartsWith("folder", StringComparison.OrdinalIgnoreCase)
+				&& key != "folder_warning"
+				&& key != "folder_never_empty")
+			{
+				node.ForeColor = ColortoBeDeleted;
+			}
+			else if (key == "folder_warning")
+			{
+				node.ForeColor = RED.UI.DarkTheme.Warning;
+			}
+			else
+			{
+				node.ForeColor = ColorDoNotTouch;
+			}
+
+			foreach (TreeNode child in node.Nodes)
+			{
+				refreshNodeTheme(child);
+			}
 		}
 
 		private void showFastModeResults()
