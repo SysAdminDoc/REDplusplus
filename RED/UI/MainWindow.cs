@@ -487,19 +487,19 @@ namespace RED.UI
 
             RuntimeWatch.Stop();
             string runtime = string.Format("{0:D2}:{1:D2}.{2:D2}", RuntimeWatch.Elapsed.Minutes, RuntimeWatch.Elapsed.Seconds, RuntimeWatch.Elapsed.Milliseconds);
-            SetStatusAndLogMessage(TXT.Translate("Empty Directories Found: {0} (Checked: {1} / Runtime: {2})", e.EmptyFolderCount, e.FolderCount, runtime));
+            SetStatusAndLogMessage(TXT.Translate("Empty Directories Found: {0}; Empty Files Found: {1} (Checked: {2} / Runtime: {3})", e.EmptyFolderCount, e.EmptyFileCount, e.FolderCount, runtime));
 
             if (RedConfig.Options.AutoProtectRoot)
             {
                 TreeMgr.ProtectRoot();
             }
 
-            UiProgressBar(false, true, e.EmptyFolderCount);
+            UiProgressBar(false, true, Math.Max(1, e.EmptyFolderCount + e.EmptyFileCount));
             UpdateContextMenu(cmTreeview, true);
             SetProcessActiveLock(false);
             btnSearch.Enabled = true;
             //btnSearch.Text = TXT.Translate("&Search Again");
-            btnDelete.Enabled = (e.EmptyFolderCount > 0);
+            btnDelete.Enabled = (e.EmptyFolderCount > 0 || e.EmptyFileCount > 0);
 
             TreeMgr.OnSearchFinished();
 
@@ -524,7 +524,7 @@ namespace RED.UI
             {
                 using (var dlg = new FolderBrowserDialog())
                 {
-                    dlg.Description = TXT.Translate("Select the folder where empty directories will be moved to");
+                    dlg.Description = TXT.Translate("Select the folder where empty directories and empty files will be moved to");
                     dlg.ShowNewFolderButton = true;
                     if (dlg.ShowDialog(this) != DialogResult.OK)
                         return;
@@ -537,10 +537,11 @@ namespace RED.UI
                 int totalCount = RunData.ScanResults.Count;
                 int protectedCount = RunData.ProtectedFolderList.Count;
                 int deleteCount = totalCount - protectedCount;
+                int fileDeleteCount = RunData.EmptyFileResults.Count;
 
                 string action = (RunData.DeleteMode == DeleteModes.MoveToFolder)
-                    ? TXT.Translate("Move {0} empty directories?", deleteCount)
-                    : TXT.Translate("Delete {0} empty directories?", deleteCount);
+                    ? TXT.Translate("Move {0} empty directories and {1} empty files?", deleteCount, fileDeleteCount)
+                    : TXT.Translate("Delete {0} empty directories and {1} empty files?", deleteCount, fileDeleteCount);
                 if (protectedCount > 0)
                 {
                     action += "\n" + TXT.Translate("({0} protected directories will be skipped)", protectedCount);
@@ -555,7 +556,7 @@ namespace RED.UI
             RunData.AddLogSpacer();
             SetStatusAndLogMessage(TXT.Translate("Started Deletion Process..."));
 
-            UiProgressBar(true, true, RunData.ScanResults.Count);
+            UiProgressBar(true, true, Math.Max(1, RunData.ScanResults.Count + RunData.EmptyFileResults.Count));
             UpdateContextMenu(cmTreeview, false);
             SetProcessActiveLock(true);
             btnSearch.Enabled = false;
@@ -621,7 +622,7 @@ namespace RED.UI
         {
             RuntimeWatch.Stop();
             string runtime = string.Format("{0:D2}:{1:D2})", RuntimeWatch.Elapsed.Minutes, RuntimeWatch.Elapsed.Seconds);
-            SetStatusAndLogMessage(string.Format(TXT.Translate("Deleted {0} empty directories (Failed: {1}, Skipped: {2}, Runtime: {3})"), e.DeletedFolderCount, e.FailedFolderCount, e.ProtectedCount, runtime));
+            SetStatusAndLogMessage(string.Format(TXT.Translate("Deleted {0} empty directories and {1} empty files (Failed directories: {2}, Failed files: {3}, Skipped directories: {4}, Runtime: {5})"), e.DeletedFolderCount, e.DeletedFileCount, e.FailedFolderCount, e.FailedFileCount, e.ProtectedCount, runtime));
 
             UiProgressBar(false);
             SetProcessActiveLock(false);
@@ -654,7 +655,7 @@ namespace RED.UI
 
             SetProcessActiveLock(false);
             btnSearch.Enabled = true;
-            btnDelete.Enabled = (RunData.ScanResults.Count > 0);
+            btnDelete.Enabled = (RunData.ScanResults.Count > 0 || RunData.EmptyFileResults.Count > 0);
 
             TreeMgr.OnProcessCancelled();
         }
@@ -674,7 +675,7 @@ namespace RED.UI
 
             SetProcessActiveLock(false);
             btnSearch.Enabled = true;
-            btnDelete.Enabled = (RunData.ScanResults.Count > 0);
+            btnDelete.Enabled = (RunData.ScanResults.Count > 0 || RunData.EmptyFileResults.Count > 0);
 
             TreeMgr.OnProcessCancelled();
         }

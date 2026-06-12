@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-1.5.0-blue)
+![Version](https://img.shields.io/badge/version-1.5.1-blue)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2B-lightgrey)
 
@@ -57,7 +57,7 @@ RED++ finds, displays, and deletes empty directories recursively below a given s
 Every release ships a `SHA256SUMS` file and a signed build-provenance attestation. To verify the zip really came from this repository's CI:
 
 ```
-gh attestation verify RED++_v1.5.0.zip -R SysAdminDoc/REDplusplus
+gh attestation verify RED++_v1.5.1.zip -R SysAdminDoc/REDplusplus
 ```
 
 ## Usage
@@ -85,6 +85,7 @@ Options:
 | `-dryrun` | Scan and report only; never delete (forces simulate mode). |
 | `-emptyfiles` | Also delete standalone zero-byte files (opt-in sister mode). |
 | `-mode <mode>` | Override delete mode: `recycle` \| `direct` \| `move` \| `simulate`. |
+| `-moveto <dir>` | Required with `-mode move`; moves empty directories and empty files to `<dir>`. |
 | `-export <file>` | Write results to `.txt` / `.csv` / `.json` (chosen by extension). |
 | `-json` | Emit one NDJSON object per result to stdout (for piping). |
 | `-log <file>` | Write a timestamped run log. |

@@ -27,11 +27,18 @@ namespace RED
 	public class FinishedScanForEmptyDirsEventArgs : EventArgs
 	{
 		public int EmptyFolderCount { get; set; }
+		public int EmptyFileCount { get; set; }
 		public int FolderCount { get; set; }
 
 		public FinishedScanForEmptyDirsEventArgs(int EmptyFolderCount, int FolderCount)
+			: this(EmptyFolderCount, 0, FolderCount)
+		{
+		}
+
+		public FinishedScanForEmptyDirsEventArgs(int EmptyFolderCount, int EmptyFileCount, int FolderCount)
 		{
 			this.EmptyFolderCount = EmptyFolderCount;
+			this.EmptyFileCount = EmptyFileCount;
 			this.FolderCount = FolderCount;
 		}
 	}
@@ -60,12 +67,21 @@ namespace RED
 	{
 		public int DeletedFolderCount { get; set; }
 		public int FailedFolderCount { get; set; }
+		public int DeletedFileCount { get; set; }
+		public int FailedFileCount { get; set; }
 		public int ProtectedCount { get; set; }
 
 		public DeleteProcessFinishedEventArgs(int deletedFolderCount, int failedFolderCount, int protectedCount)
+			: this(deletedFolderCount, failedFolderCount, protectedCount, 0, 0)
+		{
+		}
+
+		public DeleteProcessFinishedEventArgs(int deletedFolderCount, int failedFolderCount, int protectedCount, int deletedFileCount, int failedFileCount)
 		{
 			this.DeletedFolderCount = deletedFolderCount;
 			this.FailedFolderCount = failedFolderCount;
+			this.DeletedFileCount = deletedFileCount;
+			this.FailedFileCount = failedFileCount;
 			this.ProtectedCount = protectedCount;
 		}
 	}

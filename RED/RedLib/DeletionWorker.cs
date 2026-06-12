@@ -18,13 +18,15 @@ namespace RED
 
 		public int DeletedCount { get; set; }
 		public int FailedCount { get; set; }
+		public int DeletedFileCount { get; set; }
+		public int FailedFileCount { get; set; }
 		public int ProtectedCount { get; set; }
 
 		public int ListPos { get; set; }
 
 		public DeletionErrorEventArgs ErrorInfo { get; set; }
 
-		private List<UndoManifestEntry> undoEntries = new List<UndoManifestEntry>();
+		private List<UndoManager.ManifestEntry> undoEntries = new List<UndoManager.ManifestEntry>();
 
 		// Survives error-continue cycles: after a deletion error the worker is re-run
 		// to resume at ListPos, and re-sorting or forgetting already-deleted parents
@@ -105,7 +107,7 @@ namespace RED
 					// undo entry or a restore would recreate only the subtree root.
 					// (Move mode: the parent's move-back restores them; the recreate
 					// is then a no-op on the already-existing directory.)
-					undoEntries.Add(new UndoManifestEntry
+					undoEntries.Add(new UndoManager.ManifestEntry
 					{
 						Path = scanResult.FullPath,
 						Mode = this.Data.DeleteMode.ToString(),
@@ -122,7 +124,7 @@ namespace RED
 						status = DirectoryDeletionStatusTypes.Deleted;
 						this.DeletedCount++;
 						deletedParents.Add(scanResult.FullPath);
-						undoEntries.Add(new UndoManifestEntry
+						undoEntries.Add(new UndoManager.ManifestEntry
 						{
 							Path = scanResult.FullPath,
 							Mode = this.Data.DeleteMode.ToString(),
@@ -308,7 +310,7 @@ namespace RED
 				{
 					this.Data.AddLogMessage(TXT.Translate("Successfully deleted directory: {0}", RedAssist.DQuote(path)));
 					this.DeletedCount++;
-					undoEntries.Add(new UndoManifestEntry { Path = path, Mode = this.Data.DeleteMode.ToString(), MovedTo = null });
+					undoEntries.Add(new UndoManager.ManifestEntry { Path = path, Mode = this.Data.DeleteMode.ToString(), MovedTo = null });
 					this.ReportProgress(1, new DeleteProcessUpdateEventArgs(pos, scanResult, DirectoryDeletionStatusTypes.Deleted, total));
 				}
 				else
@@ -329,7 +331,7 @@ namespace RED
 				if (parentDeleted)
 				{
 					this.DeletedCount++;
-					undoEntries.Add(new UndoManifestEntry { Path = child.Item2.FullPath, Mode = this.Data.DeleteMode.ToString(), MovedTo = null });
+					undoEntries.Add(new UndoManager.ManifestEntry { Path = child.Item2.FullPath, Mode = this.Data.DeleteMode.ToString(), MovedTo = null });
 					this.ReportProgress(1, new DeleteProcessUpdateEventArgs(child.Item1, child.Item2, DirectoryDeletionStatusTypes.Deleted, total));
 				}
 				else
@@ -385,21 +387,29 @@ namespace RED
 						continue;
 					}
 
-					SystemFunctions.SecureDeleteFile(file, this.Data.DeleteMode);
-					this.Data.AddLogMessage(TXT.Translate("Successfully deleted empty file: {0}", RedAssist.DQuote(file.FullName)));
-					this.DeletedCount++;
-					undoEntries.Add(new UndoManifestEntry
+					string movedTo;
+					SystemFunctions.SecureDeleteStandaloneFile(file, this.Data.DeleteMode, out movedTo);
+					if (movedTo != null)
+					{
+						this.Data.AddLogMessage(TXT.Translate("Successfully moved empty file: {0} -> {1}", RedAssist.DQuote(file.FullName), RedAssist.DQuote(movedTo)));
+					}
+					else
+					{
+						this.Data.AddLogMessage(TXT.Translate("Successfully deleted empty file: {0}", RedAssist.DQuote(file.FullName)));
+					}
+					this.DeletedFileCount++;
+					undoEntries.Add(new UndoManager.ManifestEntry
 					{
 						Path = file.FullName,
 						Mode = this.Data.DeleteMode.ToString(),
-						MovedTo = null,
+						MovedTo = movedTo,
 						IsFile = true
 					});
 				}
 				catch (Exception ex)
 				{
 					this.Data.AddLogMessage(TXT.Translate("Failed to delete empty file: {0} - {1}", RedAssist.DQuote(file.FullName), RedGetText.Words.ErrorMessage1(ex.Message)));
-					this.FailedCount++;
+					this.FailedFileCount++;
 				}
 			}
 		}
@@ -407,40 +417,7 @@ namespace RED
 		private void WriteUndoManifest()
 		{
 			if (undoEntries.Count == 0) return;
-			try
-			{
-				string manifestPath = RuntimeData.GetWritableDataFilePath("RED++.undo.json");
-
-				var sb = new StringBuilder();
-				sb.AppendLine("{");
-				sb.AppendLine("  \"timestamp\": \"" + DateTime.Now.ToString("o") + "\",");
-				sb.AppendLine("  \"deleteMode\": \"" + this.Data.DeleteMode.ToString() + "\",");
-				sb.AppendLine("  \"entries\": [");
-				for (int i = 0; i < undoEntries.Count; i++)
-				{
-					var entry = undoEntries[i];
-					sb.Append("    { \"path\": \"" + EscapeJson(entry.Path) + "\"");
-					if (entry.MovedTo != null)
-						sb.Append(", \"movedTo\": \"" + EscapeJson(entry.MovedTo) + "\"");
-					sb.Append(", \"mode\": \"" + entry.Mode + "\"");
-					if (entry.IsFile)
-						sb.Append(", \"isFile\": true");
-					sb.Append(" }");
-					if (i < undoEntries.Count - 1) sb.Append(",");
-					sb.AppendLine();
-				}
-				sb.AppendLine("  ]");
-				sb.AppendLine("}");
-
-				File.WriteAllText(manifestPath, sb.ToString(), Encoding.UTF8);
-				this.Data.AddLogMessage(TXT.Translate("Undo manifest written: {0}", RedAssist.DQuote(manifestPath)));
-			}
-			catch { }
-		}
-
-		private static string EscapeJson(string s)
-		{
-			return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+			UndoManager.WriteManifest(this.Data.DeleteMode.ToString(), undoEntries, msg => this.Data.AddLogMessage(msg));
 		}
 
 		/// <returns>The actual MoveToFolder destination, null for other modes.</returns>
@@ -512,11 +489,4 @@ namespace RED
 		}
 	}
 
-	internal class UndoManifestEntry
-	{
-		public string Path { get; set; }
-		public string Mode { get; set; }
-		public string MovedTo { get; set; }
-		public bool IsFile { get; set; }
-	}
 }

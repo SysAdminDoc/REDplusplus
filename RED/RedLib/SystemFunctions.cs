@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -211,12 +212,25 @@ namespace RED
                 throw new Exception(TXT.Translate("Could not delete directory because the path was empty"));
             }
 
-            // Never recursively delete through a junction/symlink target
-            VerifyNotReparsePoint(path);
+            // Manual tree-node deletion is intentionally constrained to verified
+            // Recycle behavior. It bypasses the batch queue, so it must run the
+            // same stale-scan file-free guard and write its own undo manifest.
+            List<string> verifiedPaths = GetVerifiedEmptySubtreeDirectories(path);
 
             RecycleBinOperation.RecycleSingle(path,
                 allowConfirmation: !ConfigAssist.SilentMode,
                 allowErrorUi: !ConfigAssist.SilentMode);
+
+            var entries = new List<UndoManager.ManifestEntry>();
+            foreach (string verifiedPath in verifiedPaths)
+            {
+                entries.Add(new UndoManager.ManifestEntry
+                {
+                    Path = verifiedPath,
+                    Mode = DeleteModes.RecycleBinWithQuestion.ToString()
+                });
+            }
+            UndoManager.WriteManifest(DeleteModes.RecycleBinWithQuestion.ToString(), entries, null);
         }
 
         /// <summary>
@@ -227,6 +241,18 @@ namespace RED
         /// </summary>
         internal static void VerifyRecycleSafe(string path)
         {
+            GetVerifiedEmptySubtreeDirectories(path);
+        }
+
+        internal static List<string> GetVerifiedEmptySubtreeDirectories(string path)
+        {
+            var paths = new List<string>();
+            AddVerifiedEmptySubtreeDirectory(path, paths);
+            return paths;
+        }
+
+        private static void AddVerifiedEmptySubtreeDirectory(string path, List<string> paths)
+        {
             VerifyNotReparsePoint(path);
 
             var listing = FastDirectoryEnumerator.GetFilesAndDirectories(new DirectoryInfo(path));
@@ -234,9 +260,11 @@ namespace RED
             {
                 throw new Exception(TXT.Translate("Aborted deletion of the directory because it is no longer empty. This can happen if RED previously failed to delete an empty (trash) file: {0}", RedAssist.DQuote(path)));
             }
-            if (listing.Directories.Length > 0)
+
+            paths.Add(path);
+            foreach (DirectoryInfo sub in listing.Directories)
             {
-                VerifySubtreeHasNoFiles(path);
+                AddVerifiedEmptySubtreeDirectory(sub.FullName, paths);
             }
         }
 
@@ -463,6 +491,19 @@ namespace RED
 
         public static void SecureDeleteFile(FileInfo file, DeleteModes deleteMode)
         {
+            string ignored;
+            SecureDeleteFile(file, deleteMode, out ignored, false);
+        }
+
+        public static void SecureDeleteStandaloneFile(FileInfo file, DeleteModes deleteMode, out string movedToDestination)
+        {
+            SecureDeleteFile(file, deleteMode, out movedToDestination, true);
+        }
+
+        private static void SecureDeleteFile(FileInfo file, DeleteModes deleteMode, out string movedToDestination, bool moveFilesToFolder)
+        {
+            movedToDestination = null;
+
             if (deleteMode == DeleteModes.Simulate)
             {
                 return;
@@ -470,6 +511,11 @@ namespace RED
 
             if (deleteMode == DeleteModes.MoveToFolder)
             {
+                if (!moveFilesToFolder)
+                {
+                    return;
+                }
+                movedToDestination = MoveFileToFolder(file);
                 return;
             }
 
@@ -495,6 +541,33 @@ namespace RED
             {
                 throw new Exception(RedGetText.Words.ErrorUnknownDeleteMode(deleteMode));
             }
+        }
+
+        private static string MoveFileToFolder(FileInfo file)
+        {
+            if (string.IsNullOrWhiteSpace(MoveToFolderTarget))
+                throw new Exception(TXT.Translate("Move-to-folder target has not been set"));
+
+            Directory.CreateDirectory(MoveToFolderTarget);
+            string baseName = Path.GetFileNameWithoutExtension(file.Name);
+            string extension = file.Extension;
+            string destPath = Path.Combine(MoveToFolderTarget, file.Name);
+            int counter = 1;
+            while (File.Exists(destPath) || Directory.Exists(destPath))
+            {
+                destPath = Path.Combine(MoveToFolderTarget, baseName + "_" + counter++ + extension);
+            }
+
+            try
+            {
+                File.Move(file.FullName, destPath);
+            }
+            catch (IOException)
+            {
+                File.Copy(file.FullName, destPath, overwrite: false);
+                File.Delete(file.FullName);
+            }
+            return destPath;
         }
 
         public static string ChooseDirectoryDialog(string path)
