@@ -30,14 +30,34 @@
 <h3 id="rs_cline">Command Line</h3>
 <div>
 <pre>
-  RED++.exe [SWITCHES] &quot;path&quot;
-      
-    -autosearch is an OPTIONAL switch which searches the supplied path as soon 
-    as RED++ starts. If supplied it MUST be before &quot;path&quot;
-      
-   &quot;path&quot; is the directory to be searched. It should be enclosed in double quotes.
+  RED+.exe [-silent] -path &quot;C:\target&quot; [-path &quot;D:\other&quot; ...] [options]
+
+  Options:
+    -path &lt;dir&gt;      Scan root. Repeat for multiple roots. A bare path also works.
+    -dryrun          Scan and report only; never delete.
+    -emptyfiles      Also delete standalone zero-byte files.
+    -mode &lt;mode&gt;     recycle | direct | move | simulate.
+    -moveto &lt;dir&gt;    Required with -mode move.
+    -export &lt;file&gt;   Write .txt, .csv, or .json results by file extension.
+    -json            Emit NDJSON: one meta record, then result records.
+    -quiet           Suppress stdout/stderr; use the exit code and optional log.
+    -log &lt;file&gt;      Write a timestamped run log.
+    -undo            Restore the last deletion run.
+    -help, -version  Show help or version.
 </pre>
-<p>e.g.<code>RED++.exe -autosearch &quot;X:\NotBob\Test&quot;</code></p>
+<p>Preview a cleanup without touching anything:</p>
+<pre>RED+.exe -path &quot;D:\Shares&quot; -dryrun -json</pre>
+<p>Run from Task Scheduler and write a log:</p>
+<pre>RED+.exe -silent -path &quot;\\server\share\folder&quot; -log &quot;cleanup.log&quot;</pre>
+<p>Restore the previous deletion run:</p>
+<pre>RED+.exe -undo -log &quot;restore.log&quot;</pre>
+<h4>Exit Codes</h4>
+<ul>
+<li><span class="sx">0</span> Success, or simulate/dry-run found nothing.</li>
+<li><span class="sx">1</span> Error, invalid argument, failed deletion, or failed undo.</li>
+<li><span class="sx">11</span> Simulate/dry-run succeeded and found empty directories or files.</li>
+</ul>
+<p>The older <span class="nbn">-autosearch</span> switch still opens the GUI and starts a search for the supplied path. Use <span class="nbn">-silent</span> or any <span class="nbn">-path</span> argument for true headless mode.</p>
 </div>
 <!-- ======= ======= ======= ======= ======= ======= ======= -->
 <hr><p>&nbsp;</p>

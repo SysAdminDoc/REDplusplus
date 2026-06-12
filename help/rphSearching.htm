@@ -39,8 +39,11 @@
 <div class="btd">
 The results of a search are shown in the treeview on the search tab.
 <div class="note"><b>NOTE:</b> If you have <b>Fast Mode</b> enabled in settings the results will not be shown until the search has completed. Otherwise results are shown as the search progresses.</div>
+<div class="note"><b>Safety:</b> Reparse points such as junctions, symlinks, mount points, and cloud-placeholder directories are kept and shown with a reason instead of being treated as empty directories. A <span class="nbn">.redkeep</span> file inside any directory protects that directory and all of its children.</div>
 <figure><img class="imgx" src="img/screen-M01-search2.png"><figcaption>Search: Delete Matches</figcaption></figure>
 <p>Click on the DELETE button <img src="img/btn-search-del.png" alt="delete button"> to remove empty directories.</p>
+<p>If <em>Delete empty files too</em> is enabled from the Extras menu, standalone zero-byte files are deleted through the same delete mode as directories. They are counted separately in the final status.</p>
+<p>After a deletion run, use <em>Extras &gt; Restore Last Deletion</em> to recreate deleted directories or move files/directories back from a Move-to-folder run.</p>
 </div>
 
 <div class="btd">

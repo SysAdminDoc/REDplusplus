@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.7 (2026-06-12)
+
+### Help
+- Update bundled help pages for current safety behavior, `.redkeep`, restore/undo, standalone empty-file cleanup, MFT turbo scan, headless CLI options, exit codes, logs, and undo manifest locations
+
 ## 1.5.6 (2026-06-12)
 
 ### Data Safety

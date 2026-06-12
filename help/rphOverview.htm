@@ -38,10 +38,14 @@ One might think that searching and deleting empty directories is a trivial thing
 Remove Empty Directories ++ (aka <span class="red">RED++</span>) finds, displays, and deletes empty directories recursively below a given start folder. It allows you to create custom rules and filters for keeping and deleting folders (e.g. ignore directories  called <em>RECYCLER</em>, treat directories with empty files as empty etc).
 <ul>
  <li>Shows empty directories before deleting them</li>
- <li>Supports multiple delete modes (including Delete to recycle bin)</li>
+ <li>Supports multiple delete modes (Recycle Bin, Direct, Simulate, and Move to folder)</li>
  <li>User configurable filters to control directory processing</li>
  <li>Filter rules can be enabled / disabled as required</li>
- <li>Can treat directories with empty files as empty</li>
+ <li>Can treat directories with empty files as empty and can optionally remove standalone zero-byte files</li>
+ <li>One-click restore of the last deletion run from the Extras menu</li>
+ <li><span class="nbn">.redkeep</span> marker files protect a directory and its subtree wherever it is copied</li>
+ <li>Optional MFT turbo scan for NTFS/ReFS volumes when running as administrator</li>
+ <li>Headless command-line mode for scheduled or scripted scans</li>
  <li>Portable</li>
 </ul>
 <p>
@@ -59,7 +63,7 @@ Remove Empty Directories ++ (aka <span class="red">RED++</span>) finds, displays
 
 <h4>System Requirements</h4>
 <ul>
-<li>Windows 10 (version 20H2 or later) or Windows 11</li>
+<li>Windows 10 22H2, Windows 11, or Windows Server 2022/2025</li>
 <li>Microsoft .NET Framework 4.8.1</li>
 <li>There is no installer. Just unzip into a folder of your choice and run it.</li>
 </ul>
