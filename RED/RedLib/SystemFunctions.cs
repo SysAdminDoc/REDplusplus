@@ -472,6 +472,15 @@ namespace RED
                     throw new Exception(TXT.Translate("Move-to-folder target has not been set"));
                 if (PathContains(path, MoveToFolderTarget))
                     throw new Exception(TXT.Translate("The move-to folder is inside a directory that is being moved: {0}", RedAssist.DQuote(MoveToFolderTarget)));
+                var moveListing = FastDirectoryEnumerator.GetFilesAndDirectories(new DirectoryInfo(path));
+                if (moveListing.Files.Length > 0)
+                {
+                    throw new Exception(TXT.Translate("Aborted deletion of the directory because it is no longer empty. This can happen if RED previously failed to delete an empty (trash) file: {0}", RedAssist.DQuote(path)));
+                }
+                if (moveListing.Directories.Length > 0)
+                {
+                    VerifySubtreeHasNoFiles(path);
+                }
                 string relativePath = new DirectoryInfo(path).Name;
                 string destPath = Path.Combine(MoveToFolderTarget, relativePath);
                 int counter = 1;

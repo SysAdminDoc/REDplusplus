@@ -127,6 +127,7 @@ namespace RED.UI
             AddRestoreMenuItem();
             AddThemeMenu();
             AddEmptyFilesMenuItem();
+            AddImportResultsMenuItem();
 
             SetAccessibleNames();
             DarkTheme.SetMode((ThemeMode)RedConfig.UI.ThemeMode);
@@ -199,6 +200,15 @@ namespace RED.UI
             item.AccessibleName = TXT.Translate("Also delete standalone zero-byte files");
             item.CheckedChanged += (s, e) => RedConfig.Options.DeleteEmptyFiles = item.Checked;
             cmMenuExtras.Items.Insert(3, item);
+        }
+
+        private void AddImportResultsMenuItem()
+        {
+            var item = new ToolStripMenuItem(TXT.Translate("&Import Saved Dry-Run Results..."));
+            item.AccessibleName = TXT.Translate("Import saved dry-run results for review");
+            item.Click += mnuItemImportDryRunResults_Click;
+            cmMenuExtras.Items.Insert(Math.Min(5, cmMenuExtras.Items.Count), item);
+            cmMenuExtras.Opening += (s, e) => item.Enabled = !UiIsBusy();
         }
 
         private void mnuItemRestoreLastDeletion_Click(object sender, EventArgs e)
@@ -819,6 +829,56 @@ namespace RED.UI
             }
         }
 
+        private void mnuItemImportDryRunResults_Click(object sender, EventArgs e)
+        {
+            using (var dlg = new OpenFileDialog())
+            {
+                dlg.Title = TXT.Translate("Import Saved Dry-Run Results");
+                dlg.Filter = TXT.Translate("RED++ Results (*.json;*.jsonl;*.ndjson)|*.json;*.jsonl;*.ndjson|All Files (*.*)|*.*");
+                dlg.FilterIndex = 1;
+                dlg.CheckFileExists = true;
+                dlg.Multiselect = false;
+
+                if (dlg.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(dlg.FileName))
+                {
+                    return;
+                }
+
+                try
+                {
+                    RedImportedScanResults imported = RedImportScanResults.ReadFile(dlg.FileName);
+                    RunData.ScanResults.Clear();
+                    foreach (RedScanResultItem item in imported.DeletableResults)
+                    {
+                        RunData.ScanResults.AddItem(item);
+                    }
+                    RunData.EmptyFileResults.Clear();
+                    RunData.ProtectedFolderList = new Dictionary<string, bool>();
+                    RunData.StartFolder = imported.Roots.Count == 1 ? imported.Roots[0].RootDirectory : null;
+
+                    TreeMgr.LoadImportedResults(imported.Roots);
+
+                    tcMain.SelectedTab = tabSearch;
+                    UiProgressBar(false, true, Math.Max(1, RunData.ScanResults.Count));
+                    UpdateContextMenu(cmTreeview, true);
+                    SetProcessActiveLock(false);
+                    btnSearch.Enabled = true;
+                    btnDelete.Enabled = RunData.ScanResults.Count > 0;
+
+                    SetStatusAndLogMessage(TXT.Translate(
+                        "Imported {0} review records from {1}; {2} empty directories are eligible for deletion.",
+                        imported.ReviewCount,
+                        Path.GetFileName(dlg.FileName),
+                        RunData.ScanResults.Count));
+                }
+                catch (Exception ex)
+                {
+                    UiAssist.MsgBoxException(this, TXT.Translate("Could not import saved dry-run results"), ex);
+                    btnDelete.Enabled = RunData.ScanResults.Count > 0;
+                }
+            }
+        }
+
         #endregion Tree view related methods
 
         #region GUI related functions / events
@@ -1175,7 +1235,10 @@ namespace RED.UI
 
         private void cmTreeview_Opening(object sender, CancelEventArgs e)
         {
-            tsmiOpenFolder.Enabled = tvSearchResults.SelectedNode != null;
+            bool hasSelection = tvSearchResults.SelectedNode != null;
+            bool isDeletionCandidate = hasSelection && tvSearchResults.SelectedNode.ForeColor == TreeManager.ColortoBeDeleted;
+            tsmiOpenFolder.Enabled = hasSelection;
+            tsmiDeleteDirectory.Enabled = isDeletionCandidate && !UiIsBusy();
         }
 
         private void UpdateRuntimeDataObject()

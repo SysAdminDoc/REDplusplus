@@ -122,6 +122,7 @@
     <Compile Include="RedHelpers\RedAssist.cs" />
     <Compile Include="RedHelpers\RedDebug.cs" />
     <Compile Include="RedHelpers\RedExportScanResults.cs" />
+    <Compile Include="RedHelpers\RedImportScanResults.cs" />
     <Compile Include="RedHelpers\RedGetText.cs" />
     <Compile Include="RedMatch\RedMatchEnums.cs" />
     <Compile Include="RedMatch\RedMatchItem.cs" />

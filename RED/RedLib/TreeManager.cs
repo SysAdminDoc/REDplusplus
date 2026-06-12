@@ -120,6 +120,35 @@ namespace RED
 			this.showFastModeResults();
 		}
 
+		internal void LoadImportedResults(IList<RedImportedScanRoot> roots)
+		{
+			this.resetTree();
+			this.treeView.SuspendLayout();
+			try
+			{
+				for (int i = 0; i < roots.Count; i++)
+				{
+					RedImportedScanRoot importRoot = roots[i];
+					this.createRootNode(importRoot.RootDirectory, DirectoryIcons.home, i > 0);
+					this.addRootNode();
+					foreach (RedScanResultItem item in importRoot.Results)
+					{
+						this.AddOrUpdateDirectoryNode(item.Directory, item.SearchStatus, item.ErrorMessage);
+					}
+				}
+				if (this.treeView.Nodes.Count > 0)
+				{
+					this.treeView.Nodes[0].EnsureVisible();
+					this.treeView.ExpandAll();
+				}
+			}
+			finally
+			{
+				this.treeView.ResumeLayout();
+				this.clearFastMode();
+			}
+		}
+
 		#endregion Incoming "events"
 
 		private void suspendTreeViewForFastMode()
@@ -174,7 +203,8 @@ namespace RED
 		{
 			this.rootPath = directory.FullName.Trim(Path.DirectorySeparatorChar);
 
-			rootNode = new TreeNode(RedAssist.SanitizeDisplay(directory.Name));
+			string displayName = string.IsNullOrWhiteSpace(directory.Name) ? directory.FullName : directory.Name;
+			rootNode = new TreeNode(RedAssist.SanitizeDisplay(displayName));
 			rootNode.Tag = directory;
 			rootNode.ImageKey = imageKey.ToString();
 			rootNode.SelectedImageKey = imageKey.ToString();
