@@ -59,6 +59,7 @@ namespace RED
 			bool isDryRun = false;
 			bool isJson = false;
 			bool emptyFiles = false;
+			bool quiet = false;
 
 			for (int i = 1; i < args.Length; i++)
 			{
@@ -82,6 +83,10 @@ namespace RED
 					case "-json":
 					case "--json":
 						isJson = true;
+						break;
+					case "-quiet":
+					case "--quiet":
+						quiet = true;
 						break;
 					case "-emptyfiles":
 					case "--emptyfiles":
@@ -134,7 +139,7 @@ namespace RED
 
 			if (isUndo)
 			{
-				Environment.ExitCode = RunUndo(logFile);
+				Environment.ExitCode = RunUndo(logFile, quiet);
 				return;
 			}
 
@@ -142,12 +147,15 @@ namespace RED
 			{
 				if (paths.Count == 0)
 				{
-					Console.Error.WriteLine("Error: -silent requires at least one -path");
-					PrintUsage();
+					if (!quiet)
+					{
+						Console.Error.WriteLine("Error: -silent requires at least one -path");
+						PrintUsage();
+					}
 					Environment.ExitCode = 1;
 					return;
 				}
-				Environment.ExitCode = RunHeadless(paths, logFile, exportFile, modeOverride, moveTarget, isDryRun, isJson, emptyFiles);
+				Environment.ExitCode = RunHeadless(paths, logFile, exportFile, modeOverride, moveTarget, isDryRun, isJson, emptyFiles, quiet);
 				return;
 			}
 
@@ -177,21 +185,21 @@ namespace RED
 		/// Headless restore of the last deletion run from RED++.undo.json.
 		/// Exit 0 = everything restored, 1 = nothing to restore or failures.
 		/// </summary>
-		private static int RunUndo(string logFile)
+		private static int RunUndo(string logFile, bool quiet)
 		{
 			var log = new StringBuilder();
 			Action<string> logMsg = (msg) =>
 			{
 				msg = RED.Helper.RedAssist.SanitizeDisplay(msg);
 				log.AppendLine(DateTime.Now.ToString("r") + "\t" + msg);
-				Console.WriteLine(msg);
+				if (!quiet) Console.WriteLine(msg);
 			};
 
 			int restored, failed;
 			bool ok = UndoManager.Restore(out restored, out failed, logMsg);
 			logMsg(string.Format("Restored: {0}, Failed: {1}", restored, failed));
 
-			WriteLogFile(logFile, log);
+			WriteLogFile(logFile, log, quiet);
 			return ok ? 0 : 1;
 		}
 
@@ -206,7 +214,7 @@ namespace RED
 				{ "dryrun", DeleteModes.Simulate },
 			};
 
-		private static int RunHeadless(List<string> paths, string logFile, string exportFile, string modeOverride, string moveTarget, bool dryRun, bool jsonOutput, bool emptyFiles)
+		private static int RunHeadless(List<string> paths, string logFile, string exportFile, string modeOverride, string moveTarget, bool dryRun, bool jsonOutput, bool emptyFiles, bool quiet)
 		{
 			var log = new StringBuilder();
 			Action<string> logMsg = (msg) =>
@@ -216,7 +224,13 @@ namespace RED
 				msg = RED.Helper.RedAssist.SanitizeDisplay(msg);
 				string line = DateTime.Now.ToString("r") + "\t" + msg;
 				log.AppendLine(line);
-				if (!jsonOutput) Console.WriteLine(msg);
+				if (!jsonOutput && !quiet) Console.WriteLine(msg);
+			};
+			Action<string> errorMsg = (msg) =>
+			{
+				msg = RED.Helper.RedAssist.SanitizeDisplay(msg);
+				log.AppendLine(DateTime.Now.ToString("r") + "\t" + msg);
+				if (!quiet) Console.Error.WriteLine(msg);
 			};
 
 			// Never show dialogs in headless mode — a modal prompt would hang Task Scheduler
@@ -235,7 +249,8 @@ namespace RED
 				DeleteModes parsed;
 				if (!ModeAliases.TryGetValue(modeOverride, out parsed))
 				{
-					Console.Error.WriteLine("Error: unknown -mode '" + modeOverride + "' (use recycle|direct|move|simulate)");
+					errorMsg("Error: unknown -mode '" + modeOverride + "' (use recycle|direct|move|simulate)");
+					WriteLogFile(logFile, log, quiet);
 					return 1;
 				}
 				deleteMode = parsed;
@@ -245,14 +260,15 @@ namespace RED
 			{
 				if (string.IsNullOrWhiteSpace(moveTarget))
 				{
-					Console.Error.WriteLine("Error: -mode move requires -moveto <dir>");
+					errorMsg("Error: -mode move requires -moveto <dir>");
+					WriteLogFile(logFile, log, quiet);
 					return 1;
 				}
 				SystemFunctions.MoveToFolderTarget = Environment.ExpandEnvironmentVariables(moveTarget);
 			}
 
 			bool hadErrors = false;
-			int totalEmpty = 0, totalDeleted = 0, totalFailed = 0;
+			int totalEmpty = 0, totalEmptyFiles = 0, totalDeleted = 0, totalFailed = 0;
 			var allResults = new System.Collections.Generic.List<RedScanResultItem>();
 
 			foreach (string rawPath in paths)
@@ -261,7 +277,7 @@ namespace RED
 				var startDir = new System.IO.DirectoryInfo(targetPath);
 				if (!startDir.Exists)
 				{
-					logMsg("Error: directory does not exist: " + targetPath);
+					errorMsg("Error: directory does not exist: " + targetPath);
 					hadErrors = true;
 					continue;
 				}
@@ -310,6 +326,7 @@ namespace RED
 					logMsg(string.Format("Found {0} empty files", emptyFileCount));
 				}
 				totalEmpty += emptyCount;
+				totalEmptyFiles += emptyFileCount;
 
 				// Honor the same default as the GUI: protect the start folder itself
 				if (config.Options.AutoProtectRoot)
@@ -355,7 +372,7 @@ namespace RED
 				runData.Dispose();
 			}
 
-			if (jsonOutput)
+			if (jsonOutput && !quiet)
 			{
 				EmitJson(allResults);
 			}
@@ -369,24 +386,47 @@ namespace RED
 				}
 				catch (Exception ex)
 				{
-					Console.Error.WriteLine("Failed to export: " + ex.Message);
+					errorMsg("Failed to export: " + ex.Message);
 					hadErrors = true;
 				}
 			}
 
-			WriteLogFile(logFile, log);
-			return (hadErrors || totalFailed > 0) ? 1 : 0;
+			WriteLogFile(logFile, log, quiet);
+			if (hadErrors || totalFailed > 0) return 1;
+			if (deleteMode == DeleteModes.Simulate && (totalEmpty + totalEmptyFiles) > 0) return 11;
+			return 0;
 		}
 
 		/// <summary>One NDJSON object per scanned result to stdout, for piping.</summary>
 		private static void EmitJson(System.Collections.Generic.List<RedScanResultItem> results)
 		{
+			Console.WriteLine(string.Format("{{\"type\":\"meta\",\"schema\":1,\"version\":\"{0}\"}}", EscapeJson(GetFileVersion())));
 			foreach (RedScanResultItem item in results)
 			{
-				string path = (item.FullPath ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\"");
-				string reason = (item.StatusReason ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\"");
-				Console.WriteLine(string.Format("{{\"path\":\"{0}\",\"status\":\"{1}\",\"reason\":\"{2}\"}}", path, item.SearchStatus, reason));
+				Console.WriteLine(string.Format("{{\"type\":\"result\",\"path\":\"{0}\",\"status\":\"{1}\",\"reason\":\"{2}\"}}", EscapeJson(item.FullPath), item.SearchStatus, EscapeJson(item.StatusReason)));
 			}
+		}
+
+		private static string EscapeJson(string value)
+		{
+			if (value == null) return string.Empty;
+			var sb = new StringBuilder(value.Length + 8);
+			foreach (char c in value)
+			{
+				switch (c)
+				{
+					case '\\': sb.Append(@"\\"); break;
+					case '"': sb.Append("\\\""); break;
+					case '\r': sb.Append(@"\r"); break;
+					case '\n': sb.Append(@"\n"); break;
+					case '\t': sb.Append(@"\t"); break;
+					default:
+						if (char.IsControl(c)) sb.Append("\\u").Append(((int)c).ToString("x4"));
+						else sb.Append(c);
+						break;
+				}
+			}
+			return sb.ToString();
 		}
 
 		private static void WriteExportFile(string exportFile, System.Collections.Generic.List<RedScanResultItem> results)
@@ -410,8 +450,13 @@ namespace RED
 
 		private static void PrintVersion()
 		{
+			Console.WriteLine("RED++ " + GetFileVersion());
+		}
+
+		private static string GetFileVersion()
+		{
 			var vi = System.Diagnostics.FileVersionInfo.GetVersionInfo(System.Reflection.Assembly.GetExecutingAssembly().Location);
-			Console.WriteLine("RED++ " + vi.FileVersion);
+			return vi.FileVersion;
 		}
 
 		private static void PrintUsage()
@@ -431,15 +476,19 @@ Options:
   -mode <mode>     Override delete mode: recycle | direct | move | simulate.
   -moveto <dir>    Required with -mode move; move directories/files to <dir>.
   -export <file>   Write results to .txt / .csv / .json (by extension).
-  -json            Emit one NDJSON object per result to stdout.
+  -json            Emit NDJSON to stdout (meta record, then result records).
+  -quiet           Suppress stdout/stderr; use the process exit code/log file.
   -log <file>      Write a timestamped run log to <file>.
   -undo            Restore the directories deleted by the last run.
   -help, -version  Show this help / the version and exit.
 
-Exit code: 0 = success, 1 = errors or failed deletions.");
+Exit codes:
+  0  Success, or simulate/dry-run found nothing.
+  1  Errors, invalid arguments, failed deletions, or failed undo.
+  11 Simulate/dry-run succeeded and found empty directories or files.");
 		}
 
-		private static void WriteLogFile(string logFile, StringBuilder log)
+		private static void WriteLogFile(string logFile, StringBuilder log, bool quiet)
 		{
 			if (!string.IsNullOrWhiteSpace(logFile))
 			{
@@ -449,7 +498,7 @@ Exit code: 0 = success, 1 = errors or failed deletions.");
 				}
 				catch (Exception ex)
 				{
-					Console.Error.WriteLine("Failed to write log file: " + ex.Message);
+					if (!quiet) Console.Error.WriteLine("Failed to write log file: " + ex.Message);
 				}
 			}
 		}

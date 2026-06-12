@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-1.5.3-blue)
+![Version](https://img.shields.io/badge/version-1.5.4-blue)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2B-lightgrey)
 
@@ -57,7 +57,7 @@ RED++ finds, displays, and deletes empty directories recursively below a given s
 Every release ships a `SHA256SUMS` file and a signed build-provenance attestation. To verify the zip really came from this repository's CI:
 
 ```
-gh attestation verify RED++_v1.5.3.zip -R SysAdminDoc/REDplusplus
+gh attestation verify RED++_v1.5.4.zip -R SysAdminDoc/REDplusplus
 ```
 
 ## Usage
@@ -75,7 +75,7 @@ If the config file (**RED+.cfg**) isn't found, you'll be prompted to create one:
 RED+.exe [-silent] -path "C:\target" [-path "D:\other" ...] [options]
 ```
 
-Scans and deletes (per configured delete mode) without showing a window. Exits with code 0 (success) or 1 (errors). Useful for Task Scheduler and batch scripts.
+Scans and deletes (per configured delete mode) without showing a window. Useful for Task Scheduler and batch scripts.
 
 Options:
 
@@ -87,10 +87,19 @@ Options:
 | `-mode <mode>` | Override delete mode: `recycle` \| `direct` \| `move` \| `simulate`. |
 | `-moveto <dir>` | Required with `-mode move`; moves empty directories and empty files to `<dir>`. |
 | `-export <file>` | Write results to `.txt` / `.csv` / `.json` (chosen by extension). |
-| `-json` | Emit one NDJSON object per result to stdout (for piping). |
+| `-json` | Emit NDJSON to stdout: one `meta` record, then one `result` record per directory. |
+| `-quiet` | Suppress stdout/stderr; use only the process exit code and optional `-log`. |
 | `-log <file>` | Write a timestamped run log. |
 | `-undo` | Restore the directories deleted by the last run. |
 | `-help`, `-version` | Show usage / version and exit. |
+
+Exit codes:
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success, or simulate/dry-run found nothing. |
+| `1` | Error, invalid argument, failed deletion, or failed undo. |
+| `11` | Simulate/dry-run succeeded and found empty directories or files. |
 
 Preview a cleanup without touching anything, machine-readable:
 
