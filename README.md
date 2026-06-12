@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-1.5.7-blue)
+![Version](https://img.shields.io/badge/version-1.5.8-blue)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2B-lightgrey)
 
@@ -57,7 +57,7 @@ RED++ finds, displays, and deletes empty directories recursively below a given s
 Every release ships a `SHA256SUMS` file and a signed build-provenance attestation. To verify the zip really came from this repository's CI:
 
 ```
-gh attestation verify RED++_v1.5.7.zip -R SysAdminDoc/REDplusplus
+gh attestation verify RED++_v1.5.8.zip -R SysAdminDoc/REDplusplus
 ```
 
 ## Usage
@@ -86,6 +86,12 @@ Options:
 | `-emptyfiles` | Also delete standalone zero-byte files (opt-in sister mode). |
 | `-mode <mode>` | Override delete mode: `recycle` \| `direct` \| `move` \| `simulate`. |
 | `-moveto <dir>` | Required with `-mode move`; moves empty directories and empty files to `<dir>`. |
+| `-minage <hours>` | Override minimum directory age for this run. |
+| `-maxdepth <n>` | Override maximum scan depth for this run (`-1` = infinite). |
+| `-gitignore`, `-no-gitignore` | Enable or disable `.gitignore` rules for this run. |
+| `-mft`, `-no-mft` | Enable or disable MFT turbo scan for this run; MFT still requires administrator rights. |
+| `-hidden`, `-ignore-hidden` | Include or ignore hidden directories for this run. |
+| `-system`, `-ignore-system` | Include or ignore system directories for this run. |
 | `-export <file>` | Write results to `.txt` / `.csv` / `.json` (chosen by extension). |
 | `-json` | Emit NDJSON to stdout: one `meta` record, then one `result` record per directory. |
 | `-quiet` | Suppress stdout/stderr; use only the process exit code and optional `-log`. |
