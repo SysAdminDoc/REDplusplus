@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.6 (2026-06-12)
+
+### Data Safety
+- Detect Cloud Files and Azure File Sync directory reparse tags explicitly so cloud-placeholder directories are kept with a clear `cloud placeholder directory` reason instead of being reported as generic symbolic links
+
 ## 1.5.5 (2026-06-12)
 
 ### UX

@@ -354,6 +354,9 @@ msgstr ""
 msgid "The start folder is a reparse point (junction, symlink, or mount point) and cannot be scanned: {0}"
 msgstr ""
 
+msgid "The start folder is a cloud placeholder directory and cannot be scanned safely: {0}"
+msgstr ""
+
 msgid "An error occurred during the scan process: "
 msgstr ""
 
@@ -385,6 +388,12 @@ msgid "Aborted scan of {0} because it is a symbolic link"
 msgstr ""
 
 msgid "Aborted because directory is a symbolic link"
+msgstr ""
+
+msgid "Skipped cloud placeholder directory: {0}"
+msgstr ""
+
+msgid "cloud placeholder directory"
 msgstr ""
 
 msgid "Directory {0} skipped because creation time [{1}] is < {2} hours old"

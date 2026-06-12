@@ -61,6 +61,13 @@ namespace RED
         private static extern bool SetFileInformationByHandle(IntPtr hFile, int fileInformationClass, ref FILE_DISPOSITION_INFO_EX info, uint dwBufferSize);
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool DeviceIoControl(
+            IntPtr hDevice, uint dwIoControlCode,
+            IntPtr lpInBuffer, uint nInBufferSize,
+            byte[] lpOutBuffer, uint nOutBufferSize,
+            out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool CloseHandle(IntPtr hObject);
 
         // FILETIME fields must be 4-byte aligned (two DWORDs) — `long` would insert
@@ -108,9 +115,64 @@ namespace RED
         private const uint FILE_DISPOSITION_FLAG_DELETE = 0x00000001;
         private const uint FILE_DISPOSITION_FLAG_POSIX_SEMANTICS = 0x00000002;
         private const uint FILE_DISPOSITION_FLAG_IGNORE_READONLY_ATTRIBUTE = 0x00000010;
+        private const uint FSCTL_GET_REPARSE_POINT = 0x000900A8;
+        private const uint IO_REPARSE_TAG_CLOUD = 0x9000001A;
+        private const uint IO_REPARSE_TAG_CLOUD_MASK = 0xFFFF0FFF;
+        private const uint IO_REPARSE_TAG_STORAGE_SYNC_FOLDER = 0x90000027;
         private const int ERROR_INVALID_FUNCTION = 1;
         private const int ERROR_NOT_SUPPORTED = 50;
         private const int ERROR_INVALID_PARAMETER = 87;
+
+        internal static bool IsCloudPlaceholderDirectory(string path)
+        {
+            uint tag;
+            return TryGetReparseTag(path, out tag) && IsCloudReparseTag(tag);
+        }
+
+        internal static bool IsCloudReparseTag(uint tag)
+        {
+            return (tag & IO_REPARSE_TAG_CLOUD_MASK) == IO_REPARSE_TAG_CLOUD ||
+                   tag == IO_REPARSE_TAG_STORAGE_SYNC_FOLDER;
+        }
+
+        private static bool TryGetReparseTag(string path, out uint tag)
+        {
+            tag = 0;
+            IntPtr hDir = CreateFileW(FastDirectoryEnumerator.ToExtendedLengthPath(path), FILE_READ_ATTRIBUTES,
+                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                IntPtr.Zero, OPEN_EXISTING,
+                FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+                IntPtr.Zero);
+
+            if (hDir == INVALID_HANDLE_VALUE)
+            {
+                return false;
+            }
+
+            try
+            {
+                BY_HANDLE_FILE_INFORMATION info;
+                if (!GetFileInformationByHandle(hDir, out info) ||
+                    (info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) == 0)
+                {
+                    return false;
+                }
+
+                byte[] buffer = new byte[16 * 1024];
+                uint bytesReturned;
+                if (!DeviceIoControl(hDir, FSCTL_GET_REPARSE_POINT, IntPtr.Zero, 0, buffer, (uint)buffer.Length, out bytesReturned, IntPtr.Zero) || bytesReturned < 4)
+                {
+                    return false;
+                }
+
+                tag = BitConverter.ToUInt32(buffer, 0);
+                return true;
+            }
+            finally
+            {
+                CloseHandle(hDir);
+            }
+        }
 
         private static void VerifyNotReparsePoint(string path)
         {
