@@ -31,7 +31,10 @@ namespace RED.UI
         // append instead of replacing the previous root's output.
         private bool multiRootContinuation = false;
         private Label treeEmptyStateLabel;
+        private Label pathHintLabel;
+        private Label actionHintLabel;
         private bool premiumPolishEventsAttached = false;
+        private bool reviewSurfaceHasCompletedRun = false;
 
         #region Init methods
 
@@ -323,14 +326,30 @@ namespace RED.UI
             lblExplorerIntegrationInfo.MaximumSize = new Size(340, 0);
 
             EnsureComfortableWindowBounds();
+            EnsurePathHintLabel();
+            EnsureActionHintLabel();
 
-            tvSearchResults.BorderStyle = BorderStyle.FixedSingle;
             tvSearchResults.HideSelection = false;
             tvSearchResults.FullRowSelect = true;
             tvSearchResults.ShowNodeToolTips = true;
+            tvSearchResults.ItemHeight = Math.Max(22, tvSearchResults.ItemHeight);
+            tvSearchResults.Anchor = AnchorStyles.Top | AnchorStyles.Left;
+            pnlIconDesc.Anchor = AnchorStyles.Top | AnchorStyles.Left;
+            txtSearchDirectory.Anchor = AnchorStyles.Top | AnchorStyles.Left;
+            btnSearchDirectoryBrowseFor.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             lblPickAFolder.Visible = false;
             stausStripMain.SizingGrip = false;
             lbUiStatus.Size = new Size(82, lbUiStatus.Height);
+            pbProgressStatus.AutoSize = false;
+            pbProgressStatus.Width = 150;
+            pnlActions.AutoSize = false;
+            pnlActionsSearch.Dock = DockStyle.None;
+            btnSearch.AutoSize = false;
+            btnDelete.AutoSize = false;
+            btnCancel.AutoSize = false;
+            uxMenuButtonExtras.AutoSize = false;
+            btnExit.AutoSize = false;
+            btnSearchDirectoryBrowseFor.AutoSize = false;
 
             uxToolTips.SetToolTip(btnSearch, TXT.Translate("Scan the selected folder and show reviewable results before anything is deleted."));
             uxToolTips.SetToolTip(btnDelete, TXT.Translate("Change only eligible results after RED++ re-checks them for safety."));
@@ -338,6 +357,7 @@ namespace RED.UI
             uxToolTips.SetToolTip(uxMenuButtonExtras, TXT.Translate("Open restore, import, export, log, language, and theme actions."));
             uxToolTips.SetToolTip(tvSearchResults, TXT.Translate("Right-click a result to open it, protect it, add it to filters, or delete one eligible branch."));
             uxToolTips.SetToolTip(txtSearchDirectory, TXT.Translate("Paste, type, browse, or drop one or more folders to scan."));
+            uxToolTips.SetToolTip(btnSearchDirectoryBrowseFor, TXT.Translate("Choose the folder RED++ will scan."));
 
             if (!premiumPolishEventsAttached)
             {
@@ -347,12 +367,58 @@ namespace RED.UI
                     LayoutMainChrome();
                     AdjustSearchLayout();
                 };
+                txtSearchDirectory.TextChanged += (s, e) =>
+                {
+                    reviewSurfaceHasCompletedRun = false;
+                    UpdateTreeEmptyState();
+                    UpdateActionHint();
+                };
                 premiumPolishEventsAttached = true;
             }
 
             EnsureTreeEmptyStateLabel();
             LayoutMainChrome();
             AdjustSearchLayout();
+            UpdateActionHint();
+        }
+
+        private void EnsurePathHintLabel()
+        {
+            if (pathHintLabel != null)
+            {
+                return;
+            }
+
+            pathHintLabel = new Label
+            {
+                Name = "lbPathHint",
+                AutoSize = false,
+                UseMnemonic = false,
+                TabStop = false,
+                Text = TXT.Translate("Pick a root folder. RED++ scans first and only changes items after review.")
+            };
+            gbFind.Controls.Add(pathHintLabel);
+            pathHintLabel.BringToFront();
+        }
+
+        private void EnsureActionHintLabel()
+        {
+            if (actionHintLabel != null)
+            {
+                return;
+            }
+
+            actionHintLabel = new Label
+            {
+                Name = "lbActionHint",
+                AutoSize = false,
+                AutoEllipsis = true,
+                UseMnemonic = false,
+                TabStop = false,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            pnlActions.Controls.Add(actionHintLabel);
+            actionHintLabel.BringToFront();
         }
 
         private void LayoutMainChrome()
@@ -362,17 +428,55 @@ namespace RED.UI
                 return;
             }
 
-            int statusHeight = Math.Max(24, stausStripMain.PreferredSize.Height);
-            int actionHeight = Math.Max(34, pnlActions.Height);
-            int actionsTop = Math.Max(0, ClientSize.Height - statusHeight - actionHeight);
+            stausStripMain.Dock = DockStyle.Bottom;
+            pnlActions.Dock = DockStyle.Bottom;
+            tcMain.Dock = DockStyle.Fill;
+            pnlActions.Height = 46;
+            LayoutActionBar();
+        }
 
-            tcMain.Dock = DockStyle.None;
-            pnlActions.Dock = DockStyle.None;
-            stausStripMain.Dock = DockStyle.None;
+        private void LayoutActionBar()
+        {
+            if (pnlActions.ClientSize.Width <= 0)
+            {
+                return;
+            }
 
-            tcMain.Bounds = new Rectangle(0, 0, ClientSize.Width, Math.Max(120, actionsTop));
-            pnlActions.Bounds = new Rectangle(0, actionsTop, ClientSize.Width, actionHeight);
-            stausStripMain.Bounds = new Rectangle(0, actionsTop + actionHeight, ClientSize.Width, statusHeight);
+            const int margin = 10;
+            const int gap = 8;
+            int buttonHeight = Math.Min(34, Math.Max(30, pnlActions.ClientSize.Height - 12));
+            int top = Math.Max(5, (pnlActions.ClientSize.Height - buttonHeight) / 2);
+
+            btnSearch.Bounds = new Rectangle(margin, top, 112, buttonHeight);
+            btnDelete.Bounds = new Rectangle(btnSearch.Right + gap, top, 174, buttonHeight);
+            btnCancel.Bounds = new Rectangle(btnDelete.Right + gap, top, 116, buttonHeight);
+
+            pnlActionsSearch.Bounds = new Rectangle(0, 0, btnCancel.Right + gap, pnlActions.ClientSize.Height);
+
+            int exitWidth = 104;
+            int extrasWidth = 118;
+            btnExit.Bounds = new Rectangle(
+                Math.Max(margin, pnlActions.ClientSize.Width - margin - exitWidth),
+                top,
+                exitWidth,
+                buttonHeight);
+            uxMenuButtonExtras.Bounds = new Rectangle(
+                Math.Max(margin, btnExit.Left - gap - extrasWidth),
+                top,
+                extrasWidth,
+                buttonHeight);
+
+            if (actionHintLabel != null)
+            {
+                int hintLeft = pnlActionsSearch.Right + gap;
+                int hintRight = uxMenuButtonExtras.Left - gap;
+                actionHintLabel.Bounds = new Rectangle(
+                    hintLeft,
+                    top,
+                    Math.Max(0, hintRight - hintLeft),
+                    buttonHeight);
+                actionHintLabel.Visible = actionHintLabel.Width >= 180;
+            }
         }
 
         private void EnsureComfortableWindowBounds()
@@ -445,38 +549,113 @@ namespace RED.UI
                 return;
             }
 
-            const int margin = 8;
-            const int gap = 6;
-            int sideWidth = Math.Max(112, pnlIconDesc.Width);
-            bool showLegend = gbFind.ClientSize.Width >= 560;
+            EnsurePathHintLabel();
+            const int margin = 14;
+            const int gap = 8;
+            int sideWidth = Math.Max(168, pnlIconDesc.Width);
+            bool showLegend = gbFind.ClientSize.Width >= 740;
+            int inputTop = 24;
+            int inputHeight = 28;
 
             pnlIconDesc.Visible = showLegend;
             if (showLegend)
             {
                 pnlIconDesc.Left = gbFind.ClientSize.Width - sideWidth - margin;
                 pnlIconDesc.Width = sideWidth;
-                pnlIconDesc.Top = tvSearchResults.Top;
-                pnlIconDesc.Height = Math.Max(120, gbFind.ClientSize.Height - pnlIconDesc.Top - margin);
                 btnSearchDirectoryBrowseFor.Width = sideWidth;
                 btnSearchDirectoryBrowseFor.Left = pnlIconDesc.Left;
             }
             else
             {
-                btnSearchDirectoryBrowseFor.Width = Math.Min(96, Math.Max(80, btnSearchDirectoryBrowseFor.Width));
+                btnSearchDirectoryBrowseFor.Width = 108;
                 btnSearchDirectoryBrowseFor.Left = gbFind.ClientSize.Width - btnSearchDirectoryBrowseFor.Width - margin;
             }
 
+            txtSearchDirectory.Left = margin;
+            txtSearchDirectory.Top = inputTop;
+            btnSearchDirectoryBrowseFor.Top = inputTop - 1;
+            btnSearchDirectoryBrowseFor.Height = inputHeight + 2;
             txtSearchDirectory.Width = Math.Max(120, btnSearchDirectoryBrowseFor.Left - txtSearchDirectory.Left - gap);
+            pathHintLabel.Bounds = new Rectangle(
+                txtSearchDirectory.Left,
+                txtSearchDirectory.Bottom + 5,
+                txtSearchDirectory.Width,
+                18);
 
+            int resultsTop = pathHintLabel.Bottom + 10;
             int treeRight = showLegend ? pnlIconDesc.Left - gap : gbFind.ClientSize.Width - margin;
+            tvSearchResults.Left = margin;
+            tvSearchResults.Top = resultsTop;
             tvSearchResults.Width = Math.Max(160, treeRight - tvSearchResults.Left);
             tvSearchResults.Height = Math.Max(120, gbFind.ClientSize.Height - tvSearchResults.Top - margin);
-            txtSearchDirectory.BringToFront();
-            btnSearchDirectoryBrowseFor.BringToFront();
+            if (showLegend)
+            {
+                pnlIconDesc.Top = tvSearchResults.Top;
+                pnlIconDesc.Height = tvSearchResults.Height;
+                LayoutLegend();
+            }
+            lbFastModeInfo.AutoSize = false;
+            lbFastModeInfo.Bounds = new Rectangle(
+                tvSearchResults.Left + 16,
+                tvSearchResults.Top + 16,
+                Math.Max(120, tvSearchResults.Width - 32),
+                24);
+            lbFastModeInfo.TextAlign = ContentAlignment.MiddleCenter;
+            tvSearchResults.BringToFront();
             pnlIconDesc.BringToFront();
-            tvSearchResults.SendToBack();
+            txtSearchDirectory.BringToFront();
+            pathHintLabel.BringToFront();
+            btnSearchDirectoryBrowseFor.BringToFront();
             PositionTreeEmptyStateLabel();
             treeEmptyStateLabel?.BringToFront();
+        }
+
+        private void LayoutLegend()
+        {
+            if (!pnlIconDesc.Visible)
+            {
+                return;
+            }
+
+            int x = 10;
+            int y = 34;
+            int labelWidth = Math.Max(60, pnlIconDesc.ClientSize.Width - 40);
+            lbIconDesc.Location = new Point(x, 10);
+            lbIconDesc.AutoSize = false;
+            lbIconDesc.Width = Math.Max(80, pnlIconDesc.ClientSize.Width - 20);
+            lbIconDesc.Height = 18;
+            lbIconDesc.TextAlign = ContentAlignment.MiddleLeft;
+
+            foreach (Control control in pnlIconDesc.Controls)
+            {
+                if (control.Name == "picIcon")
+                {
+                    control.Location = new Point(x, y);
+                    y += control.Height + 6;
+                }
+                else if (control.Name == "picLabel")
+                {
+                    control.AutoSize = false;
+                    control.Location = new Point(x + 22, control.Location.Y);
+                    control.Width = labelWidth;
+                    control.Height = 22;
+                    control.Top = y - control.Height - 5;
+                }
+            }
+
+            int swatchTop = Math.Max(y + 12, pnlIconDesc.ClientSize.Height - 88);
+            lbHorzLine1.Bounds = new Rectangle(0, swatchTop - 10, pnlIconDesc.ClientSize.Width, 1);
+            LayoutLegendSwatch(pnlColorDoNoTouch, lbColorDoNotTouch, swatchTop);
+            LayoutLegendSwatch(pnlColorToBeDeleted, lbColorToBeDeleted, swatchTop + 26);
+            LayoutLegendSwatch(pnlColorProtected, lbColorProtected, swatchTop + 52);
+        }
+
+        private void LayoutLegendSwatch(Panel swatch, Label label, int top)
+        {
+            swatch.Bounds = new Rectangle(10, top + 2, 14, 14);
+            label.AutoSize = false;
+            label.Bounds = new Rectangle(32, top, Math.Max(60, pnlIconDesc.ClientSize.Width - 42), 20);
+            label.TextAlign = ContentAlignment.MiddleLeft;
         }
 
         private void RefreshThemeDependentUi()
@@ -485,7 +664,19 @@ namespace RED.UI
             {
                 treeEmptyStateLabel.BackColor = DarkTheme.Mantle;
                 treeEmptyStateLabel.ForeColor = DarkTheme.Subtext0;
-                treeEmptyStateLabel.Font = new Font(Font, FontStyle.Regular);
+                treeEmptyStateLabel.Font = new Font(Font.FontFamily, Font.Size + 1, FontStyle.Regular);
+            }
+
+            if (pathHintLabel != null)
+            {
+                pathHintLabel.BackColor = DarkTheme.Base;
+                pathHintLabel.ForeColor = DarkTheme.Subtext0;
+            }
+
+            if (actionHintLabel != null)
+            {
+                actionHintLabel.BackColor = DarkTheme.Surface0;
+                actionHintLabel.ForeColor = DarkTheme.Subtext1;
             }
 
             pnlIconDesc.BackColor = DarkTheme.Surface0;
@@ -500,8 +691,40 @@ namespace RED.UI
             lbFastModeInfo.ForeColor = DarkTheme.Subtext0;
             lbUiStatus.ForeColor = UiIsBusy() ? DarkTheme.Warning : DarkTheme.Green;
             lbStatus.ForeColor = DarkTheme.Text;
+            pnlActions.BackColor = DarkTheme.Surface0;
+            pnlActionsSearch.BackColor = DarkTheme.Surface0;
+            StyleActionButtons();
             TreeMgr?.RefreshTheme();
             UpdateTreeEmptyState();
+            UpdateActionHint();
+        }
+
+        private void StyleActionButtons()
+        {
+            StyleButton(btnSearch, DarkTheme.Blue, DarkTheme.Base, true);
+            StyleButton(btnDelete, DarkTheme.Red, DarkTheme.Base, btnDelete.Enabled);
+            StyleButton(btnCancel, DarkTheme.Surface1, DarkTheme.Base, btnCancel.Enabled);
+            StyleButton(uxMenuButtonExtras, DarkTheme.Surface1, DarkTheme.Base, uxMenuButtonExtras.Enabled);
+            StyleButton(btnExit, DarkTheme.Surface1, DarkTheme.Base, btnExit.Enabled);
+        }
+
+        private void StyleButton(Button button, Color accent, Color fallback, bool active)
+        {
+            if (DarkTheme.IsHighContrast)
+            {
+                return;
+            }
+
+            bool enabled = button.Enabled;
+            button.BackColor = active && enabled ? accent : fallback;
+            button.ForeColor = enabled
+                ? (active ? Color.White : DarkTheme.Text)
+                : DarkTheme.DisabledText;
+            button.FlatAppearance.BorderColor = enabled
+                ? (active ? accent : DarkTheme.Surface1)
+                : DarkTheme.Surface0;
+            button.FlatAppearance.MouseOverBackColor = active ? ControlPaint.Light(accent, 0.12f) : DarkTheme.ButtonHover;
+            button.FlatAppearance.MouseDownBackColor = active ? ControlPaint.Dark(accent, 0.08f) : DarkTheme.ButtonDown;
         }
 
         private void UpdateTreeEmptyState()
@@ -512,10 +735,55 @@ namespace RED.UI
             }
 
             bool shouldShow = !UiIsBusy() && tvSearchResults.Nodes.Count == 0;
+            if (shouldShow)
+            {
+                if (reviewSurfaceHasCompletedRun)
+                {
+                    treeEmptyStateLabel.Text = TXT.Translate("No eligible results found.\r\nThe selected folder was checked; nothing is marked for deletion.");
+                }
+                else if (!string.IsNullOrWhiteSpace(txtSearchDirectory.Text))
+                {
+                    treeEmptyStateLabel.Text = TXT.Translate("Ready to scan.\r\nRED++ will show reviewable results before anything is changed.");
+                }
+                else
+                {
+                    treeEmptyStateLabel.Text = TXT.Translate("Choose a folder to scan.\r\nRED++ shows reviewable results before anything is deleted.");
+                }
+            }
             treeEmptyStateLabel.Visible = shouldShow;
             if (shouldShow)
             {
                 treeEmptyStateLabel.BringToFront();
+            }
+            UpdateActionHint();
+        }
+
+        private void UpdateActionHint()
+        {
+            if (actionHintLabel == null)
+            {
+                return;
+            }
+
+            if (UiIsBusy())
+            {
+                actionHintLabel.Text = TXT.Translate("Working. Progress and detailed status appear below.");
+            }
+            else if (btnDelete.Enabled)
+            {
+                actionHintLabel.Text = TXT.Translate("Review the marked results, then choose Review & Delete.");
+            }
+            else if (reviewSurfaceHasCompletedRun)
+            {
+                actionHintLabel.Text = TXT.Translate("Scan complete. No eligible items are currently queued.");
+            }
+            else if (!string.IsNullOrWhiteSpace(txtSearchDirectory.Text))
+            {
+                actionHintLabel.Text = TXT.Translate("Ready to scan. Results are reviewed before cleanup.");
+            }
+            else
+            {
+                actionHintLabel.Text = TXT.Translate("Choose a folder or drop folders into the window.");
             }
         }
 
@@ -658,7 +926,9 @@ namespace RED.UI
                 {
                     Text = icons[key],
                     Location = new Point(xpos + Icon.Width + 2, ypos + 2),
-                    Name = "picLabel"
+                    Name = "picLabel",
+                    AutoSize = false,
+                    TextAlign = ContentAlignment.MiddleLeft
                 };
 
                 pnlIconDesc.Controls.Add(picIcon);
@@ -701,8 +971,10 @@ namespace RED.UI
 
             SetProcessActiveLock(true);
             UiProgressBar(true);
+            reviewSurfaceHasCompletedRun = false;
             UpdateTreeEmptyState();
             btnDelete.Enabled = false;
+            StyleActionButtons();
             UpdateContextMenu(cmTreeview, false);
 
             RunData.StartFolder = selectedDirectory;
@@ -771,6 +1043,8 @@ namespace RED.UI
             btnSearch.Enabled = true;
             //btnSearch.Text = TXT.Translate("&Search Again");
             btnDelete.Enabled = (e.EmptyFolderCount > 0 || e.EmptyFileCount > 0);
+            reviewSurfaceHasCompletedRun = true;
+            StyleActionButtons();
 
             TreeMgr.OnSearchFinished();
             UpdateTreeEmptyState();
@@ -832,6 +1106,7 @@ namespace RED.UI
             SetProcessActiveLock(true);
             btnSearch.Enabled = false;
             btnDelete.Enabled = false;
+            StyleActionButtons();
 
             TreeMgr.OnDeletionProcessStart();
 
@@ -892,13 +1167,15 @@ namespace RED.UI
         private void Core_OnDeleteProcessFinished(object sender, DeleteProcessFinishedEventArgs e)
         {
             RuntimeWatch.Stop();
-            string runtime = string.Format("{0:D2}:{1:D2})", RuntimeWatch.Elapsed.Minutes, RuntimeWatch.Elapsed.Seconds);
+            string runtime = string.Format("{0:D2}:{1:D2}.{2:D2}", RuntimeWatch.Elapsed.Minutes, RuntimeWatch.Elapsed.Seconds, RuntimeWatch.Elapsed.Milliseconds);
             SetStatusAndLogMessage(string.Format(TXT.Translate("Deletion complete: {0} directories and {1} files changed; {2} directory failures, {3} file failures, {4} skipped. Runtime: {5}"), e.DeletedFolderCount, e.DeletedFileCount, e.FailedFolderCount, e.FailedFileCount, e.ProtectedCount, runtime));
 
             UiProgressBar(false);
             SetProcessActiveLock(false);
             btnSearch.Enabled = true;
             btnDelete.Enabled = false;
+            reviewSurfaceHasCompletedRun = true;
+            StyleActionButtons();
 
             // Increase deletion statistics (ignore overflows).
             unchecked { RedConfig.Runtime.Volatile.CountOfDeletions += e.DeletedFolderCount; }
@@ -945,16 +1222,17 @@ namespace RED.UI
 
             if (Core.CurrentProcessStep == WorkflowSteps.DeleteProcessRunning)
             {
-                SetStatusAndLogMessage(TXT.Translate("Delete Process was Cancelled"));
+                SetStatusAndLogMessage(TXT.Translate("Deletion canceled."));
             }
             else
             {
-                SetStatusAndLogMessage(TXT.Translate("Process was Cancelled"));
+                SetStatusAndLogMessage(TXT.Translate("Operation canceled."));
             }
 
             SetProcessActiveLock(false);
             btnSearch.Enabled = true;
             btnDelete.Enabled = (RunData.ScanResults.Count > 0 || RunData.EmptyFileResults.Count > 0);
+            StyleActionButtons();
 
             TreeMgr.OnProcessCancelled();
             UpdateTreeEmptyState();
@@ -966,16 +1244,17 @@ namespace RED.UI
 
             if (Core.CurrentProcessStep == WorkflowSteps.DeleteProcessRunning)
             {
-                SetStatusAndLogMessage(TXT.Translate("Delete Process was Aborted"));
+                SetStatusAndLogMessage(TXT.Translate("Deletion stopped."));
             }
             else
             {
-                SetStatusAndLogMessage(TXT.Translate("Process was Aborted"));
+                SetStatusAndLogMessage(TXT.Translate("Operation stopped."));
             }
 
             SetProcessActiveLock(false);
             btnSearch.Enabled = true;
             btnDelete.Enabled = (RunData.ScanResults.Count > 0 || RunData.EmptyFileResults.Count > 0);
+            StyleActionButtons();
 
             TreeMgr.OnProcessCancelled();
             UpdateTreeEmptyState();
@@ -1081,12 +1360,14 @@ namespace RED.UI
 
                 // Remove root node
                 TreeMgr.RemoveNode(deletePath);
+                reviewSurfaceHasCompletedRun = true;
                 UpdateTreeEmptyState();
 
                 SetStatusAndLogMessage(TXT.Translate("Deleted selected eligible branch: \"{0}\"", deletePath));
 
                 // Disable the delete button because the user has to re-scan after he manually deleted a directory
                 btnDelete.Enabled = false;
+                StyleActionButtons();
             }
             catch (System.OperationCanceledException)
             {
@@ -1153,6 +1434,8 @@ namespace RED.UI
                     SetProcessActiveLock(false);
                     btnSearch.Enabled = true;
                     btnDelete.Enabled = RunData.ScanResults.Count > 0;
+                    reviewSurfaceHasCompletedRun = true;
+                    StyleActionButtons();
 
                     SetStatusAndLogMessage(TXT.Translate(
                         "Imported {0} review records from {1}. {2} empty directories are eligible after safety checks.",
@@ -1165,6 +1448,7 @@ namespace RED.UI
                 {
                     UiAssist.MsgBoxException(this, TXT.Translate("Could not import saved dry-run results"), ex);
                     btnDelete.Enabled = RunData.ScanResults.Count > 0;
+                    StyleActionButtons();
                     UpdateTreeEmptyState();
                 }
             }
@@ -1178,10 +1462,14 @@ namespace RED.UI
         {
             UiBusy(isActive);
             btnCancel.Enabled = isActive;
+            txtSearchDirectory.Enabled = !isActive;
+            btnSearchDirectoryBrowseFor.Enabled = !isActive;
 
             uxMenuButtonExtras.Enabled = !isActive;
             tcFilters.Enabled = !isActive;
             tcSettings.Enabled = !isActive;
+            StyleActionButtons();
+            UpdateActionHint();
         }
 
         private void UiProgressBar(bool isActive, bool isDeleting = false, int maximum = 100)
@@ -1218,6 +1506,7 @@ namespace RED.UI
                 lbUiStatus.Text = TXT.Words.Ready;
                 lbUiStatus.ForeColor = DarkTheme.Green;
             }
+            UpdateActionHint();
         }
 
         private bool UiIsBusy()
@@ -1268,6 +1557,7 @@ namespace RED.UI
         {
             lbStatus.Text = msg;
             RunData.AddLogMessage(msg);
+            UpdateActionHint();
         }
 
         /// <summary>
@@ -1447,7 +1737,7 @@ namespace RED.UI
             }
             else
             {
-                lbStatus.Text = "";
+                UpdateActionHint();
             }
         }
 
@@ -1539,7 +1829,14 @@ namespace RED.UI
         {
             bool hasSelection = tvSearchResults.SelectedNode != null;
             bool isDeletionCandidate = hasSelection && tvSearchResults.SelectedNode.ForeColor == TreeManager.ColortoBeDeleted;
+            bool hasResults = tvSearchResults.Nodes.Count > 0;
             tsmiOpenFolder.Enabled = hasSelection;
+            tsmiSearchOnlyThisDirectory.Enabled = hasSelection && !UiIsBusy();
+            tsmiExpandAll.Enabled = hasResults;
+            tsmiCollapseAll.Enabled = hasResults;
+            tsmiProtectDirectoryOnce.Enabled = hasSelection && !UiIsBusy();
+            tsmiUnprotectDirectory.Enabled = hasSelection && !UiIsBusy();
+            tsmiAddToFilterDirectoryIgnore.Enabled = hasSelection && !UiIsBusy();
             tsmiDeleteDirectory.Enabled = isDeletionCandidate && !UiIsBusy();
         }
 

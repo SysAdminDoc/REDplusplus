@@ -368,6 +368,20 @@ namespace RED
 			applyNodeStyle(treeNode, scanResult.Directory, scanResult.SearchStatus, scanResult.ErrorMessage);
 		}
 
+		private static string CleanStatusLabel(string value)
+		{
+			if (string.IsNullOrWhiteSpace(value))
+			{
+				return string.Empty;
+			}
+
+			return value
+				.Replace(((char)0x00AB).ToString(), string.Empty)
+				.Replace(((char)0x00BB).ToString(), string.Empty)
+				.Replace(((char)0x00C2).ToString(), string.Empty)
+				.Trim();
+		}
+
 		//private void applyNodeStyle(TreeNode treeNode, string path, DirectorySearchStatusTypes statusType, string optionalErrorMsg)
 		private void applyNodeStyle(TreeNode treeNode, DirectoryInfo directory, DirectorySearchStatusTypes statusType, string optionalErrorMsg)
 		{
@@ -422,7 +436,7 @@ namespace RED
 						treeNode.ToolTipText = TXT.Translate("«Empty»");
 						accessibleReason = TXT.Translate("Empty - eligible for deletion");
 					}
-					treeNode.Text = baseText + "  " + treeNode.ToolTipText;
+					treeNode.Text = baseText + "  [" + CleanStatusLabel(treeNode.ToolTipText) + "]";
 					break;
 
 				case DirectorySearchStatusTypes.Ignore:
@@ -430,7 +444,7 @@ namespace RED
 					treeNode.ForeColor = ColorProtected;
 					treeNode.ToolTipText = TXT.Translate("«Ignored»");
 					accessibleReason = TXT.Translate("Kept - matches an ignore filter rule");
-					treeNode.Text = baseText + "  " + treeNode.ToolTipText;
+					treeNode.Text = baseText + "  [" + CleanStatusLabel(treeNode.ToolTipText) + "]";
 					break;
 
 				case DirectorySearchStatusTypes.NeverEmpty:
@@ -438,7 +452,7 @@ namespace RED
 					treeNode.ForeColor = ColorDoNotTouch;
 					treeNode.ToolTipText = TXT.Translate("«Never Empty»");
 					accessibleReason = TXT.Translate("Kept - matches a never-empty rule");
-					treeNode.Text = baseText + "  " + treeNode.ToolTipText;
+					treeNode.Text = baseText + "  [" + CleanStatusLabel(treeNode.ToolTipText) + "]";
 					break;
 
 				case DirectorySearchStatusTypes.Error:
@@ -604,7 +618,7 @@ namespace RED
 					node.SelectedImageKey = "protected_icon";
 				}
 				node.ForeColor = ColorProtected;
-				string protectedLabel = "  " + TXT.Translate("«Protected»");
+				string protectedLabel = "  [" + TXT.Translate("Protected") + "]";
 				if (!node.Text.Contains(protectedLabel))
 				{
 					node.Text += protectedLabel;

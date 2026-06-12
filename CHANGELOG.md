@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.11 (2026-06-12)
+
+### UX Polish
+- Refine the WinForms theme system with stronger focus, hover, disabled, tab, grid, toolstrip, and command-bar states.
+- Improve the Search screen with a clearer path helper, responsive result legend, premium empty/no-results copy, and a stable bottom command bar that separates scan, review/delete, cancel, extras, and exit actions.
+- Replace the redundant first-run defaults notification with a single clearer settings-location prompt that explains portable versus AppData storage.
+- Restore `-autosearch <path>` as a GUI launch path so verification and Explorer integration can open directly into a scanned review state instead of being intercepted by headless mode.
+
 ## 1.5.10 (2026-06-12)
 
 ### Review Imports
