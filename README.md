@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-1.5.1-blue)
+![Version](https://img.shields.io/badge/version-1.5.2-blue)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2B-lightgrey)
 
@@ -48,7 +48,7 @@ RED++ finds, displays, and deletes empty directories recursively below a given s
 
 ## System Requirements
 
-- Windows 10 (version 20H2 or later) or Windows 11
+- Windows 10 22H2, Windows 11, or Windows Server 2022/2025
 - Microsoft .NET Framework 4.8.1
 - No installer required. Unzip and run.
 
@@ -57,7 +57,7 @@ RED++ finds, displays, and deletes empty directories recursively below a given s
 Every release ships a `SHA256SUMS` file and a signed build-provenance attestation. To verify the zip really came from this repository's CI:
 
 ```
-gh attestation verify RED++_v1.5.1.zip -R SysAdminDoc/REDplusplus
+gh attestation verify RED++_v1.5.2.zip -R SysAdminDoc/REDplusplus
 ```
 
 ## Usage

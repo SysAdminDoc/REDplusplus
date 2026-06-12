@@ -31,6 +31,25 @@ namespace RED
 			WorkerSupportsCancellation = true;
 		}
 
+		internal void ReportDirectoryStatus(DirectoryInfo directory, DirectorySearchStatusTypes type)
+		{
+			ReportDirectoryStatus(directory, type, null);
+		}
+
+		internal void ReportDirectoryStatus(DirectoryInfo directory, DirectorySearchStatusTypes type, string errorMessage)
+		{
+			var info = string.IsNullOrEmpty(errorMessage)
+				? new FoundEmptyDirInfoEventArgs(directory, type)
+				: new FoundEmptyDirInfoEventArgs(directory, type, errorMessage);
+
+			if (type == DirectorySearchStatusTypes.Empty)
+			{
+				this.RunData.ScanResults.AddItem(info.ScanResult);
+			}
+
+			this.ReportProgress(0, info);
+		}
+
 		private GitIgnoreParser gitIgnoreParser;
 
 		protected override void OnDoWork(DoWorkEventArgs e)
@@ -69,7 +88,7 @@ namespace RED
 				{
 					string emsg = TXT.Translate("The start folder is a reparse point (junction, symlink, or mount point) and cannot be scanned: {0}", RedAssist.DQuote(startFolder.FullName));
 					this.RunData.AddLogMessage(emsg);
-					this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startFolder, DirectorySearchStatusTypes.Error, emsg));
+					this.ReportDirectoryStatus(startFolder, DirectorySearchStatusTypes.Error, emsg);
 					e.Cancel = true;
 					this.ErrorInfo = new DeletionErrorEventArgs(startFolder.FullName, emsg);
 					return;
@@ -77,7 +96,7 @@ namespace RED
 
 				DirectorySearchStatusTypes rootStatusType = this.CheckIfDirectoryEmpty(startFolder, 1);
 
-				this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startFolder, rootStatusType));
+				this.ReportDirectoryStatus(startFolder, rootStatusType);
 
 				if (this.PossibleEndlessLoop > this.RunData.InfiniteLoopDetectionCount)
 				{
@@ -147,7 +166,7 @@ namespace RED
 		{
 			if (this.PossibleEndlessLoop > this.RunData.InfiniteLoopDetectionCount)
 			{
-				this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startDir, DirectorySearchStatusTypes.Error, TXT.Translate("Aborted - possible infinite-loop detected")));
+				this.ReportDirectoryStatus(startDir, DirectorySearchStatusTypes.Error, TXT.Translate("Aborted - possible infinite-loop detected"));
 				return DirectorySearchStatusTypes.Error;
 			}
 
@@ -155,7 +174,7 @@ namespace RED
 			{
 				this.PossibleEndlessLoop++;
 				this.RunData.AddLogMessage(TXT.Translate("Suspiciously deep directory nesting at {0} - possible filesystem loop", RedAssist.DQuote(startDir.FullName)));
-				this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startDir, DirectorySearchStatusTypes.Error, TXT.Translate("Aborted - possible infinite-loop detected")));
+				this.ReportDirectoryStatus(startDir, DirectorySearchStatusTypes.Error, TXT.Translate("Aborted - possible infinite-loop detected"));
 				return DirectorySearchStatusTypes.Error;
 			}
 
@@ -193,7 +212,7 @@ namespace RED
 					this.RunData.AddLogMessage(msg);
 					if (!this.RunData.HideIgnoredDirectories)
 					{
-						this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startDir, DirectorySearchStatusTypes.NeverEmpty, msg));
+						this.ReportDirectoryStatus(startDir, DirectorySearchStatusTypes.NeverEmpty, msg);
 					}
 					return DirectorySearchStatusTypes.NotEmpty;
 				}
@@ -206,7 +225,7 @@ namespace RED
 					this.RunData.AddLogMessage(msg);
 					if (!this.RunData.HideIgnoredDirectories)
 					{
-						this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startDir, DirectorySearchStatusTypes.NeverEmpty, msg));
+						this.ReportDirectoryStatus(startDir, DirectorySearchStatusTypes.NeverEmpty, msg);
 					}
 				}
 
@@ -230,7 +249,7 @@ namespace RED
 						// if containsFiles is true then the folder does not get deleted:
 						containsFiles = true; // secure way
 						this.RunData.AddLogMessage(TXT.Translate("Failed to access files in {0}", RedAssist.DQuote(startDir.FullName)));
-						this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startDir, DirectorySearchStatusTypes.Error, TXT.Translate("Failed to access files")));
+						this.ReportDirectoryStatus(startDir, DirectorySearchStatusTypes.Error, TXT.Translate("Failed to access files"));
 					}
 					else if (fileList.Length == 0)
 					{
@@ -297,7 +316,7 @@ namespace RED
 				{
 					// If we can not read the folder -> don't delete it:
 					this.RunData.AddLogMessage(TXT.Translate("Failed to access subdirectories in {0}", RedAssist.DQuote(startDir.FullName)));
-					this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startDir, DirectorySearchStatusTypes.Error, TXT.Translate("Failed to access subdirectories")));
+					this.ReportDirectoryStatus(startDir, DirectorySearchStatusTypes.Error, TXT.Translate("Failed to access subdirectories"));
 					return DirectorySearchStatusTypes.Error;
 				}
 
@@ -328,7 +347,7 @@ namespace RED
 						// NotBob - option to exclude ignored directories from the scan window
 						if (!this.RunData.HideIgnoredDirectories)
 						{
-							this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(curDir, DirectorySearchStatusTypes.Ignore));
+							this.ReportDirectoryStatus(curDir, DirectorySearchStatusTypes.Ignore);
 						}
 					}
 
@@ -341,7 +360,7 @@ namespace RED
 							ignoreSubDirectory = true;
 							if (!this.RunData.HideIgnoredDirectories)
 							{
-								this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(curDir, DirectorySearchStatusTypes.Ignore));
+								this.ReportDirectoryStatus(curDir, DirectorySearchStatusTypes.Ignore);
 							}
 						}
 					}
@@ -349,7 +368,7 @@ namespace RED
 					if (!ignoreSubDirectory && (attribs & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
 					{
 						this.RunData.AddLogMessage(TXT.Translate("Aborted scan of {0} because it is a symbolic link", RedAssist.DQuote(curDir.FullName)));
-						this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(curDir, DirectorySearchStatusTypes.Error, TXT.Translate("Aborted because directory is a symbolic link")));
+						this.ReportDirectoryStatus(curDir, DirectorySearchStatusTypes.Error, TXT.Translate("Aborted because directory is a symbolic link"));
 						ignoreSubDirectory = true;
 					}
 
@@ -380,7 +399,7 @@ namespace RED
 						// Report status to the GUI
 						if (subFolderStatus == DirectorySearchStatusTypes.Empty)
 						{
-							this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(curDir, subFolderStatus));
+							this.ReportDirectoryStatus(curDir, subFolderStatus);
 						}
 					}
 
@@ -404,7 +423,7 @@ namespace RED
 				{
 					this.RunData.AddLogMessage(TXT.Translate("An unknown error occurred while trying to scan directory: {0} - {1}", RedAssist.DQuote(startDir.FullName), ex.Message));
 				}
-				this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startDir, DirectorySearchStatusTypes.Error, ex.Message));
+				this.ReportDirectoryStatus(startDir, DirectorySearchStatusTypes.Error, ex.Message);
 				return DirectorySearchStatusTypes.Error;
 			}
 		}
@@ -441,7 +460,7 @@ namespace RED
 
 			scanner.FindEmptyDirectories(startFrn.Value, volumeRoot, this.RunData, this, ref this.folderCount, gitIgnoreParser, startFolder.FullName);
 
-			this.ReportProgress(0, new FoundEmptyDirInfoEventArgs(startFolder, DirectorySearchStatusTypes.NotEmpty));
+			this.ReportDirectoryStatus(startFolder, DirectorySearchStatusTypes.NotEmpty);
 
 			this.RunData.AddLogMessage(string.Format("MFT scan complete: checked {0} directories", this.folderCount));
 			return true;

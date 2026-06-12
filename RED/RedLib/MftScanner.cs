@@ -424,7 +424,7 @@ namespace RED
             Frn startFrn,
             string volumeRoot,
             RuntimeData runData,
-            BackgroundWorker worker,
+            FindEmptyDirectoryWorker worker,
             ref int folderCount,
             GitIgnoreParser gitIgnoreParser,
             string startFolderPath)
@@ -447,7 +447,7 @@ namespace RED
                     var dirInfo = new DirectoryInfo(path);
                     if (!dirInfo.Exists) continue;
 
-                    worker?.ReportProgress(0, new FoundEmptyDirInfoEventArgs(dirInfo, DirectorySearchStatusTypes.Empty));
+                    worker?.ReportDirectoryStatus(dirInfo, DirectorySearchStatusTypes.Empty);
                 }
                 catch { }
             }
@@ -458,7 +458,7 @@ namespace RED
 
         private bool CheckSubtreeEmpty(
             Frn frn, string volumeRoot, RuntimeData runData,
-            BackgroundWorker worker, ref int folderCount,
+            FindEmptyDirectoryWorker worker, ref int folderCount,
             List<Frn> emptyDirs, int depth)
         {
             if (worker != null && worker.CancellationPending) return false;

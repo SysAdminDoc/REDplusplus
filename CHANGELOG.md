@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.2 (2026-06-12)
+
+### Release Hardening
+- Add push/PR CI for Windows Release builds plus headless safety smoke coverage for root protection, non-empty directory survival, junction survival, empty-file deletion, and deny-ACL fail-closed behavior
+- Fix a headless scan-result race where an inaccessible child could make Direct mode report zero found directories while still deleting queued empty directories
+- Correct the documented supported platform floor to Windows 10 22H2, Windows 11, or Windows Server 2022/2025 while keeping the tested .NET Framework 4.8.1 target
+- Fix the winget portable manifest shape for the zip release artifact and add the `red++` portable command alias
+
 ## 1.5.1 (2026-06-12)
 
 ### Bug Fixes
