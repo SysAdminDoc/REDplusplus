@@ -46,11 +46,29 @@ jobs:
         shell: pwsh
         run: |
           $zip = "RED++_${{ inputs.version }}.zip"
+          $zipHash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
           $lines = @(
-            "{0}  {1}" -f (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower(), $zip
+            "{0}  {1}" -f $zipHash, $zip
             "{0}  {1}" -f (Get-FileHash "release\RED+.exe" -Algorithm SHA256).Hash.ToLower(), "RED+.exe"
           )
           Set-Content -Path SHA256SUMS -Value $lines -Encoding ascii
+
+      - name: Generate winget manifest
+        shell: pwsh
+        run: |
+          $version = "${{ inputs.version }}".TrimStart("v")
+          $tag = "${{ inputs.version }}"
+          $zip = "RED++_${{ inputs.version }}.zip"
+          $zipHash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToUpperInvariant()
+          $manifest = "packaging\winget\SysAdminDoc.REDplusplus.yaml"
+          $content = Get-Content -Path $manifest -Raw
+          $content = $content -replace '(?m)^PackageVersion:.*$', "PackageVersion: $version"
+          $content = $content -replace '(?m)^    InstallerUrl:.*$', "    InstallerUrl: https://github.com/SysAdminDoc/REDplusplus/releases/download/$tag/$zip"
+          $content = $content -replace '(?m)^    InstallerSha256:.*$', "    InstallerSha256: $zipHash"
+          Set-Content -Path $manifest -Value $content -Encoding utf8
+          if (Get-Command winget -ErrorAction SilentlyContinue) {
+            winget validate $manifest
+          }
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@v4
@@ -63,7 +81,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ inputs.version }}" "RED++_${{ inputs.version }}.zip" SHA256SUMS --title "RED++ ${{ inputs.version }}" --generate-notes
+          gh release create "${{ inputs.version }}" "RED++_${{ inputs.version }}.zip" SHA256SUMS "packaging\winget\SysAdminDoc.REDplusplus.yaml" --title "RED++ ${{ inputs.version }}" --generate-notes
 
       - name: VirusTotal scan
         id: virustotal
