@@ -245,6 +245,8 @@ namespace RED.UI
             cbHideDeletionErrors.AccessibleName = TXT.Translate("Hide errors during deletion");
             cbHideIgnoredFolders.AccessibleName = TXT.Translate("Hide ignored directories from results");
             cbAutoProtectRoot.AccessibleName = TXT.Translate("Automatically protect the starting directory");
+            cbRespectGitIgnore.AccessibleName = TXT.Translate("Respect .gitignore rules during scans");
+            cbUseMftScan.AccessibleName = TXT.Translate("Use MFT turbo scan");
             cbClipboardDetection.AccessibleName = TXT.Translate("Detect paths in the clipboard");
             pbProgressStatus.AccessibleName = TXT.Translate("Operation progress");
         }
@@ -1282,6 +1284,14 @@ namespace RED.UI
             cbIgnore0kbFiles.Checked = RedConfig.Options.IgnoreEmptyFiles;
             cbIgnoreHiddenFolders.Checked = RedConfig.Options.IgnoreHiddenDirectories;
             cbIgnoreSystemFolders.Checked = RedConfig.Options.IgnoreSystemDirectories;
+            cbRespectGitIgnore.Checked = RedConfig.Options.RespectGitIgnore;
+            cbUseMftScan.Checked = RedConfig.Options.UseMftScan;
+            bool mftAvailable = SystemFunctions.IsAdmin();
+            cbUseMftScan.Enabled = mftAvailable;
+            lbUseMftScan.Enabled = mftAvailable;
+            string mftRequirement = TXT.Translate("Requires administrator rights; falls back to standard scan when unavailable");
+            uxToolTips.SetToolTip(cbUseMftScan, mftRequirement);
+            uxToolTips.SetToolTip(lbUseMftScan, mftRequirement);
 
             // Clamp values from the config file — a hand-edited or corrupt entry
             // must degrade to a sane default instead of crashing at startup
@@ -1364,6 +1374,11 @@ namespace RED.UI
                 RedConfig.Options.HideDeletionErrors = cbHideDeletionErrors.Checked;
                 RedConfig.Options.IgnoreHiddenDirectories = cbIgnoreHiddenFolders.Checked;
                 RedConfig.Options.IgnoreSystemDirectories = cbIgnoreSystemFolders.Checked;
+                RedConfig.Options.RespectGitIgnore = cbRespectGitIgnore.Checked;
+                if (cbUseMftScan.Enabled)
+                {
+                    RedConfig.Options.UseMftScan = cbUseMftScan.Checked;
+                }
                 RedConfig.Options.DeleteModeInt = cbDeleteMode.SelectedIndex;
 
                 RedConfig.Options.MinDirectoryAgeHours = (uint)nuFolderAge.Value;
@@ -1424,6 +1439,7 @@ namespace RED.UI
                 if (DialogResult.OK == frm.ShowDialog(this))
                 {
                     ConfigLanguage(frm.Language);
+                    SetAccessibleNames();
                     btnExit.Text = RedGetText.Words.Exit;
                     UiAssist.MsgBoxInfo(this, TXT.Words.RestartRequired);
                 }
