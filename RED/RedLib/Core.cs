@@ -119,7 +119,7 @@ namespace RED
 
 				SearchEmptyFoldersWorker.Dispose(); SearchEmptyFoldersWorker = null;
 
-				OnFinishedScanForEmptyDirs?.Invoke(this, new FinishedScanForEmptyDirsEventArgs(RunData.ScanResults.Count, FolderCount));
+				OnFinishedScanForEmptyDirs?.Invoke(this, new FinishedScanForEmptyDirsEventArgs(RunData.ScanResults.Count, RunData.EmptyFileResults.Count, FolderCount));
 			}
 		}
 
@@ -209,11 +209,13 @@ namespace RED
 				int deletedCount = DeletionWorker.DeletedCount;
 				int failedCount = DeletionWorker.FailedCount;
 				int protectedCount = DeletionWorker.ProtectedCount;
+				int deletedFileCount = DeletionWorker.DeletedFileCount;
+				int failedFileCount = DeletionWorker.FailedFileCount;
 
 				DeletionWorker.Dispose();
 				DeletionWorker = null;
 
-				OnDeleteProcessFinished?.Invoke(this, new DeleteProcessFinishedEventArgs(deletedCount, failedCount, protectedCount));
+				OnDeleteProcessFinished?.Invoke(this, new DeleteProcessFinishedEventArgs(deletedCount, failedCount, protectedCount, deletedFileCount, failedFileCount));
 			}
 		}
 
