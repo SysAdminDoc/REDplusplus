@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.8 (2026-06-12)
+
+### CLI Automation
+- Add per-run CLI overrides for minimum age, maximum depth, `.gitignore`, MFT turbo scan, hidden directories, and system directories so scheduled jobs do not need to edit `RED+.cfg`
+
 ## 1.5.7 (2026-06-12)
 
 ### Help

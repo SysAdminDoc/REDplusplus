@@ -38,6 +38,16 @@
     -emptyfiles      Also delete standalone zero-byte files.
     -mode &lt;mode&gt;     recycle | direct | move | simulate.
     -moveto &lt;dir&gt;    Required with -mode move.
+    -minage &lt;hours&gt;  Override minimum directory age for this run.
+    -maxdepth &lt;n&gt;    Override maximum scan depth for this run (-1 = infinite).
+    -gitignore       Respect .gitignore rules for this run.
+    -no-gitignore    Ignore .gitignore rules for this run.
+    -mft             Try the MFT turbo scan for this run (administrator required).
+    -no-mft          Disable the MFT turbo scan for this run.
+    -hidden          Include hidden directories for this run.
+    -ignore-hidden   Ignore hidden directories for this run.
+    -system          Include system directories for this run.
+    -ignore-system   Ignore system directories for this run.
     -export &lt;file&gt;   Write .txt, .csv, or .json results by file extension.
     -json            Emit NDJSON: one meta record, then result records.
     -quiet           Suppress stdout/stderr; use the exit code and optional log.
