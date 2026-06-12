@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Windows.Forms;
 using RED.Match;
+using TXT = RED.RedGetText;
 
 namespace RED.Helper
 {
@@ -42,12 +43,12 @@ namespace RED.Helper
                 }
                 else
                 {
-                    MessageBox.Show("No Data To Export", "RED++", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    UiAssist.MsgBoxInfo(TXT.Translate("There are no scan results to export. Scan or import results first."));
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error trying to export data:" + Environment.NewLine + ex.Message, "RED++ error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                UiAssist.MsgBoxException(TXT.Translate("Could not export scan results"), ex);
             }
         }
 
@@ -55,8 +56,8 @@ namespace RED.Helper
         {
             using (SaveFileDialog dlg = new SaveFileDialog())
             {
-                dlg.Title = "Export Scan Results";
-                dlg.Filter = "Text Files|*.txt|CSV Files|*.csv|JSON Files|*.json|All Files|*.*";
+                dlg.Title = TXT.Translate("Export scan results");
+                dlg.Filter = TXT.Translate("Text files|*.txt|CSV files|*.csv|JSON files|*.json|All files|*.*");
                 dlg.FilterIndex = 1;
                 dlg.DefaultExt = "txt";
                 dlg.FileName = "RED++_EmptyDirectories";
@@ -163,12 +164,12 @@ namespace RED.Helper
                 }
                 else
                 {
-                    MessageBox.Show("No Directories To Export", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                    UiAssist.MsgBoxInfo(TXT.Translate("There are no directories to export. Scan or import results first."));
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error trying to export data:" + Environment.NewLine + ex.Message, "RED++ error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                UiAssist.MsgBoxException(TXT.Translate("Could not export directories"), ex);
             }
         }
 
@@ -204,12 +205,12 @@ namespace RED.Helper
                 }
                 else
                 {
-                    MessageBox.Show("No Data To Export", "RED++", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    UiAssist.MsgBoxInfo(TXT.Translate("There are no scan results to export. Scan or import results first."));
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error trying to export treeview data:" + Environment.NewLine + ex.Message, "RED++ error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                UiAssist.MsgBoxException(TXT.Translate("Could not export tree view results"), ex);
             }
         }
 
