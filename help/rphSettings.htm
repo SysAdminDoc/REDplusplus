@@ -105,6 +105,12 @@ You won't be able to see the progress but it will be much faster.
 <li><span class="sx">Infinite-loop detection</span>
 <div>Search processing will stop after the specified number of errors.</div>
 </li>
+<li><span class="sx">Respect .gitignore rules during scans</span>
+<div>When this option is enabled, directories ignored by a <span class="nbn">.gitignore</span> file are skipped in the same way as configured ignore filters. This is useful when scanning development workspaces.</div>
+</li>
+<li><span class="sx">Use MFT turbo scan</span>
+<div>When running as administrator, <span class="red">RED++</span> can use the NTFS/ReFS master file table to find empty directories more quickly on large volumes. If MFT access is unavailable, it falls back to the normal directory walk.</div>
+</li>
 </ul>
 </div>
 
