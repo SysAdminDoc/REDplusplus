@@ -81,14 +81,36 @@ namespace RED
 				{
 					if (entry.IsFile)
 					{
-						// Zero-byte files are recreated losslessly (they had no content)
 						string parent = Path.GetDirectoryName(entry.Path);
 						if (!string.IsNullOrEmpty(parent))
 						{
 							Directory.CreateDirectory(parent);
 						}
-						if (!File.Exists(entry.Path))
+
+						if (!string.IsNullOrWhiteSpace(entry.MovedTo) && File.Exists(entry.MovedTo))
 						{
+							if (File.Exists(entry.Path))
+							{
+								FileInfo existing = new FileInfo(entry.Path);
+								if (existing.Length != 0)
+								{
+									throw new IOException(TXT.Translate("Original file exists and is no longer empty: {0}", RedAssist.DQuote(entry.Path)));
+								}
+								File.Delete(entry.Path);
+							}
+							try
+							{
+								File.Move(entry.MovedTo, entry.Path);
+							}
+							catch (IOException)
+							{
+								File.Copy(entry.MovedTo, entry.Path, overwrite: false);
+								File.Delete(entry.MovedTo);
+							}
+						}
+						else if (!File.Exists(entry.Path))
+						{
+							// Zero-byte files are recreated losslessly (they had no content)
 							using (File.Create(entry.Path)) { }
 						}
 						restored++;
@@ -125,7 +147,8 @@ namespace RED
 				catch (Exception ex)
 				{
 					failed++;
-					log?.Invoke(TXT.Translate("Failed to restore directory: {0} - {1}", RedAssist.DQuote(entry.Path), ex.Message));
+					string kind = entry.IsFile ? TXT.Translate("file") : TXT.Translate("directory");
+					log?.Invoke(TXT.Translate("Failed to restore {0}: {1} - {2}", kind, RedAssist.DQuote(entry.Path), ex.Message));
 				}
 			}
 
@@ -160,6 +183,46 @@ namespace RED
 			{
 				return null;
 			}
+		}
+
+		internal static void WriteManifest(string deleteMode, IList<ManifestEntry> entries, Action<string> log)
+		{
+			if (entries == null || entries.Count == 0) return;
+			try
+			{
+				string manifestPath = ManifestPath;
+
+				var sb = new StringBuilder();
+				sb.AppendLine("{");
+				sb.AppendLine("  \"timestamp\": \"" + DateTime.Now.ToString("o") + "\",");
+				sb.AppendLine("  \"deleteMode\": \"" + EscapeJson(deleteMode) + "\",");
+				sb.AppendLine("  \"entries\": [");
+				for (int i = 0; i < entries.Count; i++)
+				{
+					var entry = entries[i];
+					sb.Append("    { \"path\": \"" + EscapeJson(entry.Path) + "\"");
+					if (entry.MovedTo != null)
+						sb.Append(", \"movedTo\": \"" + EscapeJson(entry.MovedTo) + "\"");
+					sb.Append(", \"mode\": \"" + EscapeJson(entry.Mode) + "\"");
+					if (entry.IsFile)
+						sb.Append(", \"isFile\": true");
+					sb.Append(" }");
+					if (i < entries.Count - 1) sb.Append(",");
+					sb.AppendLine();
+				}
+				sb.AppendLine("  ]");
+				sb.AppendLine("}");
+
+				File.WriteAllText(manifestPath, sb.ToString(), Encoding.UTF8);
+				log?.Invoke(TXT.Translate("Undo manifest written: {0}", RedAssist.DQuote(manifestPath)));
+			}
+			catch { }
+		}
+
+		private static string EscapeJson(string s)
+		{
+			if (s == null) return string.Empty;
+			return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 		}
 	}
 }

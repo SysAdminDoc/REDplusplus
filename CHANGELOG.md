@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.1 (2026-06-12)
+
+### Bug Fixes
+- Empty-files mode now clears stale file candidates between fresh scans, enables Delete for file-only GUI results, reports directory and file deletion counts separately, and moves zero-byte files correctly in Move-to-folder mode; headless Move mode now requires `-moveto <dir>` so `-emptyfiles -mode move` is verifiable and undoable
+- Manual tree-node deletion now uses the same file-free stale-scan safety gate as batch Recycle deletion, refuses non-empty subtrees, and writes an undo manifest that restores the full empty subtree
+
 ## 1.5.0 (2026-06-10)
 
 ### Theme

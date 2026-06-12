@@ -44,6 +44,7 @@ namespace RED
 			if (!this.RunData.AppendScanResults)
 			{
 				this.RunData.ScanResults.Clear();
+				this.RunData.EmptyFileResults.Clear();
 			}
 
 			if (this.RunData.RespectGitIgnore)

@@ -53,6 +53,7 @@ namespace RED
 			string logFile = null;
 			string exportFile = null;
 			string modeOverride = null;
+			string moveTarget = null;
 			bool isSilent = false;
 			bool isUndo = false;
 			bool isDryRun = false;
@@ -102,6 +103,12 @@ namespace RED
 					case "--mode":
 						if (i + 1 < args.Length) modeOverride = args[++i].ToLowerInvariant();
 						break;
+					case "-moveto":
+					case "--moveto":
+					case "-move-to":
+					case "--move-to":
+						if (i + 1 < args.Length) moveTarget = args[++i];
+						break;
 					case "-help":
 					case "--help":
 					case "-h":
@@ -140,7 +147,7 @@ namespace RED
 					Environment.ExitCode = 1;
 					return;
 				}
-				Environment.ExitCode = RunHeadless(paths, logFile, exportFile, modeOverride, isDryRun, isJson, emptyFiles);
+				Environment.ExitCode = RunHeadless(paths, logFile, exportFile, modeOverride, moveTarget, isDryRun, isJson, emptyFiles);
 				return;
 			}
 
@@ -199,7 +206,7 @@ namespace RED
 				{ "dryrun", DeleteModes.Simulate },
 			};
 
-		private static int RunHeadless(List<string> paths, string logFile, string exportFile, string modeOverride, bool dryRun, bool jsonOutput, bool emptyFiles)
+		private static int RunHeadless(List<string> paths, string logFile, string exportFile, string modeOverride, string moveTarget, bool dryRun, bool jsonOutput, bool emptyFiles)
 		{
 			var log = new StringBuilder();
 			Action<string> logMsg = (msg) =>
@@ -232,6 +239,16 @@ namespace RED
 					return 1;
 				}
 				deleteMode = parsed;
+			}
+
+			if (deleteMode == DeleteModes.MoveToFolder)
+			{
+				if (string.IsNullOrWhiteSpace(moveTarget))
+				{
+					Console.Error.WriteLine("Error: -mode move requires -moveto <dir>");
+					return 1;
+				}
+				SystemFunctions.MoveToFolderTarget = Environment.ExpandEnvironmentVariables(moveTarget);
 			}
 
 			bool hadErrors = false;
@@ -305,15 +322,26 @@ namespace RED
 				// (the empty-files pre-pass lives inside the deletion worker).
 				if ((emptyCount > 0 || emptyFileCount > 0) && !runErrors && deleteMode != DeleteModes.Simulate)
 				{
-					int deleted = 0;
-					core.OnDeleteProcessFinished += (s, e) => { deleted = e.DeletedFolderCount; failed = e.FailedFolderCount; deleteDone.Set(); };
+					int deletedDirectories = 0;
+					int deletedFiles = 0;
+					int failedDirectories = 0;
+					int failedFiles = 0;
+					core.OnDeleteProcessFinished += (s, e) =>
+					{
+						deletedDirectories = e.DeletedFolderCount;
+						deletedFiles = e.DeletedFileCount;
+						failedDirectories = e.FailedFolderCount;
+						failedFiles = e.FailedFileCount;
+						failed = failedDirectories + failedFiles;
+						deleteDone.Set();
+					};
 					core.OnDeleteError += (s, e) => { runErrors = true; deleteDone.Set(); };
 
 					core.StartDeleteProcess();
 					deleteDone.WaitOne();
 
-					logMsg(string.Format("Deleted: {0}, Failed: {1}", deleted, failed));
-					totalDeleted += deleted;
+					logMsg(string.Format("Deleted directories: {0}, Deleted files: {1}, Failed directories: {2}, Failed files: {3}", deletedDirectories, deletedFiles, failedDirectories, failedFiles));
+					totalDeleted += deletedDirectories + deletedFiles;
 					totalFailed += failed;
 				}
 
@@ -401,6 +429,7 @@ Options:
   -dryrun          Scan and report only; never delete (forces simulate mode).
   -emptyfiles      Also delete standalone zero-byte files (sister mode, opt-in).
   -mode <mode>     Override delete mode: recycle | direct | move | simulate.
+  -moveto <dir>    Required with -mode move; move directories/files to <dir>.
   -export <file>   Write results to .txt / .csv / .json (by extension).
   -json            Emit one NDJSON object per result to stdout.
   -log <file>      Write a timestamped run log to <file>.
