@@ -429,11 +429,8 @@ namespace RED
             GitIgnoreParser gitIgnoreParser,
             string startFolderPath)
         {
-            this.gitIgnore = (gitIgnoreParser != null && gitIgnoreParser.HasRules) ? gitIgnoreParser : null;
-            this.gitIgnoreBasePath = startFolderPath;
-
             var emptyDirs = new List<Frn>();
-            CheckSubtreeEmpty(startFrn, volumeRoot, runData, worker, ref folderCount, emptyDirs, 1);
+            CheckSubtreeEmpty(startFrn, volumeRoot, runData, worker, ref folderCount, emptyDirs, 1, gitIgnoreParser, startFolderPath);
 
             foreach (Frn frn in emptyDirs)
             {
@@ -453,13 +450,11 @@ namespace RED
             }
         }
 
-        private GitIgnoreParser gitIgnore;
-        private string gitIgnoreBasePath;
-
         private bool CheckSubtreeEmpty(
             Frn frn, string volumeRoot, RuntimeData runData,
             FindEmptyDirectoryWorker worker, ref int folderCount,
-            List<Frn> emptyDirs, int depth)
+            List<Frn> emptyDirs, int depth,
+            GitIgnoreParser gitIgnore, string scanRootPath)
         {
             if (worker != null && worker.CancellationPending) return false;
             if (runData.MaxDepth != -1 && depth > runData.MaxDepth) return false;
@@ -516,12 +511,12 @@ namespace RED
                     return false;
                 }
 
-                // .gitignore rules (same semantics as the standard scanner)
-                if (gitIgnore != null && gitIgnoreBasePath != null &&
-                    fullPath.Length > gitIgnoreBasePath.Length &&
-                    fullPath.StartsWith(gitIgnoreBasePath, StringComparison.OrdinalIgnoreCase))
+                // .gitignore rules — check with parent's parser before extending
+                if (gitIgnore != null && scanRootPath != null &&
+                    fullPath.Length > scanRootPath.Length &&
+                    fullPath.StartsWith(scanRootPath, StringComparison.OrdinalIgnoreCase))
                 {
-                    string relativePath = fullPath.Substring(gitIgnoreBasePath.Length);
+                    string relativePath = fullPath.Substring(scanRootPath.Length);
                     if (gitIgnore.IsIgnored(entry.FileName, relativePath))
                     {
                         if (!runData.HideIgnoredDirectories && worker != null)
@@ -531,6 +526,10 @@ namespace RED
                         return false;
                     }
                 }
+
+                // Extend parser with this directory's .gitignore for child checks
+                if (gitIgnore != null)
+                    gitIgnore = gitIgnore.ExtendForDirectory(fullPath, scanRootPath);
 
                 // Same minimum-age rule as the standard scanner: a directory younger
                 // than the threshold is not scanned and keeps its parent non-empty.
@@ -560,7 +559,7 @@ namespace RED
 
                     if (child.IsDirectory)
                     {
-                        if (!CheckSubtreeEmpty(childFrn, volumeRoot, runData, worker, ref folderCount, emptyDirs, depth + 1))
+                        if (!CheckSubtreeEmpty(childFrn, volumeRoot, runData, worker, ref folderCount, emptyDirs, depth + 1, gitIgnore, scanRootPath))
                         {
                             allSubdirsEmpty = false;
                         }
