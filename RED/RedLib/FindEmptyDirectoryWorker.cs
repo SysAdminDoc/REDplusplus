@@ -440,6 +440,12 @@ namespace RED
 
 		private bool TryMftScan(DirectoryInfo startFolder, DoWorkEventArgs e)
 		{
+			if (this.RunData.DeleteEmptyFiles)
+			{
+				this.RunData.AddLogMessage("MFT scan: empty-file mode requires file sizes unavailable from USN records, falling back to standard scan");
+				return false;
+			}
+
 			if (!MftScanner.IsSupportedVolume(startFolder.FullName))
 			{
 				this.RunData.AddLogMessage("MFT scan: not an NTFS or ReFS volume, falling back to standard scan");
