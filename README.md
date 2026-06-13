@@ -83,6 +83,16 @@ Every release ships a `SHA256SUMS` file and a signed build-provenance attestatio
 gh attestation verify RED++_v1.5.12.zip -R SysAdminDoc/REDplusplus
 ```
 
+## Code Signing & SmartScreen
+
+RED++ is **unsigned**. Windows SmartScreen may show "Windows protected your PC" on first run of each new version. Click **More info → Run anyway** to proceed.
+
+**Why unsigned?** Standard OV code-signing certificates ($200–400/yr) do not bypass SmartScreen — Microsoft resets reputation per version regardless of certificate. EV certificates ($400–600/yr with hardware token) build reputation faster but are disproportionate for a free utility. Self-signing is actively harmful: Microsoft treats self-signed executables as a malware indicator.
+
+**Verification instead of signing:** every release includes a `SHA256SUMS` file and a GitHub build-provenance attestation (see [Verify Your Download](#verify-your-download)). These prove the binary came from this repository's CI, not a third party.
+
+**Future path:** if download volume grows, OV or EV signing may be adopted. The `release.yml` workflow already has a VirusTotal submission step ready to activate.
+
 ## Usage
 
 ### GUI Mode
