@@ -8,6 +8,7 @@
 - Fix incomplete JSON escaping in GUI export: `\r`, `\n`, `\t`, and control characters are now properly escaped, matching the headless `-json` output.
 - Cap imported dry-run files at 64 MB and 500K records; NDJSON imports now stream line-by-line from disk instead of loading the entire file into memory.
 - Export/import empty-file candidates as first-class results: NDJSON (schema v2), JSON, and CSV include `kind=directory|file` for each record; GUI import loads file candidates into the empty-file deletion queue with a distinct status message. Old directory-only exports still import correctly.
+- MFT turbo scan auto-falls back to standard scan when empty-file mode is enabled, since USN records lack file-size data needed for zero-byte detection.
 
 ## 1.5.11 (2026-06-12)
 
