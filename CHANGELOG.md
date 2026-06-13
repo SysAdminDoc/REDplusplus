@@ -10,6 +10,12 @@
 - Export/import empty-file candidates as first-class results: NDJSON (schema v2), JSON, and CSV include `kind=directory|file` for each record; GUI import loads file candidates into the empty-file deletion queue with a distinct status message. Old directory-only exports still import correctly.
 - MFT turbo scan auto-falls back to standard scan when empty-file mode is enabled, since USN records lack file-size data needed for zero-byte detection.
 
+### Gitignore
+- Support nested `.gitignore` files: rules from `.gitignore` files inside the scan tree are discovered during traversal and applied with correct Git precedence (closer rules override ancestors).
+- Fix rule precedence: ancestor `.gitignore` rules now load from farthest (git root) to closest so that closer rules win on conflict via last-match-wins.
+- Fix path-pattern anchoring: patterns containing `/` are now anchored to their `.gitignore`'s directory instead of matching anywhere in the path.
+- Fix `**` globstar to match zero path segments: `**/cache` now correctly ignores `cache` at the root level and at any depth.
+
 ### UX
 - Forward Explorer context-menu launches to the already-running GUI instance: the new path is set and scan starts automatically instead of showing an "already running" dialog.
 
