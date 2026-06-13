@@ -96,7 +96,7 @@ namespace RED
 					return;
 				}
 
-				DirectorySearchStatusTypes rootStatusType = this.CheckIfDirectoryEmpty(startFolder, 1);
+				DirectorySearchStatusTypes rootStatusType = this.CheckIfDirectoryEmpty(startFolder, 1, gitIgnoreParser);
 
 				this.ReportDirectoryStatus(startFolder, rootStatusType);
 
@@ -164,7 +164,7 @@ namespace RED
 			}
 		}
 
-		private DirectorySearchStatusTypes CheckIfDirectoryEmpty(DirectoryInfo startDir, int depth)
+		private DirectorySearchStatusTypes CheckIfDirectoryEmpty(DirectoryInfo startDir, int depth, GitIgnoreParser gitIgnore)
 		{
 			if (this.PossibleEndlessLoop > this.RunData.InfiniteLoopDetectionCount)
 			{
@@ -194,6 +194,9 @@ namespace RED
 				{
 					return DirectorySearchStatusTypes.NotEmpty;
 				}
+
+				if (gitIgnore != null)
+					gitIgnore = gitIgnore.ExtendForDirectory(startDir.FullName, this.RunData.StartFolder.FullName);
 
 				this.folderCount++;
 
@@ -353,10 +356,10 @@ namespace RED
 						}
 					}
 
-					if (!ignoreSubDirectory && gitIgnoreParser != null && gitIgnoreParser.HasRules)
+					if (!ignoreSubDirectory && gitIgnore != null && gitIgnore.HasRules)
 					{
 						string relativePath = curDir.FullName.Substring(this.RunData.StartFolder.FullName.Length);
-						if (gitIgnoreParser.IsIgnored(curDir.Name, relativePath))
+						if (gitIgnore.IsIgnored(curDir.Name, relativePath))
 						{
 							this.RunData.AddLogMessage(TXT.Translate("Aborted scan of {0} because it is on the ignore list", RedAssist.DQuote(curDir.FullName)));
 							ignoreSubDirectory = true;
@@ -399,7 +402,7 @@ namespace RED
 						// JRS ADDED check for AGE of folder
 						if (curDir.CreationTime.AddHours(this.RunData.MinFolderAgeHours) < DateTime.Now)
 						{
-							subFolderStatus = this.CheckIfDirectoryEmpty(curDir, depth + 1);
+							subFolderStatus = this.CheckIfDirectoryEmpty(curDir, depth + 1, gitIgnore);
 						}
 						else
 						{
