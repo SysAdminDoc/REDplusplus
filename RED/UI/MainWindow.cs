@@ -1418,30 +1418,62 @@ namespace RED.UI
                 {
                     RedImportedScanResults imported = RedImportScanResults.ReadFile(dlg.FileName);
                     RunData.ScanResults.Clear();
+                    RunData.EmptyFileResults.Clear();
+
+                    int importedFileCount = 0;
                     foreach (RedScanResultItem item in imported.DeletableResults)
                     {
-                        RunData.ScanResults.AddItem(item);
+                        if (item.Kind == Match.ResultKind.File)
+                        {
+                            RunData.EmptyFileResults.Add(new System.IO.FileInfo(item.FullPath));
+                            importedFileCount++;
+                        }
+                        else
+                        {
+                            RunData.ScanResults.AddItem(item);
+                        }
                     }
-                    RunData.EmptyFileResults.Clear();
+
                     RunData.ProtectedFolderList = new Dictionary<string, bool>();
                     RunData.StartFolder = imported.Roots.Count == 1 ? imported.Roots[0].RootDirectory : null;
 
-                    TreeMgr.LoadImportedResults(imported.Roots);
+                    var directoryRoots = new List<RedImportedScanRoot>();
+                    foreach (RedImportedScanRoot root in imported.Roots)
+                    {
+                        var dirRoot = new RedImportedScanRoot(root.RootDirectory);
+                        foreach (RedScanResultItem item in root.Results)
+                        {
+                            if (item.Kind != Match.ResultKind.File)
+                                dirRoot.Results.Add(item);
+                        }
+                        if (dirRoot.Results.Count > 0)
+                            directoryRoots.Add(dirRoot);
+                    }
+                    TreeMgr.LoadImportedResults(directoryRoots);
 
                     tcMain.SelectedTab = tabSearch;
-                    UiProgressBar(false, true, Math.Max(1, RunData.ScanResults.Count));
+                    UiProgressBar(false, true, Math.Max(1, RunData.ScanResults.Count + RunData.EmptyFileResults.Count));
                     UpdateContextMenu(cmTreeview, true);
                     SetProcessActiveLock(false);
                     btnSearch.Enabled = true;
-                    btnDelete.Enabled = RunData.ScanResults.Count > 0;
+                    btnDelete.Enabled = RunData.ScanResults.Count > 0 || RunData.EmptyFileResults.Count > 0;
                     reviewSurfaceHasCompletedRun = true;
                     StyleActionButtons();
 
-                    SetStatusAndLogMessage(TXT.Translate(
-                        "Imported {0} review records from {1}. {2} empty directories are eligible after safety checks.",
-                        imported.ReviewCount,
-                        Path.GetFileName(dlg.FileName),
-                        RunData.ScanResults.Count));
+                    string statusMsg = importedFileCount > 0
+                        ? TXT.Translate(
+                            "Imported {0} review records from {1}. {2} empty directories and {3} empty files are eligible after safety checks.",
+                            imported.ReviewCount,
+                            Path.GetFileName(dlg.FileName),
+                            RunData.ScanResults.Count,
+                            importedFileCount)
+                        : TXT.Translate(
+                            "Imported {0} review records from {1}. {2} empty directories are eligible after safety checks.",
+                            imported.ReviewCount,
+                            Path.GetFileName(dlg.FileName),
+                            RunData.ScanResults.Count);
+
+                    SetStatusAndLogMessage(statusMsg);
                     UpdateTreeEmptyState();
                 }
                 catch (Exception ex)

@@ -70,7 +70,15 @@ namespace RED.Helper
 			{
 				string path = NormalizePath(record.Path);
 				DirectorySearchStatusTypes status = ParseStatus(record.Status, path);
-				var item = new RedScanResultItem(new DirectoryInfo(path), status, record.Reason ?? string.Empty);
+				RedScanResultItem item;
+				if (record.IsFile)
+				{
+					item = new RedScanResultItem(new FileInfo(path), status, record.Reason ?? string.Empty);
+				}
+				else
+				{
+					item = new RedScanResultItem(new DirectoryInfo(path), status, record.Reason ?? string.Empty);
+				}
 				allResults.Add(item);
 				if (status == DirectorySearchStatusTypes.Empty)
 				{
@@ -328,6 +336,9 @@ namespace RED.Helper
 			[DataMember(Name = "type")]
 			public string Type { get; set; }
 
+			[DataMember(Name = "kind")]
+			public string Kind { get; set; }
+
 			[DataMember(Name = "path")]
 			public string Path { get; set; }
 
@@ -336,6 +347,11 @@ namespace RED.Helper
 
 			[DataMember(Name = "reason")]
 			public string Reason { get; set; }
+
+			public bool IsFile
+			{
+				get { return string.Equals(Kind, "file", StringComparison.OrdinalIgnoreCase); }
+			}
 		}
 	}
 }

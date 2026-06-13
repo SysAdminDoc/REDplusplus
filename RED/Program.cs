@@ -477,6 +477,13 @@ namespace RED
 					if (!jsonOutput) logMsg(item.FullPath);
 				}
 
+				foreach (System.IO.FileInfo fi in runData.EmptyFileResults)
+				{
+					var fileItem = new RedScanResultItem(fi, DirectorySearchStatusTypes.Empty, "Empty file - zero bytes");
+					allResults.Add(fileItem);
+					if (!jsonOutput) logMsg(fi.FullName);
+				}
+
 				hadErrors |= runErrors;
 				runData.Dispose();
 			}
@@ -509,10 +516,11 @@ namespace RED
 		/// <summary>One NDJSON object per scanned result to stdout, for piping.</summary>
 		private static void EmitJson(System.Collections.Generic.List<RedScanResultItem> results)
 		{
-			Console.WriteLine(string.Format("{{\"type\":\"meta\",\"schema\":1,\"version\":\"{0}\"}}", EscapeJson(GetFileVersion())));
+			Console.WriteLine(string.Format("{{\"type\":\"meta\",\"schema\":2,\"version\":\"{0}\"}}", EscapeJson(GetFileVersion())));
 			foreach (RedScanResultItem item in results)
 			{
-				Console.WriteLine(string.Format("{{\"type\":\"result\",\"path\":\"{0}\",\"status\":\"{1}\",\"reason\":\"{2}\"}}", EscapeJson(item.FullPath), item.SearchStatus, EscapeJson(item.StatusReason)));
+				string kind = item.Kind == ResultKind.File ? "file" : "directory";
+				Console.WriteLine(string.Format("{{\"type\":\"result\",\"kind\":\"{0}\",\"path\":\"{1}\",\"status\":\"{2}\",\"reason\":\"{3}\"}}", kind, EscapeJson(item.FullPath), item.SearchStatus, EscapeJson(item.StatusReason)));
 			}
 		}
 
