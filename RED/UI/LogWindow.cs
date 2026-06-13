@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows.Forms;
+using TXT = RED.RedGetText;
 
 namespace RED.UI
 {
@@ -12,16 +13,16 @@ namespace RED.UI
 
 		private void LogWindow_Load(object sender, EventArgs e)
 		{
-			Text = "RED++ Log";
+			Text = TXT.Translate("RED++ Log");
 			tbLog.ReadOnly = true;
-			tbLog.AccessibleName = "RED++ log output";
+			tbLog.AccessibleName = TXT.Translate("RED++ log output");
 			DarkTheme.Apply(this);
 		}
 
 		public void SetLog(string log)
 		{
 			this.tbLog.Text = string.IsNullOrWhiteSpace(log)
-				? "No log entries for this session yet."
+				? TXT.Translate("No log entries for this session yet.")
 				: log;
 			this.tbLog.SelectionStart = 0;
 			this.tbLog.SelectionLength = 0;

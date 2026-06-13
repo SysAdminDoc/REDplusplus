@@ -221,6 +221,8 @@ namespace RED.UI
                 btn.FlatAppearance.BorderSize = 1;
                 btn.FlatAppearance.MouseOverBackColor = ButtonHover;
                 btn.FlatAppearance.MouseDownBackColor = ButtonDown;
+                btn.Paint -= ButtonFocusPaint;
+                btn.Paint += ButtonFocusPaint;
             }
             else if (control is ComboBox cb)
             {
@@ -428,6 +430,18 @@ namespace RED.UI
         {
             if (c is Label) return Subtext1;
             return Text;
+        }
+
+        private static void ButtonFocusPaint(object sender, PaintEventArgs e)
+        {
+            var btn = (Button)sender;
+            if (!btn.Focused) return;
+            var rect = new Rectangle(2, 2, btn.Width - 5, btn.Height - 5);
+            using (var pen = new Pen(Focus, Active.IsHighContrast ? 2 : 1))
+            {
+                pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dot;
+                e.Graphics.DrawRectangle(pen, rect);
+            }
         }
 
         private class DarkToolStripRenderer : ToolStripProfessionalRenderer
