@@ -240,6 +240,7 @@ namespace RED.UI
                 chk.ForeColor = chk.Enabled ? Text : DisabledText;
                 chk.FlatStyle = FlatStyle.Flat;
                 chk.Padding = new Padding(0, 2, 0, 2);
+                chk.MinimumSize = new Size(24, Math.Max(24, chk.MinimumSize.Height));
             }
             else if (control is TreeView tv)
             {
@@ -249,7 +250,7 @@ namespace RED.UI
                 tv.HideSelection = false;
                 tv.FullRowSelect = true;
                 tv.ShowNodeToolTips = true;
-                tv.ItemHeight = Math.Max(22, tv.ItemHeight);
+                tv.ItemHeight = Math.Max(24, tv.ItemHeight);
                 tv.BorderStyle = BorderStyle.FixedSingle;
             }
             else if (control is DataGridView dgv)
@@ -401,6 +402,11 @@ namespace RED.UI
         {
             item.BackColor = Surface0;
             item.ForeColor = Text;
+            if (item is ToolStripButton || item is ToolStripDropDownButton || item is ToolStripMenuItem)
+            {
+                if (item.Size.Height < 24)
+                    item.Size = new Size(Math.Max(24, item.Size.Width), 24);
+            }
             if (item is ToolStripDropDownButton ddb)
             {
                 foreach (ToolStripItem child in ddb.DropDownItems)

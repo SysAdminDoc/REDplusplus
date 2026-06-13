@@ -15,6 +15,7 @@
 - Replace hardcoded Color.White and Color.DarkGray with HC-aware palette colors (SystemColors.HighlightText in High Contrast, DarkTheme.DisabledText for muted labels).
 - Draw dotted focus rectangles on all flat buttons when focused; 2px solid in High Contrast mode.
 - Localize LogWindow title, accessible name, and empty-state text via TXT.Translate.
+- Enforce WCAG 2.2 SC 2.5.8 minimum target sizes: TreeView rows 22→24px, checkboxes 24px minimum height, ToolStrip buttons 24px minimum height.
 
 ### Gitignore
 - Support nested `.gitignore` files: rules from `.gitignore` files inside the scan tree are discovered during traversal and applied with correct Git precedence (closer rules override ancestors).
