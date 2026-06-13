@@ -26,6 +26,10 @@
 ### UX
 - Forward Explorer context-menu launches to the already-running GUI instance: the new path is set and scan starts automatically instead of showing an "already running" dialog.
 
+### Discoverability
+- Set GitHub topics (empty-directories, disk-cleanup, sysadmin, cli, portable, mft, etc.) for search visibility.
+- README now leads with a one-line value proposition, hero screenshot, and quick-start install commands (portable, Scoop, headless).
+
 ### Performance
 - Batch empty-file recycle into a single IFileOperation transaction instead of per-file shell calls; non-recycle modes (Direct, Move) still process one-by-one with pre-delete re-verification.
 
