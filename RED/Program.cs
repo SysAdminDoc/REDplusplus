@@ -446,6 +446,25 @@ namespace RED
 				int emptyCount = 0;
 				int failed = 0;
 				bool runErrors = false;
+				int progressDirCount = 0;
+				DateTime lastProgressTime = DateTime.UtcNow;
+
+				core.OnProgressChanged += (s, ev) =>
+				{
+					progressDirCount++;
+					if (!quiet && (DateTime.UtcNow - lastProgressTime).TotalSeconds >= 2)
+					{
+						lastProgressTime = DateTime.UtcNow;
+						if (jsonOutput)
+						{
+							Console.Error.WriteLine(string.Format("{{\"type\":\"progress\",\"directories\":{0}}}", progressDirCount));
+						}
+						else
+						{
+							Console.Error.Write(string.Format("\rScanning: {0:N0} directories examined...", progressDirCount));
+						}
+					}
+				};
 
 				core.OnFinishedScanForEmptyDirs += (s, e) => { emptyCount = e.EmptyFolderCount; scanDone.Set(); };
 				core.OnCancelled += (s, e) => { scanDone.Set(); deleteDone.Set(); };
@@ -454,6 +473,11 @@ namespace RED
 
 				core.SearchingForEmptyDirectories();
 				scanDone.WaitOne();
+
+				if (!quiet && !jsonOutput && progressDirCount > 0)
+				{
+					Console.Error.Write("\r" + new string(' ', 60) + "\r");
+				}
 
 				int emptyFileCount = runData.EmptyFileResults.Count;
 				logMsg(string.Format("Found {0} empty directories", emptyCount));
