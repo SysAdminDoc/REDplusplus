@@ -35,6 +35,9 @@
 - Set GitHub topics (empty-directories, disk-cleanup, sysadmin, cli, portable, mft, etc.) for search visibility.
 - README now leads with a one-line value proposition, hero screenshot, and quick-start install commands (portable, Scoop, headless).
 
+### Distribution
+- Add Chocolatey portable package manifest (`packaging/chocolatey/`): nuspec, install/uninstall scripts ready for `choco pack` and community submission.
+
 ### Documentation
 - Add Code Signing & SmartScreen strategy section to README: documents the unsigned-by-design decision, explains why OV/EV/self-signing are each unsuitable, and points users to attestation-based verification.
 - Add benchmark harness (`packaging/bench/`): `Generate-Tree.ps1` creates reproducible synthetic trees; `Run-Benchmark.ps1` times RED++ standard, MFT, PowerShell, and robocopy scanners with hardware/methodology context.
