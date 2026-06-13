@@ -28,12 +28,16 @@
 - Forward Explorer context-menu launches to the already-running GUI instance: the new path is set and scan starts automatically instead of showing an "already running" dialog.
 - Multi-run undo history: the last 5 deletion runs are preserved as timestamped manifests instead of a single overwritten file. GUI Extras → Restore Deletion shows all available runs with date, mode, and entry count. CLI `-undo` without arguments restores the most recent; `-undo <timestamp>` restores a specific one.
 
+### Enterprise
+- Windows Event Log integration: `-eventlog` flag writes a summary event (source "RED++", Application log) with scan paths, mode, counts, and exit code after headless runs. Event source registration requires admin on first use.
+
 ### Discoverability
 - Set GitHub topics (empty-directories, disk-cleanup, sysadmin, cli, portable, mft, etc.) for search visibility.
 - README now leads with a one-line value proposition, hero screenshot, and quick-start install commands (portable, Scoop, headless).
 
 ### Documentation
 - Add Code Signing & SmartScreen strategy section to README: documents the unsigned-by-design decision, explains why OV/EV/self-signing are each unsuitable, and points users to attestation-based verification.
+- Add benchmark harness (`packaging/bench/`): `Generate-Tree.ps1` creates reproducible synthetic trees; `Run-Benchmark.ps1` times RED++ standard, MFT, PowerShell, and robocopy scanners with hardware/methodology context.
 
 ### Performance
 - Batch empty-file recycle into a single IFileOperation transaction instead of per-file shell calls; non-recycle modes (Direct, Move) still process one-by-one with pre-delete re-verification.

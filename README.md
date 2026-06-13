@@ -132,6 +132,7 @@ Options:
 | `-quiet` | Suppress stdout/stderr; use only the process exit code and optional `-log`. |
 | `-log <file>` | Write a timestamped run log. |
 | `-undo [manifest]` | Restore directories from the most recent (or specified) run. Up to 5 undo manifests are kept. |
+| `-eventlog` | Write a summary event to the Windows Application Event Log (source "RED++"). |
 | `-help`, `-version` | Show usage / version and exit. |
 
 Exit codes:
