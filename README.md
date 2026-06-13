@@ -4,11 +4,34 @@
 
 # RED++ : Remove Empty Directories
 
-[Download RED++](https://github.com/SysAdminDoc/REDplusplus/releases)
-
-RED++ finds, displays, and deletes empty directories recursively below a given start folder. Create custom rules for keeping and deleting folders (e.g. treat directories with empty files as empty).
+**Fast, portable empty-directory scanner and cleaner for Windows** — GUI + headless CLI, filter rules, MFT turbo scan, one-click undo, network/UNC support, and zero installation required.
 
 ![screenshot](help/img/screen-M02.png)
+
+### Quick Start
+
+**Portable** — download, unzip, run:
+
+```
+curl -Lo RED++.zip https://github.com/SysAdminDoc/REDplusplus/releases/latest/download/RED++_v1.5.12.zip
+tar -xf RED++.zip
+RED+.exe
+```
+
+**Scoop:**
+
+```
+scoop bucket add redplusplus https://github.com/SysAdminDoc/REDplusplus
+scoop install redplusplus
+```
+
+**Headless (Task Scheduler, scripts):**
+
+```
+RED+.exe -silent -path "D:\Shares" -log cleanup.log
+```
+
+[All releases](https://github.com/SysAdminDoc/REDplusplus/releases)
 
 ## Features
 
