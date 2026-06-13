@@ -131,7 +131,7 @@ Options:
 | `-json` | Emit NDJSON to stdout: one `meta` record, then one `result` record per directory. |
 | `-quiet` | Suppress stdout/stderr; use only the process exit code and optional `-log`. |
 | `-log <file>` | Write a timestamped run log. |
-| `-undo` | Restore the directories deleted by the last run. |
+| `-undo [manifest]` | Restore directories from the most recent (or specified) run. Up to 5 undo manifests are kept. |
 | `-help`, `-version` | Show usage / version and exit. |
 
 Exit codes:
@@ -156,10 +156,12 @@ RED+.exe -silent -path "\\server\share\folder" -log "cleanup.log"
 
 ### Undo
 
-Every deletion run writes an undo manifest (`RED++.undo.json`). Restore the last run's directories with one click (Extras menu → Restore Last Deletion) or headlessly:
+Every deletion run writes a timestamped undo manifest. The last 5 manifests are kept so you can undo earlier runs, not just the most recent one. Restore via the GUI (Extras → Restore Deletion → pick a run) or headlessly:
 
 ```
-RED+.exe -undo [-log "restore.log"]
+RED+.exe -undo                              # restore the most recent run
+RED+.exe -undo 2026-06-13_14-30-00          # restore a specific run by timestamp
+RED+.exe -undo RED++.undo.2026-06-13_14-30-00.json  # or by filename
 ```
 
 Deleted directories were empty, so recreating them is a complete restore; Move-to-folder deletions are moved back to their original location.

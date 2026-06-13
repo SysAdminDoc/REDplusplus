@@ -62,6 +62,7 @@ namespace RED
 			string exportFile = null;
 			string modeOverride = null;
 			string moveTarget = null;
+			string undoManifest = null;
 			bool isSilent = false;
 			bool isAutoSearch = false;
 			bool isUndo = false;
@@ -95,6 +96,8 @@ namespace RED
 					case "-undo":
 					case "--undo":
 						isUndo = true;
+						if (i + 1 < args.Length && !args[i + 1].StartsWith("-"))
+							undoManifest = args[++i];
 						break;
 					case "-dryrun":
 					case "--dryrun":
@@ -270,7 +273,7 @@ namespace RED
 
 			if (isUndo)
 			{
-				Environment.ExitCode = RunUndo(logFile, quiet);
+				Environment.ExitCode = RunUndo(logFile, quiet, undoManifest);
 				return;
 			}
 
@@ -320,10 +323,12 @@ namespace RED
 		}
 
 		/// <summary>
-		/// Headless restore of the last deletion run from RED++.undo.json.
+		/// Headless restore from an undo manifest. Without a manifest argument,
+		/// restores the most recent run. With a timestamp or file path, restores
+		/// that specific manifest.
 		/// Exit 0 = everything restored, 1 = nothing to restore or failures.
 		/// </summary>
-		private static int RunUndo(string logFile, bool quiet)
+		private static int RunUndo(string logFile, bool quiet, string manifestArg)
 		{
 			var log = new StringBuilder();
 			Action<string> logMsg = (msg) =>
@@ -334,11 +339,56 @@ namespace RED
 			};
 
 			int restored, failed;
-			bool ok = UndoManager.Restore(out restored, out failed, logMsg);
-			logMsg(string.Format("Restored: {0}, Failed: {1}", restored, failed));
+			bool ok;
 
+			if (!string.IsNullOrEmpty(manifestArg))
+			{
+				string resolvedPath = ResolveManifestArg(manifestArg);
+				if (resolvedPath == null)
+				{
+					logMsg("Error: no manifest found matching '" + manifestArg + "'");
+					if (!quiet)
+					{
+						var available = UndoManager.ListManifests();
+						if (available.Count > 0)
+						{
+							logMsg("Available manifests:");
+							foreach (var m in available)
+								logMsg(string.Format("  {0}  {1}  ({2} entries)", m.Timestamp.ToString("s"), m.DeleteMode, m.EntryCount));
+						}
+					}
+					WriteLogFile(logFile, log, quiet);
+					return 1;
+				}
+				ok = UndoManager.Restore(resolvedPath, out restored, out failed, logMsg);
+			}
+			else
+			{
+				ok = UndoManager.Restore(out restored, out failed, logMsg);
+			}
+
+			logMsg(string.Format("Restored: {0}, Failed: {1}", restored, failed));
 			WriteLogFile(logFile, log, quiet);
 			return ok ? 0 : 1;
+		}
+
+		private static string ResolveManifestArg(string arg)
+		{
+			if (File.Exists(arg)) return arg;
+
+			var manifests = UndoManager.ListManifests();
+			foreach (var m in manifests)
+			{
+				if (m.FileName.Equals(arg, StringComparison.OrdinalIgnoreCase))
+					return m.FilePath;
+				if (m.FileName.Contains(arg))
+					return m.FilePath;
+				if (m.Timestamp.ToString("yyyy-MM-dd_HH-mm-ss") == arg)
+					return m.FilePath;
+				if (m.Timestamp.ToString("s") == arg)
+					return m.FilePath;
+			}
+			return null;
 		}
 
 		private static readonly System.Collections.Generic.Dictionary<string, DeleteModes> ModeAliases =
@@ -646,7 +696,7 @@ namespace RED
 
 Usage:
   RED+.exe [-silent] -path <dir> [-path <dir> ...] [options]
-  RED+.exe -undo [-log <file>]
+  RED+.exe -undo [<manifest>] [-log <file>]
   RED+.exe -help | -version
 
 Options:
@@ -672,7 +722,7 @@ Options:
   -json            Emit NDJSON to stdout (meta record, then result records).
   -quiet           Suppress stdout/stderr; use the process exit code/log file.
   -log <file>      Write a timestamped run log to <file>.
-  -undo            Restore the directories deleted by the last run.
+  -undo [manifest]  Restore directories from the most recent (or specified) run.
   -help, -version  Show this help / the version and exit.
 
 Exit codes:
