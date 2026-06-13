@@ -66,6 +66,7 @@ namespace RED
 			bool isSilent = false;
 			bool isAutoSearch = false;
 			bool isUndo = false;
+			bool useEventLog = false;
 			bool isDryRun = false;
 			bool isJson = false;
 			bool emptyFiles = false;
@@ -116,6 +117,10 @@ namespace RED
 					case "-emptyfiles":
 					case "--emptyfiles":
 						emptyFiles = true;
+						break;
+					case "-eventlog":
+					case "--eventlog":
+						useEventLog = true;
 						break;
 					case "-minage":
 					case "--minage":
@@ -289,7 +294,7 @@ namespace RED
 					Environment.ExitCode = 1;
 					return;
 				}
-				Environment.ExitCode = RunHeadless(paths, logFile, exportFile, modeOverride, moveTarget, isDryRun, isJson, emptyFiles, quiet,
+				Environment.ExitCode = RunHeadless(paths, logFile, exportFile, modeOverride, moveTarget, isDryRun, isJson, emptyFiles, quiet, useEventLog,
 					minAgeOverride, maxDepthOverride, respectGitIgnoreOverride, useMftScanOverride, ignoreHiddenOverride, ignoreSystemOverride,
 					excludePatterns, protectPatterns);
 				return;
@@ -402,7 +407,7 @@ namespace RED
 				{ "dryrun", DeleteModes.Simulate },
 			};
 
-		private static int RunHeadless(List<string> paths, string logFile, string exportFile, string modeOverride, string moveTarget, bool dryRun, bool jsonOutput, bool emptyFiles, bool quiet,
+		private static int RunHeadless(List<string> paths, string logFile, string exportFile, string modeOverride, string moveTarget, bool dryRun, bool jsonOutput, bool emptyFiles, bool quiet, bool useEventLog,
 			uint? minAgeOverride, int? maxDepthOverride, bool? respectGitIgnoreOverride, bool? useMftScanOverride, bool? ignoreHiddenOverride, bool? ignoreSystemOverride,
 			List<string> excludePatterns, List<string> protectPatterns)
 		{
@@ -622,9 +627,20 @@ namespace RED
 			}
 
 			WriteLogFile(logFile, log, quiet);
-			if (hadErrors || totalFailed > 0) return 1;
-			if (deleteMode == DeleteModes.Simulate && (totalEmpty + totalEmptyFiles) > 0) return 11;
-			return 0;
+			int exitCode;
+			if (hadErrors || totalFailed > 0) exitCode = 1;
+			else if (deleteMode == DeleteModes.Simulate && (totalEmpty + totalEmptyFiles) > 0) exitCode = 11;
+			else exitCode = 0;
+
+			if (useEventLog)
+			{
+				EventLogWriter.WriteRunSummary(
+					string.Join("; ", paths),
+					deleteMode.ToString(),
+					totalEmpty, totalEmptyFiles, totalDeleted, totalFailed, exitCode);
+			}
+
+			return exitCode;
 		}
 
 		/// <summary>One NDJSON object per scanned result to stdout, for piping.</summary>
@@ -723,6 +739,7 @@ Options:
   -quiet           Suppress stdout/stderr; use the process exit code/log file.
   -log <file>      Write a timestamped run log to <file>.
   -undo [manifest]  Restore directories from the most recent (or specified) run.
+  -eventlog        Write a summary event to the Windows Application Event Log.
   -help, -version  Show this help / the version and exit.
 
 Exit codes:
