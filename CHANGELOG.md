@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.12 (2026-06-13)
+
+### Safety
+- Reject unknown CLI switches with a clear error and exit code 1 instead of silently ignoring them (fail-closed parser).
+- Error on missing values for `-path`, `-log`, `-export`, `-mode`, and `-moveto` instead of silently skipping the switch.
+- Fix incomplete JSON escaping in GUI export: `\r`, `\n`, `\t`, and control characters are now properly escaped, matching the headless `-json` output.
+
 ## 1.5.11 (2026-06-12)
 
 ### UX Polish
