@@ -71,6 +71,7 @@ namespace RED
 			bool isJson = false;
 			bool emptyFiles = false;
 			bool quiet = false;
+			bool useClassicUi = false;
 			string parseError = null;
 			uint? minAgeOverride = null;
 			int? maxDepthOverride = null;
@@ -113,6 +114,10 @@ namespace RED
 					case "-quiet":
 					case "--quiet":
 						quiet = true;
+						break;
+					case "-classic":
+					case "--classic":
+						useClassicUi = true;
 						break;
 					case "-emptyfiles":
 					case "--emptyfiles":
@@ -309,16 +314,28 @@ namespace RED
 				{
 					try { File.WriteAllText(ForwardSignalPath, paths[0], Encoding.UTF8); } catch { }
 				}
-				IntPtr hwnd = FindWindow(null, "Remove Empty Directories+");
+				IntPtr hwnd = FindWindow(null, "RED++ - Remove Empty Directories+");
+				if (hwnd == IntPtr.Zero) hwnd = FindWindow(null, "Remove Empty Directories+");
 				if (hwnd != IntPtr.Zero) SetForegroundWindow(hwnd);
 				return;
 			}
 
 			try
 			{
-				Application.EnableVisualStyles();
-				Application.SetCompatibleTextRenderingDefault(false);
-				Application.Run(new UI.MainWindow());
+				if (useClassicUi)
+				{
+					Application.EnableVisualStyles();
+					Application.SetCompatibleTextRenderingDefault(false);
+					Application.Run(new UI.MainWindow());
+				}
+				else
+				{
+					var app = new System.Windows.Application
+					{
+						ShutdownMode = System.Windows.ShutdownMode.OnMainWindowClose
+					};
+					app.Run(new UI.Wpf.ModernMainWindow(paths.Count > 0 ? paths[0] : null, isAutoSearch));
+				}
 			}
 			finally
 			{
@@ -740,6 +757,7 @@ Options:
   -log <file>      Write a timestamped run log to <file>.
   -undo [manifest]  Restore directories from the most recent (or specified) run.
   -eventlog        Write a summary event to the Windows Application Event Log.
+  -classic         Open the legacy Windows Forms interface.
   -help, -version  Show this help / the version and exit.
 
 Exit codes:
