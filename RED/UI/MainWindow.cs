@@ -140,6 +140,42 @@ namespace RED.UI
             DarkTheme.Apply(this);
             RefreshThemeDependentUi();
             UpdateTreeEmptyState();
+            StartForwardWatcher();
+        }
+
+        private System.Windows.Forms.Timer forwardWatchTimer;
+
+        private void StartForwardWatcher()
+        {
+            try { if (File.Exists(Program.ForwardSignalPath)) File.Delete(Program.ForwardSignalPath); } catch { }
+            forwardWatchTimer = new System.Windows.Forms.Timer { Interval = 500 };
+            forwardWatchTimer.Tick += ForwardWatchTimer_Tick;
+            forwardWatchTimer.Start();
+        }
+
+        private void ForwardWatchTimer_Tick(object sender, EventArgs e)
+        {
+            if (!File.Exists(Program.ForwardSignalPath)) return;
+
+            string path = null;
+            try
+            {
+                path = File.ReadAllText(Program.ForwardSignalPath, System.Text.Encoding.UTF8).Trim();
+                File.Delete(Program.ForwardSignalPath);
+            }
+            catch { return; }
+
+            if (string.IsNullOrWhiteSpace(path)) return;
+
+            if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;
+            Activate();
+
+            if (!path.EndsWith(Path.DirectorySeparatorChar.ToString()))
+                path += Path.DirectorySeparatorChar;
+
+            txtSearchDirectory.Text = path;
+            tcMain.SelectedTab = tabSearch;
+            btnSearch.PerformClick();
         }
 
         /// <summary>
