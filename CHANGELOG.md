@@ -12,6 +12,7 @@
 
 ### Automation
 - Add `-exclude <name>` and `-protect <name>` CLI switches (repeatable) for per-run filter overrides that compose with config-file filters.
+- Add headless scan progress reporting: periodic `Scanning: N directories examined...` to stderr (every 2 seconds), or `{"type":"progress",...}` in `-json` mode. `-quiet` suppresses progress.
 
 ## 1.5.11 (2026-06-12)
 
