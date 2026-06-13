@@ -22,6 +22,14 @@ namespace RED
 		[System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
 		private static extern bool SetDllDirectoryW(string lpPathName);
 
+		[System.Runtime.InteropServices.DllImport("user32.dll")]
+		private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+		[System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+		private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+		internal static readonly string ForwardSignalPath = Path.Combine(Path.GetTempPath(), "REDplusplus_forward.path");
+
 		private const uint LOAD_LIBRARY_SEARCH_SYSTEM32 = 0x00000800;
 
 		/// <summary>
@@ -289,7 +297,12 @@ namespace RED
 
 			if (!createdNew)
 			{
-				MessageBox.Show("RED++ is already running.", "RED++", MessageBoxButtons.OK, MessageBoxIcon.Information);
+				if (paths.Count > 0)
+				{
+					try { File.WriteAllText(ForwardSignalPath, paths[0], Encoding.UTF8); } catch { }
+				}
+				IntPtr hwnd = FindWindow(null, "Remove Empty Directories+");
+				if (hwnd != IntPtr.Zero) SetForegroundWindow(hwnd);
 				return;
 			}
 
