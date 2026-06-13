@@ -10,6 +10,12 @@
 - Export/import empty-file candidates as first-class results: NDJSON (schema v2), JSON, and CSV include `kind=directory|file` for each record; GUI import loads file candidates into the empty-file deletion queue with a distinct status message. Old directory-only exports still import correctly.
 - MFT turbo scan auto-falls back to standard scan when empty-file mode is enabled, since USN records lack file-size data needed for zero-byte detection.
 
+### Accessibility
+- Add accessible names (localized) to all Settings, Filter, and sub-tab pages.
+- Replace hardcoded Color.White and Color.DarkGray with HC-aware palette colors (SystemColors.HighlightText in High Contrast, DarkTheme.DisabledText for muted labels).
+- Draw dotted focus rectangles on all flat buttons when focused; 2px solid in High Contrast mode.
+- Localize LogWindow title, accessible name, and empty-state text via TXT.Translate.
+
 ### Gitignore
 - Support nested `.gitignore` files: rules from `.gitignore` files inside the scan tree are discovered during traversal and applied with correct Git precedence (closer rules override ancestors).
 - Fix rule precedence: ancestor `.gitignore` rules now load from farthest (git root) to closest so that closer rules win on conflict via last-match-wins.

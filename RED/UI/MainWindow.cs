@@ -310,6 +310,16 @@ namespace RED.UI
             tvSearchResults.AccessibleDescription = TXT.Translate("Shows every reviewed directory and why it will be deleted, kept, or skipped.");
             lbStatus.AccessibleName = TXT.Translate("Detailed status");
             lbUiStatus.AccessibleName = TXT.Translate("Application state");
+            tabSettings.AccessibleName = TXT.Translate("Settings");
+            tabSettings1.AccessibleName = TXT.Translate("General Settings");
+            tabSettings1.AccessibleDescription = TXT.Translate("Basic scan behavior, delete mode, and age filters");
+            tabSettings2.AccessibleName = TXT.Translate("Advanced Settings");
+            tabSettings2.AccessibleDescription = TXT.Translate("Explorer integration, MFT turbo scan, and clipboard detection");
+            tabFilters.AccessibleName = TXT.Translate("Filters");
+            tabFilters.AccessibleDescription = TXT.Translate("Rules that control which directories and files are ignored or protected");
+            tabFilterFoldersIgnore.AccessibleName = TXT.Translate("Directories: Ignore");
+            tabFilterFoldersNeverEmpty.AccessibleName = TXT.Translate("Directories: Never Empty");
+            tabFiltersFilesIgnore.AccessibleName = TXT.Translate("Files: Ignore");
         }
 
         private void ApplyPremiumPolish()
@@ -754,7 +764,7 @@ namespace RED.UI
             bool enabled = button.Enabled;
             button.BackColor = active && enabled ? accent : fallback;
             button.ForeColor = enabled
-                ? (active ? Color.White : DarkTheme.Text)
+                ? (active ? (DarkTheme.IsHighContrast ? SystemColors.HighlightText : Color.White) : DarkTheme.Text)
                 : DarkTheme.DisabledText;
             button.FlatAppearance.BorderColor = enabled
                 ? (active ? accent : DarkTheme.Surface1)
@@ -849,7 +859,7 @@ namespace RED.UI
                     lblExplorerIntegrationInfo.Text = TXT.Translate("Start the application as an Admin user to change this");
                     if (SystemFunctions.IsAdmin())
                     {
-                        lblExplorerIntegrationInfo.ForeColor = Color.DarkGray;
+                        lblExplorerIntegrationInfo.ForeColor = DarkTheme.DisabledText;
                     }
                     else
                     {
