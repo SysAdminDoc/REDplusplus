@@ -92,6 +92,10 @@ namespace NotBob.UI
 			{
 				this.UxMessageText.Location = new System.Drawing.Point(FORM_X_MARGIN, FORM_Y_MARGIN);
 			}
+			else
+			{
+				this.UxMessageText.Location = new System.Drawing.Point(FORM_X_MARGIN + this.m_DialogIcon.Width + 14, FORM_Y_MARGIN);
+			}
 		}
 
 
@@ -231,12 +235,13 @@ namespace NotBob.UI
 		private void NBMsgBox_Shown(object sender, EventArgs e)
 		{
 			Font = DarkTheme.UiFont;
-			UxMessageText.MaximumSize = new Size(560, 0);
+			Padding = new Padding(FORM_X_MARGIN, FORM_Y_MARGIN, FORM_X_MARGIN, FORM_Y_MARGIN);
+			UxMessageText.MaximumSize = new Size(600, 0);
 			UxMessageText.ForeColor = DarkTheme.Text;
-			UxButton1.MinimumSize = new Size(96, 30);
-			UxButton2.MinimumSize = new Size(96, 30);
-			UxButton3.MinimumSize = new Size(96, 30);
-			UxButton4.MinimumSize = new Size(96, 30);
+			UxButton1.MinimumSize = new Size(104, 32);
+			UxButton2.MinimumSize = new Size(104, 32);
+			UxButton3.MinimumSize = new Size(104, 32);
+			UxButton4.MinimumSize = new Size(104, 32);
 			DarkTheme.Apply(this);
 			BuildForm();
 		}
@@ -323,10 +328,10 @@ namespace NotBob.UI
 		/// <summary>
 		/// Margins and spacing for form elements
 		/// </summary>
-		const int FORM_Y_MARGIN = 10;
-		const int FORM_X_MARGIN = 16;
-		const int TEXT_Y_MARGIN = 30;
-		const int BUTTON_SPACE = 5;
+		const int FORM_Y_MARGIN = 18;
+		const int FORM_X_MARGIN = 20;
+		const int TEXT_Y_MARGIN = 26;
+		const int BUTTON_SPACE = 8;
 
 		/// <summary>
 		/// Max number of buttons on the form.
@@ -380,7 +385,11 @@ namespace NotBob.UI
 			button.Text = text;
 			button.Visible = true;
 			button.DialogResult = dialogResult;
-			return button.Size.Width;
+			Size measured = TextRenderer.MeasureText(text, button.Font);
+			button.Size = new Size(
+				Math.Max(button.MinimumSize.Width, measured.Width + 30),
+				Math.Max(button.MinimumSize.Height, measured.Height + 12));
+			return button.Width;
 		}
 
 		/// <summary>
@@ -391,7 +400,7 @@ namespace NotBob.UI
 			int formWidth = this.ClientRectangle.Width;
 
 			int x = formWidth - FORM_X_MARGIN;
-			int y = UxButton1.Location.Y;
+			int y = this.ClientRectangle.Height - FORM_Y_MARGIN - UxButton1.Height;
 
 			if (UxButton4.Visible)
 			{
@@ -465,10 +474,13 @@ namespace NotBob.UI
 		/// </summary>
 		private void SetDialogSize()
 		{
+			UxMessageText.AutoSize = true;
 			int requiredWidth = this.UxMessageText.Location.X + this.UxMessageText.Size.Width + FORM_X_MARGIN;
 			requiredWidth = requiredWidth > m_minButtonRowWidth ? requiredWidth : m_minButtonRowWidth;
 
-			int requiredHeight = this.UxMessageText.Location.Y + this.UxMessageText.Size.Height - this.UxButton2.Location.Y + this.ClientSize.Height + TEXT_Y_MARGIN;
+			int iconBottom = m_DialogIcon == null ? FORM_Y_MARGIN : FORM_Y_MARGIN + m_DialogIcon.Height;
+			int contentBottom = Math.Max(this.UxMessageText.Bottom, iconBottom);
+			int requiredHeight = contentBottom + TEXT_Y_MARGIN + UxButton1.Height + FORM_Y_MARGIN;
 
 			int minSetWidth = this.ClientSize.Width > this.m_minWidth ? this.ClientSize.Width : this.m_minWidth;
 			int minSetHeight = this.ClientSize.Height > this.m_minHeight ? this.ClientSize.Height : this.m_minHeight;

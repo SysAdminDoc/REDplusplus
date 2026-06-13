@@ -28,22 +28,22 @@ namespace RED.UI
         private static readonly ThemePalette Mocha = new ThemePalette
         {
             IsDark = true,
-            Base = Color.FromArgb(30, 30, 46),
-            Mantle = Color.FromArgb(24, 24, 37),
-            Crust = Color.FromArgb(17, 17, 27),
-            Surface0 = Color.FromArgb(49, 50, 68),
-            Surface1 = Color.FromArgb(69, 71, 90),
-            Surface2 = Color.FromArgb(88, 91, 112),
-            Overlay0 = Color.FromArgb(108, 112, 134),
-            Text = Color.FromArgb(205, 214, 244),
-            Subtext0 = Color.FromArgb(166, 173, 200),
-            Subtext1 = Color.FromArgb(186, 194, 222),
-            Blue = Color.FromArgb(137, 180, 250),
-            Red = Color.FromArgb(243, 139, 168),
-            Green = Color.FromArgb(166, 227, 161),
-            Yellow = Color.FromArgb(249, 226, 175),
-            Lavender = Color.FromArgb(180, 190, 254),
-            Peach = Color.FromArgb(250, 179, 135),
+            Base = Color.FromArgb(17, 25, 36),
+            Mantle = Color.FromArgb(13, 21, 32),
+            Crust = Color.FromArgb(10, 16, 25),
+            Surface0 = Color.FromArgb(29, 39, 54),
+            Surface1 = Color.FromArgb(47, 58, 76),
+            Surface2 = Color.FromArgb(70, 83, 105),
+            Overlay0 = Color.FromArgb(116, 130, 156),
+            Text = Color.FromArgb(230, 237, 252),
+            Subtext0 = Color.FromArgb(156, 169, 194),
+            Subtext1 = Color.FromArgb(190, 201, 224),
+            Blue = Color.FromArgb(48, 108, 232),
+            Red = Color.FromArgb(222, 55, 72),
+            Green = Color.FromArgb(124, 194, 99),
+            Yellow = Color.FromArgb(232, 195, 91),
+            Lavender = Color.FromArgb(141, 162, 255),
+            Peach = Color.FromArgb(241, 151, 102),
         };
 
         // Catppuccin Latte (light). "Surface" tones darken (not lighten) so borders
@@ -188,7 +188,17 @@ namespace RED.UI
             try
             {
                 int value = Active.IsDark ? 1 : 0;
+                DwmSetWindowAttribute(handle, 19, ref value, sizeof(int));
                 DwmSetWindowAttribute(handle, 20, ref value, sizeof(int));
+                if (Active.IsDark)
+                {
+                    int caption = ColorTranslator.ToWin32(Crust);
+                    int text = ColorTranslator.ToWin32(Text);
+                    int border = ColorTranslator.ToWin32(Surface1);
+                    DwmSetWindowAttribute(handle, 35, ref caption, sizeof(int));
+                    DwmSetWindowAttribute(handle, 36, ref text, sizeof(int));
+                    DwmSetWindowAttribute(handle, 34, ref border, sizeof(int));
+                }
             }
             catch { }
         }
@@ -215,8 +225,8 @@ namespace RED.UI
                 btn.ForeColor = btn.Enabled ? Text : DisabledText;
                 btn.FlatStyle = FlatStyle.Flat;
                 btn.UseVisualStyleBackColor = false;
-                btn.MinimumSize = new Size(0, Math.Max(30, btn.MinimumSize.Height));
-                btn.Padding = new Padding(10, 3, 10, 3);
+                btn.MinimumSize = new Size(0, Math.Max(32, btn.MinimumSize.Height));
+                btn.Padding = new Padding(12, 4, 12, 4);
                 btn.FlatAppearance.BorderColor = btn.Enabled ? Surface1 : Surface0;
                 btn.FlatAppearance.BorderSize = 1;
                 btn.FlatAppearance.MouseOverBackColor = ButtonHover;
@@ -259,12 +269,15 @@ namespace RED.UI
                 dgv.GridColor = Surface1;
                 dgv.BorderStyle = BorderStyle.None;
                 dgv.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+                dgv.DefaultCellStyle.Font = UiFont;
                 dgv.DefaultCellStyle.BackColor = Base;
                 dgv.DefaultCellStyle.ForeColor = Text;
                 dgv.DefaultCellStyle.SelectionBackColor = Surface1;
                 dgv.DefaultCellStyle.SelectionForeColor = Text;
+                dgv.DefaultCellStyle.Padding = new Padding(4, 2, 4, 2);
                 dgv.AlternatingRowsDefaultCellStyle.BackColor = Active.IsHighContrast ? Base : Mantle;
                 dgv.AlternatingRowsDefaultCellStyle.ForeColor = Text;
+                dgv.ColumnHeadersDefaultCellStyle.Font = new Font(UiFont, FontStyle.Bold);
                 dgv.ColumnHeadersDefaultCellStyle.BackColor = Surface0;
                 dgv.ColumnHeadersDefaultCellStyle.ForeColor = Text;
                 dgv.ColumnHeadersDefaultCellStyle.SelectionBackColor = Surface1;
@@ -272,12 +285,23 @@ namespace RED.UI
                 dgv.RowHeadersDefaultCellStyle.BackColor = Surface0;
                 dgv.RowHeadersDefaultCellStyle.ForeColor = Text;
                 dgv.EnableHeadersVisualStyles = false;
-                dgv.RowTemplate.Height = Math.Max(26, dgv.RowTemplate.Height);
-                dgv.ColumnHeadersHeight = Math.Max(28, dgv.ColumnHeadersHeight);
+                dgv.RowTemplate.Height = Math.Max(28, dgv.RowTemplate.Height);
+                dgv.ColumnHeadersHeight = Math.Max(30, dgv.ColumnHeadersHeight);
             }
             else if (control is TabControl tc)
             {
                 tc.BackColor = Base;
+                if (tc.Name == "tcMain")
+                {
+                    tc.SizeMode = TabSizeMode.Fixed;
+                    tc.ItemSize = new Size(182, 56);
+                    tc.Padding = new Point(0, 0);
+                }
+                else
+                {
+                    tc.SizeMode = TabSizeMode.Normal;
+                    tc.Padding = new Point(10, 5);
+                }
                 // Tab headers ignore BackColor/ForeColor — owner-draw them so the
                 // header strip doesn't stay system light-gray on the dark theme
                 tc.DrawMode = TabDrawMode.OwnerDrawFixed;
@@ -307,6 +331,8 @@ namespace RED.UI
             {
                 ts.BackColor = Surface0;
                 ts.ForeColor = Text;
+                ts.Padding = new Padding(4, 3, 4, 3);
+                ts.ImageScalingSize = new Size(18, 18);
                 ts.Renderer = new DarkToolStripRenderer();
                 foreach (ToolStripItem item in ts.Items)
                 {
@@ -322,6 +348,7 @@ namespace RED.UI
             {
                 ss.BackColor = Surface0;
                 ss.ForeColor = Text;
+                ss.Padding = new Padding(6, 3, 6, 3);
                 ss.Renderer = new DarkToolStripRenderer();
             }
 
@@ -347,6 +374,12 @@ namespace RED.UI
             TabPage page = tc.TabPages[e.Index];
             bool selected = (e.Index == tc.SelectedIndex);
             Rectangle r = tc.GetTabRect(e.Index);
+
+            if (tc.Name == "tcMain")
+            {
+                DrawMainTab(e.Graphics, page.Text, r, selected);
+                return;
+            }
 
             using (var brush = new SolidBrush(selected ? Surface1 : Mantle))
             {
@@ -387,6 +420,85 @@ namespace RED.UI
             }
         }
 
+        private static void DrawMainTab(Graphics g, string text, Rectangle r, bool selected)
+        {
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            using (var brush = new SolidBrush(selected ? Surface0 : Base))
+            {
+                g.FillRectangle(brush, r);
+            }
+            using (var pen = new Pen(Surface1))
+            {
+                g.DrawRectangle(pen, r.Left, r.Top, r.Width - 1, r.Height - 1);
+            }
+            if (selected)
+            {
+                using (var pen = new Pen(Blue, 3))
+                {
+                    g.DrawLine(pen, r.Left + 1, r.Bottom - 3, r.Right - 2, r.Bottom - 3);
+                }
+            }
+
+            Rectangle glyph = new Rectangle(r.Left + 34, r.Top + 17, 26, 26);
+            Color glyphColor = selected ? Text : Subtext1;
+            DrawMainTabGlyph(g, text, glyph, glyphColor);
+
+            using (var font = new Font(UiFont.FontFamily, 12f, selected ? FontStyle.Bold : FontStyle.Regular))
+            {
+                Rectangle textRect = new Rectangle(r.Left + 74, r.Top, r.Width - 82, r.Height);
+                TextRenderer.DrawText(g, text, font, textRect, selected ? Text : Subtext1,
+                    TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis);
+            }
+        }
+
+        private static void DrawMainTabGlyph(Graphics g, string text, Rectangle r, Color color)
+        {
+            using (var pen = new Pen(color, 2.4f))
+            {
+                pen.StartCap = System.Drawing.Drawing2D.LineCap.Round;
+                pen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
+                pen.LineJoin = System.Drawing.Drawing2D.LineJoin.Round;
+
+                if (text.IndexOf("Search", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    g.DrawEllipse(pen, r.Left + 1, r.Top + 1, 15, 15);
+                    g.DrawLine(pen, r.Left + 15, r.Top + 15, r.Right - 2, r.Bottom - 2);
+                }
+                else if (text.IndexOf("Settings", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    g.DrawEllipse(pen, r.Left + 6, r.Top + 6, 14, 14);
+                    for (int i = 0; i < 8; i++)
+                    {
+                        double a = i * Math.PI / 4;
+                        int x1 = r.Left + 13 + (int)(Math.Cos(a) * 9);
+                        int y1 = r.Top + 13 + (int)(Math.Sin(a) * 9);
+                        int x2 = r.Left + 13 + (int)(Math.Cos(a) * 12);
+                        int y2 = r.Top + 13 + (int)(Math.Sin(a) * 12);
+                        g.DrawLine(pen, x1, y1, x2, y2);
+                    }
+                }
+                else if (text.IndexOf("Filters", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    Point[] funnel =
+                    {
+                        new Point(r.Left + 2, r.Top + 3),
+                        new Point(r.Right - 2, r.Top + 3),
+                        new Point(r.Left + 16, r.Top + 14),
+                        new Point(r.Left + 16, r.Bottom - 3),
+                        new Point(r.Left + 10, r.Bottom - 3),
+                        new Point(r.Left + 10, r.Top + 14)
+                    };
+                    g.DrawPolygon(pen, funnel);
+                }
+                else
+                {
+                    g.DrawEllipse(pen, r.Left + 2, r.Top + 2, r.Width - 5, r.Height - 5);
+                    g.DrawLine(pen, r.Left + 13, r.Top + 12, r.Left + 13, r.Bottom - 7);
+                    g.DrawLine(pen, r.Left + 13, r.Top + 8, r.Left + 13, r.Top + 8);
+                }
+            }
+        }
+
         private static void ApplyToContextMenu(ContextMenuStrip cms)
         {
             cms.BackColor = Surface0;
@@ -405,7 +517,7 @@ namespace RED.UI
             if (item is ToolStripButton || item is ToolStripDropDownButton || item is ToolStripMenuItem)
             {
                 if (item.Size.Height < 24)
-                    item.Size = new Size(Math.Max(24, item.Size.Width), 24);
+                    item.Size = new Size(Math.Max(28, item.Size.Width), 26);
             }
             if (item is ToolStripDropDownButton ddb)
             {

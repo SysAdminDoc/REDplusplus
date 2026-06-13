@@ -2,6 +2,8 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 
+using NotBob.UI;
+using RED.UI;
 using TXT = RED.RedGetText;
 
 namespace RED.Helper
@@ -148,54 +150,69 @@ namespace RED.Helper
 
         internal static bool BAskYesNo(string text, MessageBoxDefaultButton defaultButton)
         {
-            if (MessageBox.Show(text, Application.ProductName, MessageBoxButtons.YesNo, MessageBoxIcon.Question, defaultButton) == DialogResult.Yes)
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+            return ShowThemedMessage(null, text, TXT.Red.CaptionInfo, MessageBoxIcon.Question, MessageBoxButtons.YesNo, defaultButton) == DialogResult.Yes;
         }
 
         internal static DialogResult MsgBoxError(string emsg)
         {
-            return MessageBox.Show(emsg, TXT.Red.CaptionError, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return ShowThemedMessage(null, emsg, TXT.Red.CaptionError, MessageBoxIcon.Error, MessageBoxButtons.OK, MessageBoxDefaultButton.Button1);
         }
 
         internal static DialogResult MsgBoxError(IWin32Window owner, string emsg)
         {
-            return MessageBox.Show(owner, emsg, TXT.Red.CaptionError, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return ShowThemedMessage(owner, emsg, TXT.Red.CaptionError, MessageBoxIcon.Error, MessageBoxButtons.OK, MessageBoxDefaultButton.Button1);
         }
 
         internal static DialogResult MsgBoxException(string emsg, Exception ex)
         {
-            return MessageBox.Show(string.Format("{0}:{1}{2}", emsg, CrLf2, ex.Message), TXT.Red.CaptionError, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return MsgBoxException(null, emsg, ex);
         }
 
         internal static DialogResult MsgBoxException(IWin32Window owner, string emsg, Exception ex)
         {
-            return MessageBox.Show(owner, string.Format("{0}:{1}{2}", emsg, CrLf2, ex.Message), TXT.Red.CaptionError, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return ShowThemedMessage(owner, string.Format("{0}:{1}{2}", emsg, CrLf2, ex.Message), TXT.Red.CaptionError, MessageBoxIcon.Error, MessageBoxButtons.OK, MessageBoxDefaultButton.Button1);
         }
 
         internal static DialogResult MsgBoxYesNo(IWin32Window owner, string msg, MessageBoxDefaultButton defaultButton = MessageBoxDefaultButton.Button1)
         {
-            return MessageBox.Show(owner, msg, TXT.Red.CaptionInfo, MessageBoxButtons.YesNo, MessageBoxIcon.Question, defaultButton);
+            return ShowThemedMessage(owner, msg, TXT.Red.CaptionInfo, MessageBoxIcon.Question, MessageBoxButtons.YesNo, defaultButton);
         }
 
         internal static DialogResult MsgBoxInfo(string msg)
         {
-            return MessageBox.Show(msg, TXT.Red.CaptionInfo, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return ShowThemedMessage(null, msg, TXT.Red.CaptionInfo, MessageBoxIcon.Information, MessageBoxButtons.OK, MessageBoxDefaultButton.Button1);
         }
 
         internal static DialogResult MsgBoxInfo(IWin32Window owner, string msg)
         {
-            return MessageBox.Show(owner, msg, TXT.Red.CaptionInfo, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return ShowThemedMessage(owner, msg, TXT.Red.CaptionInfo, MessageBoxIcon.Information, MessageBoxButtons.OK, MessageBoxDefaultButton.Button1);
         }
 
         internal static DialogResult MsgBoxWarning(IWin32Window owner, string msg)
         {
-            return MessageBox.Show(owner, msg, TXT.Red.CaptionInfo, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return ShowThemedMessage(owner, msg, TXT.Red.CaptionInfo, MessageBoxIcon.Warning, MessageBoxButtons.OK, MessageBoxDefaultButton.Button1);
+        }
+
+        private static DialogResult ShowThemedMessage(IWin32Window owner, string message, string title, MessageBoxIcon icon, MessageBoxButtons buttons, MessageBoxDefaultButton defaultButton)
+        {
+            using (NBMsgBox box = new NBMsgBox(message, title, icon))
+            {
+                box.Icon = RED.Properties.Resources.iconProject;
+                box.SetMinSize(460, 150);
+
+                switch (buttons)
+                {
+                    case MessageBoxButtons.YesNo:
+                        box.SetButton(1, TXT.Translate("Yes"), DialogResult.Yes, isDefault: defaultButton == MessageBoxDefaultButton.Button1);
+                        box.SetButton(2, TXT.Translate("No"), DialogResult.No, isDefault: defaultButton == MessageBoxDefaultButton.Button2);
+                        break;
+                    default:
+                        box.SetButton(1, TXT.Translate("OK"), DialogResult.OK, isDefault: true);
+                        break;
+                }
+
+                return owner == null ? box.ShowDialog() : box.ShowDialog(owner);
+            }
         }
     }
 }

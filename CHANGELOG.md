@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.5.13 (2026-06-13)
+
+### Modern UI
+- Add a modern WPF shell as the default GUI while preserving the existing WinForms interface behind `-classic`.
+- Recreate the Search experience with the dark navy visual language from the design reference: custom title bar, large icon tabs, framed search panel, review-focused empty state, fixed result legend, command bar, and status/progress strip.
+- Add DPI-aware startup sizing so the default window targets the reference-sized 1584x992 physical composition instead of becoming oversized on 125% scaled displays.
+- Replace default WPF button chrome with a custom dark button template so disabled, hover, and focus states remain visually consistent with the shell.
+- Wire the WPF shell to the existing `REDCore`/`RuntimeData` scan and deletion pipeline; no scan/delete engine replacement.
+
+### Compatibility
+- Keep `-autosearch -path <dir>` opening the GUI and starting a scan in the modern shell.
+- Keep the legacy WinForms UI available with `RED+.exe -classic`.
+
 ## 1.5.12 (2026-06-13)
 
 ### Safety
