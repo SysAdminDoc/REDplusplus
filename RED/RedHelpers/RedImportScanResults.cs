@@ -37,6 +37,9 @@ namespace RED.Helper
 
 	internal static class RedImportScanResults
 	{
+		private const long MaxImportBytes = 64 * 1024 * 1024;
+		private const int MaxImportRecords = 500_000;
+
 		public static RedImportedScanResults ReadFile(string filename)
 		{
 			if (string.IsNullOrWhiteSpace(filename))
@@ -48,8 +51,14 @@ namespace RED.Helper
 				throw new FileNotFoundException(TXT.Translate("Import file was not found"), filename);
 			}
 
-			string text = File.ReadAllText(filename, Encoding.UTF8);
-			List<ImportRecord> records = ParseRecords(text);
+			long fileSize = new FileInfo(filename).Length;
+			if (fileSize > MaxImportBytes)
+			{
+				throw new InvalidDataException(TXT.Translate("Import file is too large ({0} MB, maximum {1} MB).",
+					(fileSize / (1024 * 1024)).ToString(), (MaxImportBytes / (1024 * 1024)).ToString()));
+			}
+
+			List<ImportRecord> records = ParseFile(filename);
 			if (records.Count == 0)
 			{
 				throw new InvalidDataException(TXT.Translate("The import file does not contain any scan results."));
@@ -72,32 +81,56 @@ namespace RED.Helper
 			return new RedImportedScanResults(BuildRoots(allResults), deletableResults, allResults.Count);
 		}
 
-		private static List<ImportRecord> ParseRecords(string text)
+		private static List<ImportRecord> ParseFile(string filename)
 		{
-			if (string.IsNullOrWhiteSpace(text))
+			using (var stream = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
 			{
-				throw new InvalidDataException(TXT.Translate("The import file is empty."));
-			}
+				int firstByte = -1;
+				using (var peek = new StreamReader(stream, Encoding.UTF8, true, 1024, leaveOpen: true))
+				{
+					while ((firstByte = peek.Read()) != -1)
+					{
+						if (!char.IsWhiteSpace((char)firstByte)) break;
+					}
+				}
 
-			string trimmed = text.TrimStart();
-			if (trimmed.StartsWith("[", StringComparison.Ordinal))
-			{
-				return ParseArray(trimmed);
-			}
+				if (firstByte == -1)
+				{
+					throw new InvalidDataException(TXT.Translate("The import file is empty."));
+				}
 
-			return ParseLineDelimited(text);
+				stream.Position = 0;
+
+				if ((char)firstByte == '[')
+				{
+					return ParseArray(stream);
+				}
+
+				return ParseLineDelimited(stream);
+			}
 		}
 
-		private static List<ImportRecord> ParseArray(string json)
+		private static List<ImportRecord> ParseArray(Stream stream)
 		{
+			string json;
+			using (var reader = new StreamReader(stream, Encoding.UTF8, true, 4096, leaveOpen: true))
+			{
+				json = reader.ReadToEnd();
+			}
 			var parsed = Deserialize<List<ImportRecord>>(json);
-			return FilterRecords(parsed);
+			var records = FilterRecords(parsed);
+			if (records.Count > MaxImportRecords)
+			{
+				throw new InvalidDataException(TXT.Translate("Import file contains too many records ({0}, maximum {1}).",
+					records.Count.ToString(), MaxImportRecords.ToString()));
+			}
+			return records;
 		}
 
-		private static List<ImportRecord> ParseLineDelimited(string text)
+		private static List<ImportRecord> ParseLineDelimited(Stream stream)
 		{
 			var records = new List<ImportRecord>();
-			using (var reader = new StringReader(text))
+			using (var reader = new StreamReader(stream, Encoding.UTF8, true, 4096, leaveOpen: true))
 			{
 				string line;
 				int lineNumber = 0;
@@ -120,6 +153,12 @@ namespace RED.Helper
 					}
 
 					AddIfResult(records, record);
+
+					if (records.Count > MaxImportRecords)
+					{
+						throw new InvalidDataException(TXT.Translate("Import file contains too many records (over {0}).",
+							MaxImportRecords.ToString()));
+					}
 				}
 			}
 			return records;
