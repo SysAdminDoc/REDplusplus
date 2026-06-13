@@ -68,6 +68,8 @@ namespace RED
 			bool? useMftScanOverride = null;
 			bool? ignoreHiddenOverride = null;
 			bool? ignoreSystemOverride = null;
+			var excludePatterns = new List<string>();
+			var protectPatterns = new List<string>();
 
 			for (int i = 1; i < args.Length; i++)
 			{
@@ -170,6 +172,20 @@ namespace RED
 					case "--ignore-system":
 						ignoreSystemOverride = true;
 						break;
+					case "-exclude":
+					case "--exclude":
+						if (i + 1 >= args.Length)
+							parseError = "Error: -exclude requires a pattern argument";
+						else
+							excludePatterns.Add(args[++i]);
+						break;
+					case "-protect":
+					case "--protect":
+						if (i + 1 >= args.Length)
+							parseError = "Error: -protect requires a pattern argument";
+						else
+							protectPatterns.Add(args[++i]);
+						break;
 					case "-path":
 					case "--path":
 						if (i + 1 >= args.Length)
@@ -263,7 +279,8 @@ namespace RED
 					return;
 				}
 				Environment.ExitCode = RunHeadless(paths, logFile, exportFile, modeOverride, moveTarget, isDryRun, isJson, emptyFiles, quiet,
-					minAgeOverride, maxDepthOverride, respectGitIgnoreOverride, useMftScanOverride, ignoreHiddenOverride, ignoreSystemOverride);
+					minAgeOverride, maxDepthOverride, respectGitIgnoreOverride, useMftScanOverride, ignoreHiddenOverride, ignoreSystemOverride,
+					excludePatterns, protectPatterns);
 				return;
 			}
 
@@ -323,7 +340,8 @@ namespace RED
 			};
 
 		private static int RunHeadless(List<string> paths, string logFile, string exportFile, string modeOverride, string moveTarget, bool dryRun, bool jsonOutput, bool emptyFiles, bool quiet,
-			uint? minAgeOverride, int? maxDepthOverride, bool? respectGitIgnoreOverride, bool? useMftScanOverride, bool? ignoreHiddenOverride, bool? ignoreSystemOverride)
+			uint? minAgeOverride, int? maxDepthOverride, bool? respectGitIgnoreOverride, bool? useMftScanOverride, bool? ignoreHiddenOverride, bool? ignoreSystemOverride,
+			List<string> excludePatterns, List<string> protectPatterns)
 		{
 			var log = new StringBuilder();
 			Action<string> logMsg = (msg) =>
@@ -410,6 +428,15 @@ namespace RED
 				runData.IgnoreFileNameList.Transform(config.Filters.FilesToIgnore);
 				runData.IgnoreDirectoryNameList.Transform(config.Filters.DirectoriesToIgnore);
 				runData.NeverEmptyDirectoryList.Transform(config.Filters.DirectoriesNeverEmpty);
+
+				foreach (string pattern in excludePatterns)
+				{
+					runData.IgnoreDirectoryNameList.AddItem(true, RedMatchMethodType.NameExact, pattern);
+				}
+				foreach (string pattern in protectPatterns)
+				{
+					runData.NeverEmptyDirectoryList.AddItem(true, RedMatchMethodType.NameExact, pattern);
+				}
 
 				logMsg(string.Format("RED++ scan ({0}{1}): {2}", deleteMode, dryRun ? ", dry-run" : "", targetPath));
 
@@ -602,6 +629,8 @@ Options:
   -ignore-hidden   Ignore hidden directories for this run.
   -system          Include system directories for this run.
   -ignore-system   Ignore system directories for this run.
+  -exclude <name>  Skip directories matching <name> (repeatable, composable).
+  -protect <name>  Prevent deletion of dirs matching <name> (repeatable).
   -export <file>   Write results to .txt / .csv / .json (by extension).
   -json            Emit NDJSON to stdout (meta record, then result records).
   -quiet           Suppress stdout/stderr; use the process exit code/log file.
