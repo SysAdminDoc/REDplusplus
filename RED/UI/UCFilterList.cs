@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
 using RED.Helper;
@@ -10,6 +11,8 @@ namespace RED.UI
 {
     public partial class UCFilterList : UserControl
     {
+        private Label emptyStateLabel;
+
         public UCFilterList()
         {
             InitializeComponent();
@@ -22,14 +25,49 @@ namespace RED.UI
             grdFilter.AccessibleName = TXT.Translate("Filter rules");
             grdFilter.AccessibleDescription = TXT.Translate("Each row controls whether a path or filename is treated as ignored or kept.");
             grdFilter.ShowCellToolTips = true;
-            grdFilter.RowTemplate.Height = 24;
+            grdFilter.RowTemplate.Height = 28;
+            grdFilter.ColumnHeadersHeight = Math.Max(30, grdFilter.ColumnHeadersHeight);
             grdFilter.BorderStyle = BorderStyle.None;
             grdFilter.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+            grdFilter.ExHatchStyle = null;
+            grdFilter.BackgroundColor = DarkTheme.Mantle;
+            grdFilter.DefaultCellStyle.Padding = new Padding(4, 2, 4, 2);
+            grdFilter.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+
+            tsFilterCommands.AutoSize = false;
+            tsFilterCommands.Height = 34;
+            tsFilterCommands.Padding = new Padding(5, 4, 5, 4);
+            tsFilterCommands.ImageScalingSize = new Size(18, 18);
+            tsbFilterAdd.DisplayStyle = ToolStripItemDisplayStyle.ImageAndText;
+            tsbFilterDelete.DisplayStyle = ToolStripItemDisplayStyle.ImageAndText;
+            tsbFilterEdit.DisplayStyle = ToolStripItemDisplayStyle.ImageAndText;
+            tsbCancelEdit.DisplayStyle = ToolStripItemDisplayStyle.ImageAndText;
+            tsbFilterAdd.Text = TXT.Translate("Add");
+            tsbFilterDelete.Text = TXT.Translate("Delete");
+            tsbFilterEdit.Text = TXT.Translate("Edit");
+            tsbCancelEdit.Text = TXT.Translate("Cancel edit");
+            tsbFilterHelp.Text = TXT.Translate("Help");
+            tsbFilterAdd.AutoSize = true;
+            tsbFilterDelete.AutoSize = true;
+            tsbFilterEdit.AutoSize = true;
+            tsbCancelEdit.AutoSize = true;
+            toolStripLabel1.Alignment = ToolStripItemAlignment.Right;
             tsbFilterAdd.ToolTipText = TXT.Translate("Add a filter rule");
             tsbFilterDelete.ToolTipText = TXT.Translate("Delete the selected filter rule");
             tsbFilterEdit.ToolTipText = TXT.Translate("Edit the selected filter text");
             tsbCancelEdit.ToolTipText = TXT.Translate("Cancel the current edit");
             tsbFilterHelp.ToolTipText = TXT.Translate("Show filter syntax help");
+            colBlank.Width = Math.Max(28, colBlank.Width);
+            colMatchEnabled.Width = Math.Max(58, colMatchEnabled.Width);
+            colMatchMethod.MinimumWidth = Math.Max(116, colMatchMethod.MinimumWidth);
+
+            EnsureEmptyStateLabel();
+            grdFilter.RowsAdded += (s, e) => UpdateFilterSummary();
+            grdFilter.RowsRemoved += (s, e) => UpdateFilterSummary();
+            grdFilter.SizeChanged += (s, e) => PositionEmptyStateLabel();
+            SizeChanged += (s, e) => PositionEmptyStateLabel();
+            UiUpdateContext();
+            UpdateFilterSummary();
         }
 
         private void grdFilter_DataError(object sender, DataGridViewDataErrorEventArgs e)
@@ -154,6 +192,9 @@ namespace RED.UI
             tsbFilterDelete.Enabled = enabledState;
             tsbFilterEdit.Enabled = enabledState;
             tsbCancelEdit.Enabled = grdFilter.CurrentCell != null && grdFilter.IsCurrentCellInEditMode;
+            tsiFilterDelete.Enabled = enabledState;
+            tsiFilterEdit.Enabled = enabledState;
+            UpdateFilterSummary();
         }
 
         private void UiClearSelection()
@@ -257,6 +298,7 @@ namespace RED.UI
             }
             grdFilter.AutoResizeColumns();
             UiClearSelection();
+            UpdateFilterSummary();
         }
 
         private DataGridViewRow GetSelectedRow()
@@ -291,6 +333,7 @@ namespace RED.UI
             if (row != null)
             {
                 grdFilter.Rows.Remove(row);
+                UpdateFilterSummary();
             }
         }
 
@@ -306,6 +349,67 @@ namespace RED.UI
             row.Cells[colMatchMethod.Index].ReadOnly = true;
             row.Cells[colMatchText.Index].Value = item.MatchText;
             EditFilterRule(row);
+            UpdateFilterSummary();
+        }
+
+        private void EnsureEmptyStateLabel()
+        {
+            if (emptyStateLabel != null)
+            {
+                return;
+            }
+
+            emptyStateLabel = new Label
+            {
+                Name = "lbFilterEmptyState",
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleCenter,
+                TabStop = false,
+                Text = TXT.Translate("No filter rules yet.\r\nAdd a rule to ignore or protect matching items.")
+            };
+            Controls.Add(emptyStateLabel);
+            emptyStateLabel.BringToFront();
+            PositionEmptyStateLabel();
+        }
+
+        private void PositionEmptyStateLabel()
+        {
+            if (emptyStateLabel == null)
+            {
+                return;
+            }
+
+            emptyStateLabel.Bounds = new Rectangle(
+                grdFilter.Left + 24,
+                grdFilter.Top + 44,
+                Math.Max(120, grdFilter.Width - 48),
+                Math.Max(60, grdFilter.Height - 88));
+        }
+
+        private void UpdateFilterSummary()
+        {
+            int active = 0;
+            foreach (DataGridViewRow row in grdFilter.Rows)
+            {
+                var chk = row.Cells[colMatchEnabled.Index] as DataGridViewCheckBoxCell;
+                if (chk != null && chk.Value == chk.TrueValue)
+                {
+                    active++;
+                }
+            }
+
+            toolStripLabel1.Text = TXT.Translate("{0} active / {1} rules", active, grdFilter.Rows.Count);
+            if (emptyStateLabel != null)
+            {
+                bool showEmpty = grdFilter.Rows.Count == 0;
+                emptyStateLabel.Visible = showEmpty;
+                emptyStateLabel.BackColor = DarkTheme.Mantle;
+                emptyStateLabel.ForeColor = DarkTheme.Subtext0;
+                if (showEmpty)
+                {
+                    emptyStateLabel.BringToFront();
+                }
+            }
         }
 
         private string GetHelpText()
