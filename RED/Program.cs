@@ -172,25 +172,40 @@ namespace RED
 						break;
 					case "-path":
 					case "--path":
-						if (i + 1 < args.Length) paths.Add(args[++i]);
+						if (i + 1 >= args.Length)
+							parseError = "Error: -path requires a directory argument";
+						else
+							paths.Add(args[++i]);
 						break;
 					case "-log":
 					case "--log":
-						if (i + 1 < args.Length) logFile = args[++i];
+						if (i + 1 >= args.Length)
+							parseError = "Error: -log requires a file path argument";
+						else
+							logFile = args[++i];
 						break;
 					case "-export":
 					case "--export":
-						if (i + 1 < args.Length) exportFile = args[++i];
+						if (i + 1 >= args.Length)
+							parseError = "Error: -export requires a file path argument";
+						else
+							exportFile = args[++i];
 						break;
 					case "-mode":
 					case "--mode":
-						if (i + 1 < args.Length) modeOverride = args[++i].ToLowerInvariant();
+						if (i + 1 >= args.Length)
+							parseError = "Error: -mode requires a value (recycle|direct|move|simulate)";
+						else
+							modeOverride = args[++i].ToLowerInvariant();
 						break;
 					case "-moveto":
 					case "--moveto":
 					case "-move-to":
 					case "--move-to":
-						if (i + 1 < args.Length) moveTarget = args[++i];
+						if (i + 1 >= args.Length)
+							parseError = "Error: -moveto requires a directory argument";
+						else
+							moveTarget = args[++i];
 						break;
 					case "-help":
 					case "--help":
@@ -206,8 +221,11 @@ namespace RED
 						Environment.ExitCode = 0;
 						return;
 					default:
-						// A bare path argument (not an -option) is treated as a scan root
-						if (!arg.StartsWith("-") && !arg.StartsWith("/"))
+						if (arg.StartsWith("-"))
+						{
+							parseError = "Error: unknown option '" + args[i] + "'";
+						}
+						else
 						{
 							paths.Add(args[i]);
 						}

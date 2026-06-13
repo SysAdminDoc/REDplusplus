@@ -112,14 +112,36 @@ namespace RED.Helper
             sb.AppendLine("[");
             for (int i = 0; i < v.Count; i++)
             {
-                string escapedPath = v[i].FullPath.Replace("\\", "\\\\").Replace("\"", "\\\"");
-                string escapedReason = (v[i].StatusReason ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\"");
+                string escapedPath = EscapeJson(v[i].FullPath);
+                string escapedReason = EscapeJson(v[i].StatusReason);
                 sb.AppendFormat("  {{ \"path\": \"{0}\", \"status\": \"{1}\", \"reason\": \"{2}\" }}", escapedPath, v[i].SearchStatus, escapedReason);
                 if (i < v.Count - 1) sb.Append(",");
                 sb.AppendLine();
             }
             sb.AppendLine("]");
             File.WriteAllText(filename, sb.ToString(), Encoding.UTF8);
+        }
+
+        private static string EscapeJson(string value)
+        {
+            if (value == null) return string.Empty;
+            var sb = new StringBuilder(value.Length + 8);
+            foreach (char c in value)
+            {
+                switch (c)
+                {
+                    case '\\': sb.Append(@"\\"); break;
+                    case '"': sb.Append("\\\""); break;
+                    case '\r': sb.Append(@"\r"); break;
+                    case '\n': sb.Append(@"\n"); break;
+                    case '\t': sb.Append(@"\t"); break;
+                    default:
+                        if (char.IsControl(c)) sb.Append("\\u").Append(((int)c).ToString("x4"));
+                        else sb.Append(c);
+                        break;
+                }
+            }
+            return sb.ToString();
         }
 
         private List<string> GetExportText(RedScanResultItemList v)
