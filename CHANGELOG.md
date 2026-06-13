@@ -21,6 +21,7 @@
 - Fix rule precedence: ancestor `.gitignore` rules now load from farthest (git root) to closest so that closer rules win on conflict via last-match-wins.
 - Fix path-pattern anchoring: patterns containing `/` are now anchored to their `.gitignore`'s directory instead of matching anywhere in the path.
 - Fix `**` globstar to match zero path segments: `**/cache` now correctly ignores `cache` at the root level and at any depth.
+- Load `.git/info/exclude` and the global gitignore (`core.excludesFile` or `~/.config/git/ignore`) with correct Git-spec precedence: global lowest, then exclude, then per-directory `.gitignore` highest.
 
 ### UX
 - Forward Explorer context-menu launches to the already-running GUI instance: the new path is set and scan starts automatically instead of showing an "already running" dialog.
