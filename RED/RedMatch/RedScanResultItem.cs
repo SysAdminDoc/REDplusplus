@@ -4,18 +4,34 @@ using TXT = RED.RedGetText;
 
 namespace RED.Match
 {
+	public enum ResultKind { Directory, File }
+
 	public class RedScanResultItem
 	{
 		public RedScanResultItem(DirectoryInfo di, DirectorySearchStatusTypes status) : this(di, status, string.Empty) { }
 
 		public RedScanResultItem(DirectoryInfo di, DirectorySearchStatusTypes status, string errorMsg)
 		{
+			Kind = ResultKind.Directory;
 			Populate(di, status, errorMsg);
 		}
 
+		public RedScanResultItem(FileInfo fi, DirectorySearchStatusTypes status, string reason)
+		{
+			Kind = ResultKind.File;
+			_filePath = fi.FullName;
+			Directory = fi.Directory;
+			SearchStatus = status;
+			SearchStatusOriginal = status;
+			ErrorMessage = reason;
+		}
+
+		public ResultKind Kind { get; private set; }
+		private string _filePath;
+
 		public DirectoryInfo Directory { get; private set; }
-		public string FullPath { get { return Directory?.FullName; } }
-		public string Name { get { return Directory?.Name; } }
+		public string FullPath { get { return Kind == ResultKind.File ? _filePath : Directory?.FullName; } }
+		public string Name { get { return Kind == ResultKind.File ? Path.GetFileName(_filePath) : Directory?.Name; } }
 		public DirectorySearchStatusTypes SearchStatus { get; private set; }
 		public DirectorySearchStatusTypes SearchStatusOriginal { get; private set; }
 		public string ErrorMessage { get; private set; }

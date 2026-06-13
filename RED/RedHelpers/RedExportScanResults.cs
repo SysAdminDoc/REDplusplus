@@ -96,12 +96,13 @@ namespace RED.Helper
 
         private void WriteCsv(RedScanResultItemList v, string filename)
         {
-            var lines = new List<string> { "\"Path\",\"Status\",\"Reason\"" };
+            var lines = new List<string> { "\"Kind\",\"Path\",\"Status\",\"Reason\"" };
             for (int i = 0; i < v.Count; i++)
             {
+                string kind = v[i].Kind == Match.ResultKind.File ? "file" : "directory";
                 string escapedPath = v[i].FullPath.Replace("\"", "\"\"");
                 string escapedReason = (v[i].StatusReason ?? string.Empty).Replace("\"", "\"\"");
-                lines.Add(string.Format("\"{0}\",\"{1}\",\"{2}\"", escapedPath, v[i].SearchStatus, escapedReason));
+                lines.Add(string.Format("\"{0}\",\"{1}\",\"{2}\",\"{3}\"", kind, escapedPath, v[i].SearchStatus, escapedReason));
             }
             File.WriteAllLines(filename, lines, Encoding.UTF8);
         }
@@ -112,9 +113,10 @@ namespace RED.Helper
             sb.AppendLine("[");
             for (int i = 0; i < v.Count; i++)
             {
+                string kind = v[i].Kind == Match.ResultKind.File ? "file" : "directory";
                 string escapedPath = EscapeJson(v[i].FullPath);
                 string escapedReason = EscapeJson(v[i].StatusReason);
-                sb.AppendFormat("  {{ \"path\": \"{0}\", \"status\": \"{1}\", \"reason\": \"{2}\" }}", escapedPath, v[i].SearchStatus, escapedReason);
+                sb.AppendFormat("  {{ \"kind\": \"{0}\", \"path\": \"{1}\", \"status\": \"{2}\", \"reason\": \"{3}\" }}", kind, escapedPath, v[i].SearchStatus, escapedReason);
                 if (i < v.Count - 1) sb.Append(",");
                 sb.AppendLine();
             }
