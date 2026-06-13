@@ -13,6 +13,9 @@
 ### UX
 - Forward Explorer context-menu launches to the already-running GUI instance: the new path is set and scan starts automatically instead of showing an "already running" dialog.
 
+### Performance
+- Batch empty-file recycle into a single IFileOperation transaction instead of per-file shell calls; non-recycle modes (Direct, Move) still process one-by-one with pre-delete re-verification.
+
 ### Automation
 - Add `-exclude <name>` and `-protect <name>` CLI switches (repeatable) for per-run filter overrides that compose with config-file filters.
 - Add headless scan progress reporting: periodic `Scanning: N directories examined...` to stderr (every 2 seconds), or `{"type":"progress",...}` in `-json` mode. `-quiet` suppresses progress.

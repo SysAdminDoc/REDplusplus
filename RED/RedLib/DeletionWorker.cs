@@ -373,20 +373,78 @@ namespace RED
 				return;
 			}
 
+			var verified = new List<System.IO.FileInfo>();
 			foreach (System.IO.FileInfo file in this.Data.EmptyFileResults)
+			{
+				if (CancellationPending) return;
+				file.Refresh();
+				if (!file.Exists) continue;
+				if (file.Length != 0)
+				{
+					this.Data.AddLogMessage(TXT.Translate("Skipped file because it is no longer empty: {0}", RedAssist.DQuote(file.FullName)));
+					continue;
+				}
+				verified.Add(file);
+			}
+
+			if (verified.Count == 0) return;
+
+			bool isRecycleMode = this.Data.DeleteMode == DeleteModes.RecycleBin ||
+								 this.Data.DeleteMode == DeleteModes.RecycleBinShowErrors ||
+								 this.Data.DeleteMode == DeleteModes.RecycleBinWithQuestion;
+
+			if (isRecycleMode)
+			{
+				DeleteEmptyFilesBatch(verified);
+			}
+			else
+			{
+				DeleteEmptyFilesOneByOne(verified);
+			}
+		}
+
+		private void DeleteEmptyFilesBatch(List<System.IO.FileInfo> files)
+		{
+			var paths = new List<string>(files.Count);
+			foreach (System.IO.FileInfo f in files) paths.Add(f.FullName);
+
+			bool showErrors = this.Data.DeleteMode == DeleteModes.RecycleBinShowErrors && !NotBob.Config.ConfigAssist.SilentMode;
+			bool showConfirm = this.Data.DeleteMode == DeleteModes.RecycleBinWithQuestion && !NotBob.Config.ConfigAssist.SilentMode;
+
+			List<RecycleBinOperation.ItemResult> results = RecycleBinOperation.RecycleBatch(
+				paths, showConfirm, showErrors,
+				() => CancellationPending, null);
+
+			for (int i = 0; i < results.Count; i++)
+			{
+				RecycleBinOperation.ItemResult r = results[i];
+				if (r.Succeeded)
+				{
+					this.Data.AddLogMessage(TXT.Translate("Successfully deleted empty file: {0}", RedAssist.DQuote(r.Path)));
+					this.DeletedFileCount++;
+					undoEntries.Add(new UndoManager.ManifestEntry
+					{
+						Path = r.Path,
+						Mode = this.Data.DeleteMode.ToString(),
+						MovedTo = null,
+						IsFile = true
+					});
+				}
+				else
+				{
+					this.Data.AddLogMessage(TXT.Translate("Failed to delete empty file: {0} - HRESULT 0x{1:X8}", RedAssist.DQuote(r.Path), r.HResult));
+					this.FailedFileCount++;
+				}
+			}
+		}
+
+		private void DeleteEmptyFilesOneByOne(List<System.IO.FileInfo> files)
+		{
+			foreach (System.IO.FileInfo file in files)
 			{
 				if (CancellationPending) return;
 				try
 				{
-					file.Refresh();
-					if (!file.Exists) continue;
-					// Guard: only delete if still zero bytes (the scan may be stale)
-					if (file.Length != 0)
-					{
-						this.Data.AddLogMessage(TXT.Translate("Skipped file because it is no longer empty: {0}", RedAssist.DQuote(file.FullName)));
-						continue;
-					}
-
 					string movedTo;
 					SystemFunctions.SecureDeleteStandaloneFile(file, this.Data.DeleteMode, out movedTo);
 					if (movedTo != null)
