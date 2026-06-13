@@ -111,6 +111,7 @@
     <Compile Include="RedLib\MftScanner.cs" />
     <Compile Include="RedLib\SystemFunctions.cs" />
     <Compile Include="RedLib\UndoManager.cs" />
+    <Compile Include="RedLib\EventLogWriter.cs" />
     <Compile Include="RedLib\RecycleBinOperation.cs" />
     <Compile Include="RedLib\RedKeepMarker.cs" />
     <Compile Include="RedLib\TreeManager.cs" />
