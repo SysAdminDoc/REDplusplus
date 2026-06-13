@@ -185,12 +185,28 @@ namespace RED.UI
         /// </summary>
         private void AddRestoreMenuItem()
         {
-            var mnuItemRestore = new ToolStripMenuItem(TXT.Translate("&Restore Last Deletion"));
-            mnuItemRestore.AccessibleName = TXT.Translate("Restore directories from the last deletion");
-            mnuItemRestore.Click += mnuItemRestoreLastDeletion_Click;
+            var mnuItemRestore = new ToolStripMenuItem(TXT.Translate("&Restore Deletion"));
+            mnuItemRestore.AccessibleName = TXT.Translate("Restore directories from a previous deletion");
             cmMenuExtras.Items.Insert(0, mnuItemRestore);
             cmMenuExtras.Items.Insert(1, new ToolStripSeparator());
-            cmMenuExtras.Opening += (s, e) => mnuItemRestore.Enabled = UndoManager.HasManifest;
+            cmMenuExtras.Opening += (s, e) =>
+            {
+                mnuItemRestore.DropDownItems.Clear();
+                var manifests = UndoManager.ListManifests();
+                mnuItemRestore.Enabled = manifests.Count > 0;
+                foreach (var info in manifests)
+                {
+                    string label = string.Format("{0} — {1} ({2})",
+                        info.Timestamp.ToString("g"),
+                        info.DeleteMode,
+                        TXT.Translate("{0} entries", info.EntryCount));
+                    var item = new ToolStripMenuItem(label);
+                    item.AccessibleName = TXT.Translate("Restore deletion from {0}", info.Timestamp.ToString("g"));
+                    string path = info.FilePath;
+                    item.Click += (sender, args) => RestoreFromManifest(path);
+                    mnuItemRestore.DropDownItems.Add(item);
+                }
+            };
         }
 
         /// <summary>
@@ -259,10 +275,10 @@ namespace RED.UI
             cmMenuExtras.Opening += (s, e) => item.Enabled = !UiIsBusy();
         }
 
-        private void mnuItemRestoreLastDeletion_Click(object sender, EventArgs e)
+        private void RestoreFromManifest(string manifestPath)
         {
             int restored, failed;
-            UndoManager.Restore(out restored, out failed, msg => RunData.AddLogMessage(msg));
+            UndoManager.Restore(manifestPath, out restored, out failed, msg => RunData.AddLogMessage(msg));
 
             string summary = TXT.Translate("Restored {0} directories (Failed: {1})", restored, failed);
             SetStatusAndLogMessage(summary);

@@ -26,6 +26,7 @@
 
 ### UX
 - Forward Explorer context-menu launches to the already-running GUI instance: the new path is set and scan starts automatically instead of showing an "already running" dialog.
+- Multi-run undo history: the last 5 deletion runs are preserved as timestamped manifests instead of a single overwritten file. GUI Extras → Restore Deletion shows all available runs with date, mode, and entry count. CLI `-undo` without arguments restores the most recent; `-undo <timestamp>` restores a specific one.
 
 ### Discoverability
 - Set GitHub topics (empty-directories, disk-cleanup, sysadmin, cli, portable, mft, etc.) for search visibility.

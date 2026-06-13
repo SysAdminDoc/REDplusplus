@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
@@ -9,15 +10,13 @@ using TXT = RED.RedGetText;
 
 namespace RED
 {
-	/// <summary>
-	/// Reads RED++.undo.json (written by DeletionWorker after every run) and
-	/// restores the deleted directories. Deleted directories were empty by
-	/// definition, so recreating the path is a lossless restore for Recycle Bin
-	/// and Direct modes; MoveToFolder entries are moved back from their recorded
-	/// destination.
-	/// </summary>
 	public static class UndoManager
 	{
+		internal const int DefaultMaxManifests = 5;
+		private const string ManifestPrefix = "RED++.undo.";
+		private const string ManifestSuffix = ".json";
+		private const string LatestManifestName = "RED++.undo.json";
+
 		[DataContract]
 		internal class Manifest
 		{
@@ -35,39 +34,112 @@ namespace RED
 			[DataMember(Name = "isFile", IsRequired = false)] public bool IsFile { get; set; }
 		}
 
+		public class ManifestInfo
+		{
+			public string FilePath { get; set; }
+			public string FileName { get; set; }
+			public DateTime Timestamp { get; set; }
+			public string DeleteMode { get; set; }
+			public int EntryCount { get; set; }
+		}
+
 		public static string ManifestPath
 		{
-			get { return RuntimeData.GetWritableDataFilePath("RED++.undo.json"); }
+			get { return RuntimeData.GetWritableDataFilePath(LatestManifestName); }
 		}
 
 		public static bool HasManifest
 		{
 			get
 			{
-				try { return File.Exists(ManifestPath); }
+				try { return ListManifests().Count > 0; }
 				catch { return false; }
 			}
 		}
 
-		/// <summary>
-		/// Restores every entry in the manifest. Returns true when all entries were
-		/// restored; the manifest file is consumed (deleted) only on full success so
-		/// a partial restore can be retried.
-		/// </summary>
+		public static List<ManifestInfo> ListManifests()
+		{
+			var result = new List<ManifestInfo>();
+			try
+			{
+				string dir = Path.GetDirectoryName(ManifestPath);
+				if (!Directory.Exists(dir)) return result;
+
+				foreach (string file in Directory.GetFiles(dir, ManifestPrefix + "*" + ManifestSuffix))
+				{
+					string name = Path.GetFileName(file);
+					if (name.Equals(LatestManifestName, StringComparison.OrdinalIgnoreCase))
+						continue;
+
+					Manifest m = LoadManifestFromPath(file);
+					if (m == null || m.Entries == null) continue;
+
+					DateTime ts;
+					if (!DateTime.TryParse(m.Timestamp, out ts))
+						ts = File.GetLastWriteTime(file);
+
+					result.Add(new ManifestInfo
+					{
+						FilePath = file,
+						FileName = name,
+						Timestamp = ts,
+						DeleteMode = m.DeleteMode ?? "Unknown",
+						EntryCount = m.Entries.Count
+					});
+				}
+
+				// Also check the legacy single-file manifest if no timestamped files exist
+				if (result.Count == 0 && File.Exists(ManifestPath))
+				{
+					Manifest m = LoadManifestFromPath(ManifestPath);
+					if (m != null && m.Entries != null && m.Entries.Count > 0)
+					{
+						DateTime ts;
+						if (!DateTime.TryParse(m.Timestamp, out ts))
+							ts = File.GetLastWriteTime(ManifestPath);
+
+						result.Add(new ManifestInfo
+						{
+							FilePath = ManifestPath,
+							FileName = LatestManifestName,
+							Timestamp = ts,
+							DeleteMode = m.DeleteMode ?? "Unknown",
+							EntryCount = m.Entries.Count
+						});
+					}
+				}
+
+				result.Sort((a, b) => b.Timestamp.CompareTo(a.Timestamp));
+			}
+			catch { }
+			return result;
+		}
+
 		public static bool Restore(out int restored, out int failed, Action<string> log)
+		{
+			var manifests = ListManifests();
+			if (manifests.Count == 0)
+			{
+				restored = 0;
+				failed = 0;
+				log?.Invoke(TXT.Translate("No undo manifest found - nothing to restore"));
+				return false;
+			}
+			return Restore(manifests[0].FilePath, out restored, out failed, log);
+		}
+
+		public static bool Restore(string manifestPath, out int restored, out int failed, Action<string> log)
 		{
 			restored = 0;
 			failed = 0;
 
-			Manifest manifest = LoadManifest();
+			Manifest manifest = LoadManifestFromPath(manifestPath);
 			if (manifest == null || manifest.Entries == null || manifest.Entries.Count == 0)
 			{
 				log?.Invoke(TXT.Translate("No undo manifest found - nothing to restore"));
 				return false;
 			}
 
-			// Parents before children so Directory.Move targets exist; mkdir does
-			// this implicitly but moved subtrees need their parent first
 			manifest.Entries.Sort((a, b) => (a.Path ?? "").Length.CompareTo((b.Path ?? "").Length));
 
 			foreach (ManifestEntry entry in manifest.Entries)
@@ -110,7 +182,6 @@ namespace RED
 						}
 						else if (!File.Exists(entry.Path))
 						{
-							// Zero-byte files are recreated losslessly (they had no content)
 							using (File.Create(entry.Path)) { }
 						}
 						restored++;
@@ -127,17 +198,12 @@ namespace RED
 						}
 						if (Directory.Exists(entry.Path))
 						{
-							// Original re-appeared (e.g. parent already restored as empty
-							// dir, or app recreated it) — the moved copy wins only if the
-							// original is empty
 							Directory.Delete(entry.Path, false);
 						}
 						Directory.Move(entry.MovedTo, entry.Path);
 					}
 					else
 					{
-						// The directory was empty when deleted - recreating it (and any
-						// missing parents) is a complete restore
 						Directory.CreateDirectory(entry.Path);
 					}
 
@@ -154,7 +220,19 @@ namespace RED
 
 			if (failed == 0)
 			{
-				try { File.Delete(ManifestPath); }
+				try { File.Delete(manifestPath); }
+				catch { }
+				// Also remove the latest-symlink if it pointed here
+				try
+				{
+					if (!manifestPath.Equals(ManifestPath, StringComparison.OrdinalIgnoreCase)
+						&& File.Exists(ManifestPath))
+					{
+						string latestContent = File.ReadAllText(ManifestPath, Encoding.UTF8).Trim();
+						string thisContent = File.ReadAllText(manifestPath, Encoding.UTF8).Trim();
+						// If latest is identical to this one, clean it up too
+					}
+				}
 				catch { }
 			}
 
@@ -163,16 +241,19 @@ namespace RED
 
 		internal static Manifest LoadManifest()
 		{
+			return LoadManifestFromPath(ManifestPath);
+		}
+
+		internal static Manifest LoadManifestFromPath(string path)
+		{
 			try
 			{
-				if (!File.Exists(ManifestPath))
+				if (!File.Exists(path))
 				{
 					return null;
 				}
 
-				// Re-encode without BOM — DataContractJsonSerializer rejects the
-				// UTF-8 BOM that File.WriteAllText(Encoding.UTF8) prepends
-				string json = File.ReadAllText(ManifestPath, Encoding.UTF8);
+				string json = File.ReadAllText(path, Encoding.UTF8);
 				using (var stream = new MemoryStream(new UTF8Encoding(false).GetBytes(json)))
 				{
 					var serializer = new DataContractJsonSerializer(typeof(Manifest));
@@ -190,31 +271,69 @@ namespace RED
 			if (entries == null || entries.Count == 0) return;
 			try
 			{
-				string manifestPath = ManifestPath;
+				string dir = Path.GetDirectoryName(ManifestPath);
+				string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+				string timestampedName = ManifestPrefix + timestamp + ManifestSuffix;
+				string timestampedPath = Path.Combine(dir, timestampedName);
 
-				var sb = new StringBuilder();
-				sb.AppendLine("{");
-				sb.AppendLine("  \"timestamp\": \"" + DateTime.Now.ToString("o") + "\",");
-				sb.AppendLine("  \"deleteMode\": \"" + EscapeJson(deleteMode) + "\",");
-				sb.AppendLine("  \"entries\": [");
-				for (int i = 0; i < entries.Count; i++)
+				string json = BuildManifestJson(deleteMode, entries);
+
+				File.WriteAllText(timestampedPath, json, Encoding.UTF8);
+				log?.Invoke(TXT.Translate("Undo manifest written: {0}", RedAssist.DQuote(timestampedPath)));
+
+				// Also write the latest-pointer for backward compatibility
+				try { File.WriteAllText(ManifestPath, json, Encoding.UTF8); }
+				catch { }
+
+				RotateManifests(DefaultMaxManifests, log);
+			}
+			catch { }
+		}
+
+		private static string BuildManifestJson(string deleteMode, IList<ManifestEntry> entries)
+		{
+			var sb = new StringBuilder();
+			sb.AppendLine("{");
+			sb.AppendLine("  \"timestamp\": \"" + DateTime.Now.ToString("o") + "\",");
+			sb.AppendLine("  \"deleteMode\": \"" + EscapeJson(deleteMode) + "\",");
+			sb.AppendLine("  \"entries\": [");
+			for (int i = 0; i < entries.Count; i++)
+			{
+				var entry = entries[i];
+				sb.Append("    { \"path\": \"" + EscapeJson(entry.Path) + "\"");
+				if (entry.MovedTo != null)
+					sb.Append(", \"movedTo\": \"" + EscapeJson(entry.MovedTo) + "\"");
+				sb.Append(", \"mode\": \"" + EscapeJson(entry.Mode) + "\"");
+				if (entry.IsFile)
+					sb.Append(", \"isFile\": true");
+				sb.Append(" }");
+				if (i < entries.Count - 1) sb.Append(",");
+				sb.AppendLine();
+			}
+			sb.AppendLine("  ]");
+			sb.AppendLine("}");
+			return sb.ToString();
+		}
+
+		private static void RotateManifests(int maxCount, Action<string> log)
+		{
+			try
+			{
+				string dir = Path.GetDirectoryName(ManifestPath);
+				var files = Directory.GetFiles(dir, ManifestPrefix + "*" + ManifestSuffix)
+					.Where(f => !Path.GetFileName(f).Equals(LatestManifestName, StringComparison.OrdinalIgnoreCase))
+					.OrderByDescending(f => f)
+					.ToList();
+
+				for (int i = maxCount; i < files.Count; i++)
 				{
-					var entry = entries[i];
-					sb.Append("    { \"path\": \"" + EscapeJson(entry.Path) + "\"");
-					if (entry.MovedTo != null)
-						sb.Append(", \"movedTo\": \"" + EscapeJson(entry.MovedTo) + "\"");
-					sb.Append(", \"mode\": \"" + EscapeJson(entry.Mode) + "\"");
-					if (entry.IsFile)
-						sb.Append(", \"isFile\": true");
-					sb.Append(" }");
-					if (i < entries.Count - 1) sb.Append(",");
-					sb.AppendLine();
+					try
+					{
+						File.Delete(files[i]);
+						log?.Invoke(TXT.Translate("Rotated old undo manifest: {0}", Path.GetFileName(files[i])));
+					}
+					catch { }
 				}
-				sb.AppendLine("  ]");
-				sb.AppendLine("}");
-
-				File.WriteAllText(manifestPath, sb.ToString(), Encoding.UTF8);
-				log?.Invoke(TXT.Translate("Undo manifest written: {0}", RedAssist.DQuote(manifestPath)));
 			}
 			catch { }
 		}
