@@ -10,6 +10,9 @@
 - Export/import empty-file candidates as first-class results: NDJSON (schema v2), JSON, and CSV include `kind=directory|file` for each record; GUI import loads file candidates into the empty-file deletion queue with a distinct status message. Old directory-only exports still import correctly.
 - MFT turbo scan auto-falls back to standard scan when empty-file mode is enabled, since USN records lack file-size data needed for zero-byte detection.
 
+### UX
+- Forward Explorer context-menu launches to the already-running GUI instance: the new path is set and scan starts automatically instead of showing an "already running" dialog.
+
 ### Automation
 - Add `-exclude <name>` and `-protect <name>` CLI switches (repeatable) for per-run filter overrides that compose with config-file filters.
 - Add headless scan progress reporting: periodic `Scanning: N directories examined...` to stderr (every 2 seconds), or `{"type":"progress",...}` in `-json` mode. `-quiet` suppresses progress.
