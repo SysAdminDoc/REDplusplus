@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>redplusplus.portable</id>
+    <version>1.5.12</version>
+    <title>RED++ (Portable)</title>
+    <authors>SysAdminDoc</authors>
+    <owners>SysAdminDoc</owners>
+    <projectUrl>https://github.com/SysAdminDoc/REDplusplus</projectUrl>
+    <licenseUrl>https://github.com/SysAdminDoc/REDplusplus/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/SysAdminDoc/REDplusplus</projectSourceUrl>
+    <bugTrackerUrl>https://github.com/SysAdminDoc/REDplusplus/issues</bugTrackerUrl>
+    <tags>empty-directories disk-cleanup sysadmin cli portable windows file-management</tags>
+    <summary>Fast, portable empty-directory scanner and cleaner for Windows.</summary>
+    <description>
+RED++ finds, displays, and deletes empty directories recursively. GUI + headless CLI with filter rules, MFT turbo scan, one-click undo, network/UNC support, and zero installation required.
+
+Features:
+- GUI and headless CLI modes
+- Multiple delete modes (Recycle Bin, Direct, Simulate, Move)
+- MFT turbo scan for whole-volume scans in seconds (admin required)
+- .gitignore support (global, repo, nested)
+- One-click undo with multi-run history
+- Export to TXT, CSV, JSON, NDJSON
+- UNC/network share support
+- Task Scheduler ready with exit codes
+- Portable (no install, no registry)
+    </description>
+    <releaseNotes>https://github.com/SysAdminDoc/REDplusplus/blob/main/CHANGELOG.md</releaseNotes>
+    <dependencies>
+      <dependency id="dotnetfx" version="4.8.1" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
