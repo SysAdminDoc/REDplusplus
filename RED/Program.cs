@@ -650,6 +650,15 @@ namespace RED
 					continue;
 				}
 
+				// The Recycle Bin does not exist on UNC shares / network / removable
+				// drives, so a "recycle" delete there is actually permanent. Be honest
+				// about it (undo still recreates the empty directories regardless).
+				if ((int)deleteMode <= (int)DeleteModes.RecycleBinWithQuestion
+					&& RED.Helper.RedAssist.IsNoRecycleBinPath(targetPath))
+				{
+					logMsg("Note: \"" + targetPath + "\" has no Recycle Bin (network/removable) - deletion there is permanent; undo can still recreate the empty directories.");
+				}
+
 				var runData = new RuntimeData();
 				runData.StartFolder = startDir;
 				runData.HideScanErrors = config.Options.HideScanErrors;
