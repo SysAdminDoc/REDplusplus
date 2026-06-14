@@ -81,11 +81,9 @@ namespace RED
 			}
 			catch
 			{
-				try
-				{
-					using (new FileStream(logPath, FileMode.Create, FileAccess.Write, FileShare.Read)) { }
-				}
-				catch { }
+				// Rotation failed (e.g. the log is held open elsewhere). The log is a
+				// forensic/undo aid, so never truncate it — leave the existing file
+				// intact and let the caller reopen it in append mode.
 				return false;
 			}
 		}

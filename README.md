@@ -52,7 +52,6 @@ RED+.exe -silent -path "D:\Shares" -log cleanup.log
 - Translation-ready via .po files (template included, community translations welcome)
 - Export scan results to TXT, CSV, or JSON; import saved dry-run results for GUI review
 - Headless CLI mode for scripted/scheduled operation
-- Keyboard shortcuts (Enter to scan, Del to delete selected)
 - Single-instance enforcement
 - Persistent log file (RED++.log)
 - Explorer context menu integration
