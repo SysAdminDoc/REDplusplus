@@ -15,16 +15,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
-
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
 
       - name: Build Release
-        run: msbuild "!RED+.sln" /p:Configuration=Release /p:Platform="Any CPU"
+        run: dotnet build "RED/RED+.csproj" -c Release
 
       - name: Engine unit tests
         run: dotnet test "RED.Tests/RED.Tests.csproj" -c Release --logger "console;verbosity=normal"
@@ -48,7 +45,7 @@ jobs:
             New-Item -ItemType Directory -Path $emptyDir, $nonEmpty, $junctionTarget, $deny | Out-Null
             Set-Content -Path (Join-Path $nonEmpty 'keep.txt') -Value 'content' -NoNewline
             New-Item -ItemType File -Path (Join-Path $root 'empty-file.txt') | Out-Null
-            cmd /c mklink /J "$junction" "$junctionTarget"
+            New-Item -ItemType Junction -Path $junction -Target $junctionTarget | Out-Null
 
             $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
             $denyAcl = $currentUser + ':(OI)(CI)(R)'
