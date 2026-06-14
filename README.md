@@ -134,6 +134,9 @@ Options:
 | `-quiet` | Suppress stdout/stderr; use only the process exit code and optional `-log`. |
 | `-log <file>` | Write a timestamped run log. |
 | `-undo [manifest]` | Restore directories from the most recent (or specified) run. Up to 5 undo manifests are kept. |
+| `-profile <name>` | Run a saved profile. Any other command-line options still override the profile's values. |
+| `-saveprofile <name>` | Save the current options (paths, mode, toggles) as a named profile and exit without scanning. |
+| `-listprofiles` | List saved profiles and exit. |
 | `-eventlog` | Write a summary event to the Windows Application Event Log (source "RED++"). |
 | `-classic` | Open the legacy Windows Forms GUI instead of the modern WPF shell. |
 | `-help`, `-version` | Show usage / version and exit. |
@@ -194,6 +197,18 @@ Create a scheduled task to clean a directory nightly:
 ```
 
 Exit code 0 = success, 1 = errors occurred. Configure the task to use UNC paths directly — mapped drives are not available in task context.
+
+### Saved Profiles
+
+Save a reusable set of options once, then reference it by name from a scheduled task or script instead of repeating a long argument list:
+
+```
+RED+.exe -saveprofile nightly -path "D:\Shares\Home" -mode recycle -emptyfiles
+RED+.exe -listprofiles
+RED+.exe -silent -profile nightly -log "D:\Logs\red-cleanup.log"
+```
+
+Any options passed alongside `-profile` still override the profile's stored values. Profiles are stored in `RED+.profiles.json` next to the config file.
 
 ## Credits
 

@@ -81,6 +81,9 @@ namespace RED
 			bool? ignoreSystemOverride = null;
 			var excludePatterns = new List<string>();
 			var protectPatterns = new List<string>();
+			string profileName = null;
+			string saveProfileName = null;
+			bool listProfiles = false;
 
 			for (int i = 1; i < args.Length; i++)
 			{
@@ -244,6 +247,28 @@ namespace RED
 						else
 							moveTarget = args[++i];
 						break;
+					case "-profile":
+					case "--profile":
+						if (i + 1 >= args.Length)
+							parseError = "Error: -profile requires a profile name";
+						else
+							profileName = args[++i];
+						break;
+					case "-saveprofile":
+					case "--saveprofile":
+					case "-save-profile":
+					case "--save-profile":
+						if (i + 1 >= args.Length)
+							parseError = "Error: -saveprofile requires a profile name";
+						else
+							saveProfileName = args[++i];
+						break;
+					case "-listprofiles":
+					case "--listprofiles":
+					case "-list-profiles":
+					case "--list-profiles":
+						listProfiles = true;
+						break;
 					case "-help":
 					case "--help":
 					case "-h":
@@ -278,6 +303,71 @@ namespace RED
 					PrintUsage();
 				}
 				Environment.ExitCode = 1;
+				return;
+			}
+
+			if (listProfiles)
+			{
+				List<RedProfile> all = ProfileStore.LoadAll();
+				if (all.Count == 0) { Console.WriteLine("No saved profiles."); }
+				foreach (RedProfile prof in all)
+				{
+					string roots = prof.Paths != null ? string.Join(", ", prof.Paths) : "";
+					Console.WriteLine(string.Format("{0}	[{1}]	{2}", prof.Name, prof.Mode ?? "default", roots));
+				}
+				Environment.ExitCode = 0;
+				return;
+			}
+
+			if (profileName != null)
+			{
+				RedProfile prof = ProfileStore.Get(profileName);
+				if (prof == null)
+				{
+					if (!quiet) Console.Error.WriteLine("Error: profile not found: " + profileName);
+					Environment.ExitCode = 1;
+					return;
+				}
+				// Explicit command-line arguments win; the profile only fills gaps.
+				if (paths.Count == 0 && prof.Paths != null) paths.AddRange(prof.Paths);
+				if (modeOverride == null && !string.IsNullOrEmpty(prof.Mode)) modeOverride = prof.Mode.ToLowerInvariant();
+				if (moveTarget == null && !string.IsNullOrEmpty(prof.MoveTo)) moveTarget = prof.MoveTo;
+				if (!emptyFiles && prof.EmptyFiles) emptyFiles = true;
+				if (!minAgeOverride.HasValue && prof.MinAgeHours.HasValue && prof.MinAgeHours.Value >= 0) minAgeOverride = (uint)prof.MinAgeHours.Value;
+				if (!maxDepthOverride.HasValue && prof.MaxDepth.HasValue) maxDepthOverride = prof.MaxDepth.Value;
+				if (!respectGitIgnoreOverride.HasValue && prof.GitIgnore.HasValue) respectGitIgnoreOverride = prof.GitIgnore.Value;
+				if (!useMftScanOverride.HasValue && prof.Mft.HasValue) useMftScanOverride = prof.Mft.Value;
+				if (!ignoreHiddenOverride.HasValue && prof.IgnoreHidden.HasValue) ignoreHiddenOverride = prof.IgnoreHidden.Value;
+				if (!ignoreSystemOverride.HasValue && prof.IgnoreSystem.HasValue) ignoreSystemOverride = prof.IgnoreSystem.Value;
+			}
+
+			if (saveProfileName != null)
+			{
+				var prof = new RedProfile
+				{
+					Name = saveProfileName,
+					Paths = new List<string>(paths),
+					Mode = modeOverride,
+					MoveTo = moveTarget,
+					EmptyFiles = emptyFiles,
+					MinAgeHours = minAgeOverride.HasValue ? (int?)(int)minAgeOverride.Value : null,
+					MaxDepth = maxDepthOverride,
+					GitIgnore = respectGitIgnoreOverride,
+					Mft = useMftScanOverride,
+					IgnoreHidden = ignoreHiddenOverride,
+					IgnoreSystem = ignoreSystemOverride
+				};
+				string saveErr;
+				if (ProfileStore.Save(prof, out saveErr))
+				{
+					if (!quiet) Console.WriteLine("Saved profile: " + saveProfileName);
+					Environment.ExitCode = 0;
+				}
+				else
+				{
+					if (!quiet) Console.Error.WriteLine("Error: could not save profile: " + saveErr);
+					Environment.ExitCode = 1;
+				}
 				return;
 			}
 
@@ -798,6 +888,9 @@ Options:
   -quiet           Suppress stdout/stderr; use the process exit code/log file.
   -log <file>      Write a timestamped run log to <file>.
   -undo [manifest]  Restore directories from the most recent (or specified) run.
+  -profile <name>  Run a saved profile (command-line args still override it).
+  -saveprofile <name>  Save the current options as a named profile and exit.
+  -listprofiles    List saved profiles and exit.
   -eventlog        Write a summary event to the Windows Application Event Log.
   -classic         Open the legacy Windows Forms interface.
   -help, -version  Show this help / the version and exit.
