@@ -505,7 +505,16 @@ namespace RED
 		private void WriteUndoManifest()
 		{
 			if (undoEntries.Count == 0) return;
-			UndoManager.WriteManifest(this.Data.DeleteMode.ToString(), undoEntries, msg => this.Data.AddLogMessage(msg));
+
+			// Record the scan root so a later restore can refuse any entry that points
+			// outside the originally-cleaned tree (tamper/corruption defense).
+			var roots = new List<string>();
+			if (this.Data?.StartFolder != null && !string.IsNullOrWhiteSpace(this.Data.StartFolder.FullName))
+			{
+				roots.Add(this.Data.StartFolder.FullName);
+			}
+
+			UndoManager.WriteManifest(this.Data.DeleteMode.ToString(), undoEntries, roots, msg => this.Data.AddLogMessage(msg));
 		}
 
 		/// <returns>The actual MoveToFolder destination, null for other modes.</returns>
