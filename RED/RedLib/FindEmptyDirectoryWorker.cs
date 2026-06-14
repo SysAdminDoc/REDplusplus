@@ -50,6 +50,47 @@ namespace RED
 			this.ReportProgress(0, info);
 		}
 
+		/// <summary>
+		/// Maps a directory-read failure to a short, human-readable cause so the result
+		/// row tells the user *why* a folder could not be read (and therefore was kept)
+		/// instead of a generic "could not be read". Returns null for an unknown cause.
+		/// </summary>
+		internal static string DescribeAccessError(Exception ex)
+		{
+			if (ex == null) return null;
+			// FastDirectoryEnumerator surfaces native enumeration failures as a
+			// Win32Exception carrying the raw Win32 error code, so map that first.
+			if (ex is System.ComponentModel.Win32Exception w32)
+			{
+				return DescribeWin32Error(w32.NativeErrorCode);
+			}
+			if (ex is UnauthorizedAccessException) return TXT.Translate("access denied");
+			if (ex is PathTooLongException) return TXT.Translate("path too long");
+			if (ex is DirectoryNotFoundException) return TXT.Translate("path no longer exists");
+			if (ex is IOException)
+			{
+				int code = ex.HResult & 0xFFFF;
+				if (code == 32 || code == 33) return TXT.Translate("in use by another process"); // SHARING/LOCK_VIOLATION
+				return TXT.Translate("I/O error");
+			}
+			return null;
+		}
+
+		private static string DescribeWin32Error(int code)
+		{
+			switch (code)
+			{
+				case 5: return TXT.Translate("access denied");            // ERROR_ACCESS_DENIED
+				case 19: return TXT.Translate("media is write-protected"); // ERROR_WRITE_PROTECT
+				case 32:
+				case 33: return TXT.Translate("in use by another process"); // SHARING / LOCK_VIOLATION
+				case 2:
+				case 3: return TXT.Translate("path no longer exists");     // FILE / PATH_NOT_FOUND
+				case 206: return TXT.Translate("path too long");           // FILENAME_EXCED_RANGE
+				default: return TXT.Translate("I/O error");
+			}
+		}
+
 		private GitIgnoreParser gitIgnoreParser;
 
 		protected override void OnDoWork(DoWorkEventArgs e)
@@ -240,21 +281,27 @@ namespace RED
 					FileInfo[] fileList = null;
 
 					// some directories could trigger an exception:
+					Exception fileAccessError = null;
 					try
 					{
 						fileList = FastDirectoryEnumerator.GetFiles(startDir);
 					}
-					catch
+					catch (Exception ex)
 					{
 						fileList = null;
+						fileAccessError = ex;
 					}
 
 					if (fileList == null)
 					{
 						// if containsFiles is true then the folder does not get deleted:
 						containsFiles = true; // secure way
-						this.RunData.AddLogMessage(TXT.Translate("Failed to access files in {0}", RedAssist.DQuote(startDir.FullName)));
-						this.ReportDirectoryStatus(startDir, DirectorySearchStatusTypes.Error, TXT.Translate("Failed to access files"));
+						string cause = DescribeAccessError(fileAccessError);
+						string reason = string.IsNullOrEmpty(cause)
+							? TXT.Translate("Could not read directory contents")
+							: TXT.Translate("Could not read directory contents ({0})", cause);
+						this.RunData.AddLogMessage(TXT.Translate("Could not read {0} ({1})", RedAssist.DQuote(startDir.FullName), cause ?? (fileAccessError != null ? fileAccessError.Message : TXT.Translate("unknown error"))));
+						this.ReportDirectoryStatus(startDir, DirectorySearchStatusTypes.Error, reason);
 					}
 					else if (fileList.Length == 0)
 					{
@@ -317,11 +364,15 @@ namespace RED
 				{
 					subFolderList.AddRange(FastDirectoryEnumerator.GetDirectories(startDir));
 				}
-				catch
+				catch (Exception ex)
 				{
 					// If we can not read the folder -> don't delete it:
-					this.RunData.AddLogMessage(TXT.Translate("Failed to access subdirectories in {0}", RedAssist.DQuote(startDir.FullName)));
-					this.ReportDirectoryStatus(startDir, DirectorySearchStatusTypes.Error, TXT.Translate("Failed to access subdirectories"));
+					string cause = DescribeAccessError(ex);
+					string reason = string.IsNullOrEmpty(cause)
+						? TXT.Translate("Could not read subdirectories")
+						: TXT.Translate("Could not read subdirectories ({0})", cause);
+					this.RunData.AddLogMessage(TXT.Translate("Could not read subdirectories of {0} ({1})", RedAssist.DQuote(startDir.FullName), cause ?? ex.Message));
+					this.ReportDirectoryStatus(startDir, DirectorySearchStatusTypes.Error, reason);
 					return DirectorySearchStatusTypes.Error;
 				}
 
