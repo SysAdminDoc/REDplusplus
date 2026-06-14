@@ -1426,7 +1426,16 @@ namespace RED.UI.Wpf
             deleteButton.IsEnabled = false;
             progressBar.IsIndeterminate = false;
             progressBar.Value = 0;
-            detailStatusText.Text = "Deletion started. RED++ will re-check each item before changing it.";
+            string deleteMsg = "Deletion started. RED++ will re-check each item before changing it.";
+            DeleteModes activeMode = (DeleteModes)config.Options.DeleteMode;
+            if ((int)activeMode <= (int)DeleteModes.RecycleBinWithQuestion
+                && runData != null && runData.StartFolder != null
+                && RED.Helper.RedAssist.IsNoRecycleBinPath(runData.StartFolder.FullName))
+            {
+                // No Recycle Bin on UNC/network/removable: be honest that this is permanent.
+                deleteMsg = "Note: this location has no Recycle Bin (network/removable) - deletion is permanent. Undo can still recreate the empty directories.";
+            }
+            detailStatusText.Text = deleteMsg;
             core.StartDeleteProcess();
         }
 
