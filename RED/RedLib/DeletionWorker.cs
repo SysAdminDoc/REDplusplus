@@ -513,6 +513,14 @@ namespace RED
 			{
 				roots.Add(this.Data.StartFolder.FullName);
 			}
+			// In Move mode the payload was relocated to the move-to folder, so record it
+			// too. Restore validates the move-BACK source (MovedTo) against the roots, so
+			// a tampered manifest cannot name an arbitrary system file as the source and
+			// have Directory.Move/File.Move relocate (and thereby destroy) it.
+			if (!string.IsNullOrWhiteSpace(SystemFunctions.MoveToFolderTarget))
+			{
+				roots.Add(SystemFunctions.MoveToFolderTarget);
+			}
 
 			UndoManager.WriteManifest(this.Data.DeleteMode.ToString(), undoEntries, roots, msg => this.Data.AddLogMessage(msg));
 		}
