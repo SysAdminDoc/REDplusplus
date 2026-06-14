@@ -133,6 +133,11 @@ namespace NotBob.Config
                 {
                     ConfigSave(config);
                 }
+                else if (!createConfig && !config.IsReadOnly && MigrateIfNeeded(config, config.Runtime.ConfigFilename))
+                {
+                    // An older-schema file was upgraded in memory; persist it (backup kept).
+                    ConfigSave(config);
+                }
                 config.DataIsDirty = false;
             }
         }
@@ -320,14 +325,83 @@ namespace NotBob.Config
             T respx = default(T);
             if (File.Exists(filename))
             {
-                respx = NBSerialize.DeserializeFromXmlFile<T>(filename);
+                respx = NBSerialize.DeserializeFromXmlFile<T>(filename, note => LogConfigNote("Config: ignored " + note + " in " + filename));
             }
             return respx;
         }
 
+        /// <summary>
+        /// Atomic config write: stage to a temp file, then replace the target so a crash
+        /// or power loss mid-write can never leave a truncated, unusable settings file.
+        /// Falls back to a direct overwrite if the filesystem rejects File.Replace/Move.
+        /// </summary>
         private static void Save<T>(T config, string filename)
         {
-            NBSerialize.SerializeToXmlFile<T>(config, filename);
+            string tmp = filename + ".tmp";
+            NBSerialize.SerializeToXmlFile<T>(config, tmp);
+            try
+            {
+                if (File.Exists(filename))
+                    File.Replace(tmp, filename, null);
+                else
+                    File.Move(tmp, filename);
+            }
+            catch (Exception)
+            {
+                NBSerialize.SerializeToXmlFile<T>(config, filename);
+                try { File.Delete(tmp); } catch { }
+            }
+        }
+
+        private static void LogConfigNote(string message)
+        {
+            try
+            {
+                if (SilentMode) { Console.Error.WriteLine(message); }
+                string logPath = RuntimeData.GetWritableDataFilePath("RED++.log");
+                File.AppendAllText(logPath, DateTime.Now.ToString("r") + "\t" + message + Environment.NewLine, new System.Text.UTF8Encoding(false));
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// Upgrades an older-schema config to the current version, backing up the original
+        /// first. Returns true if the config changed (and should be re-saved). A file from
+        /// a newer RED++ (higher SchemaVersion) is left untouched.
+        /// </summary>
+        internal static bool MigrateIfNeeded(RedConfiguration config, string filename)
+        {
+            if (config == null || config.SchemaVersion >= RedConfiguration.CurrentSchemaVersion)
+            {
+                return false;
+            }
+
+            int from = config.SchemaVersion;
+
+            // Preserve the pre-migration file so a bad upgrade is recoverable.
+            try
+            {
+                if (!string.IsNullOrEmpty(filename) && File.Exists(filename))
+                {
+                    File.Copy(filename, filename + ".v" + from + ".bak", overwrite: true);
+                }
+            }
+            catch { }
+
+            // Apply migrations in sequence; each case upgrades exactly one version.
+            while (config.SchemaVersion < RedConfiguration.CurrentSchemaVersion)
+            {
+                switch (config.SchemaVersion)
+                {
+                    // case 1: ApplyV1ToV2(config); break;   // add future field migrations here
+                    default:
+                        break; // no field changes between this version and the next
+                }
+                config.SchemaVersion++;
+            }
+
+            LogConfigNote("Config: migrated settings schema v" + from + " -> v" + config.SchemaVersion + " (backup: " + filename + ".v" + from + ".bak)");
+            return true;
         }
     }
 }

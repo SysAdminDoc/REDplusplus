@@ -53,6 +53,25 @@ namespace NotBob.Lib
 			return DeserializeFromXmlFile<T>(filename, utf8);
 		}
 
+		/// <summary>
+		/// Deserialize, reporting any unknown element/attribute to <paramref name="onUnknown"/>.
+		/// Unknown nodes are ignored by the serializer (forward compatibility); this just
+		/// surfaces them so a newer-schema file loaded by an older build can be diagnosed.
+		/// </summary>
+		public static T DeserializeFromXmlFile<T>(string filename, System.Action<string> onUnknown)
+		{
+			using (StreamReader reader = new StreamReader(filename, new UTF8Encoding(false)))
+			{
+				XmlSerializer xmlSerializer = new XmlSerializer(typeof(T));
+				if (onUnknown != null)
+				{
+					xmlSerializer.UnknownElement += (s, e) => onUnknown("unknown element <" + e.Element.Name + ">");
+					xmlSerializer.UnknownAttribute += (s, e) => onUnknown("unknown attribute '" + e.Attr.Name + "'");
+				}
+				return (T)xmlSerializer.Deserialize(reader);
+			}
+		}
+
 		public static T DeserializeFromXml<T>(string xml)
 		{
 			T result;
