@@ -51,10 +51,66 @@ namespace RED
 			}
 		}
 
+		// Set true once a GUI window is about to run, so the last-resort AppDomain
+		// handler shows a dialog (GUI) rather than only writing to stderr (headless).
+		internal static volatile bool GuiMode;
+
+		/// <summary>
+		/// Wire the global last-resort exception handlers so an unhandled fault writes a
+		/// crash report + a log line and exits non-zero instead of crashing with the
+		/// default OS dialog and no record. The per-UI handlers (WPF
+		/// DispatcherUnhandledException / WinForms ThreadException) are added next to each
+		/// Run() call so a main-UI-thread fault is caught before it reaches here.
+		/// </summary>
+		private static void WireGlobalExceptionHandlers()
+		{
+			AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+			{
+				Exception ex = e.ExceptionObject as Exception;
+				string path = RED.Helper.CrashReport.Write(ex, "AppDomain.UnhandledException");
+				if (GuiMode)
+				{
+					ShowCrashDialog(path, ex);
+				}
+				else
+				{
+					try { Console.Error.WriteLine("RED++ crashed: " + (ex != null ? ex.Message : "unknown") + (path != null ? " (report: " + path + ")" : "")); }
+					catch { }
+				}
+				try { Environment.ExitCode = 1; } catch { }
+			};
+
+			// A faulted Task whose exception is never observed is silent since .NET 4.5;
+			// log it so a real bug in the scan pipeline cannot vanish without a trace.
+			System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (s, e) =>
+			{
+				RED.Helper.CrashReport.Write(e.Exception, "TaskScheduler.UnobservedTaskException");
+				e.SetObserved();
+			};
+		}
+
+		/// <summary>Calm, branded crash dialog pointing the user at the saved report.</summary>
+		private static void ShowCrashDialog(string reportPath, Exception ex)
+		{
+			try
+			{
+				string msg = "RED++ hit an unexpected error and needs to close.\n\n";
+				if (!string.IsNullOrEmpty(reportPath))
+				{
+					msg += "A crash report was saved to:\n" + reportPath +
+						"\n\nPlease attach it to a new issue at\nhttps://github.com/SysAdminDoc/REDplusplus/issues\n\n";
+				}
+				if (ex != null) msg += ex.Message;
+				MessageBox.Show(msg, "RED++ - unexpected error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+			catch { }
+		}
+
 		[STAThread]
 		private static void Main()
 		{
 			HardenDllSearchPath();
+			WireGlobalExceptionHandlers();
 
 			string[] args = Environment.GetCommandLineArgs();
 			var paths = new List<string>();
@@ -457,6 +513,17 @@ namespace RED
 				{
 					Application.EnableVisualStyles();
 					Application.SetCompatibleTextRenderingDefault(false);
+					// Must precede the first window: route main-UI-thread faults through one
+					// logged, branded handler instead of leaving the app in an unknown state.
+					Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+					Application.ThreadException += (s, e) =>
+					{
+						string path = RED.Helper.CrashReport.Write(e.Exception, "WinForms ThreadException");
+						ShowCrashDialog(path, e.Exception);
+						Environment.ExitCode = 1;
+						Application.Exit();
+					};
+					GuiMode = true;
 					Application.Run(new UI.MainWindow());
 				}
 				else
@@ -465,6 +532,15 @@ namespace RED
 					{
 						ShutdownMode = System.Windows.ShutdownMode.OnMainWindowClose
 					};
+					app.DispatcherUnhandledException += (s, e) =>
+					{
+						string path = RED.Helper.CrashReport.Write(e.Exception, "WPF DispatcherUnhandledException");
+						ShowCrashDialog(path, e.Exception);
+						e.Handled = true; // suppress the default WPF crash dialog
+						Environment.ExitCode = 1;
+						try { app.Shutdown(1); } catch { }
+					};
+					GuiMode = true;
 					app.Run(new UI.Wpf.ModernMainWindow(paths.Count > 0 ? paths[0] : null, isAutoSearch));
 				}
 			}
