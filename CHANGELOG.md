@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.5.14 (2026-06-13)
+
+### Modern UI
+- Replace the oversized WPF startup/DPI workaround with screen-aware default bounds so the reference-style shell opens at a practical size on normal and scaled displays.
+- Restore Explorer/context-menu forwarding in the modern WPF shell so a second launch with `-path` brings the existing window forward and starts the requested scan.
+- Fix WPF settings lifecycle issues: saved settings now populate when the Settings tab is opened, folder edits survive tab switches, and standalone zero-byte file review is exposed as its own setting.
+- Show standalone zero-byte file candidates in the modern WPF review surface and export the same visible review list from the Extras menu.
+- Harden WPF deletion review: delete-mode changes made after scanning now apply before deletion starts, Move-to-folder prompts for a destination, and confirmation copy clearly calls out Recycle, Direct, and Move behavior.
+- Turn Extras into a real menu with log, export-to-file, and copy-to-clipboard actions, plus accessible names/help text across primary commands, tabs, result list, settings, and progress.
+
+### Packaging
+- Sync portable package metadata to v1.5.14 and fix the Chocolatey installer download URL so it no longer points at the older v1.5.12 ZIP.
+
 ## 1.5.13 (2026-06-13)
 
 ### Modern UI

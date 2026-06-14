@@ -7,11 +7,13 @@ using System.IO;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using NotBob.Config;
 using RED.Config;
 using RED.Match;
@@ -37,6 +39,7 @@ namespace RED.UI.Wpf
         private RuntimeData runData;
         private REDCore core;
         private Stopwatch runtimeWatch = new Stopwatch();
+        private DispatcherTimer forwardSignalTimer;
 
         private Grid rootGrid;
         private Grid contentHost;
@@ -57,6 +60,7 @@ namespace RED.UI.Wpf
         private StackPanel tabPanel;
         private string selectedTab = "Search";
         private WpfCheckBox ignoreEmptyFiles;
+        private WpfCheckBox deleteEmptyFiles;
         private WpfCheckBox ignoreSystem;
         private WpfCheckBox ignoreHidden;
         private WpfCheckBox hideDeletionErrors;
@@ -68,12 +72,11 @@ namespace RED.UI.Wpf
         private WpfCheckBox respectGitIgnore;
         private WpfCheckBox useMft;
         private WpfComboBox deleteMode;
-        private bool appliedStartupDpiSize;
 
-        private const double MockupPixelWidth = 1584d;
-        private const double MockupPixelHeight = 992d;
-        private const double MinPixelWidth = 1180d;
-        private const double MinPixelHeight = 720d;
+        private const double DefaultWindowWidth = 1280d;
+        private const double DefaultWindowHeight = 800d;
+        private const double PreferredMinWidth = 1040d;
+        private const double PreferredMinHeight = 660d;
 
         private static readonly Brush Bg = BrushFrom("#0b1420");
         private static readonly Brush Bg2 = BrushFrom("#101b2a");
@@ -95,10 +98,7 @@ namespace RED.UI.Wpf
             initialPath = startPath;
             autoSearch = shouldAutoSearch;
             Title = "RED++ - Remove Empty Directories+";
-            Width = MockupPixelWidth;
-            Height = MockupPixelHeight;
-            MinWidth = MinPixelWidth;
-            MinHeight = MinPixelHeight;
+            ApplyInitialWindowBounds();
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
             WindowStyle = WindowStyle.None;
             ResizeMode = ResizeMode.CanResizeWithGrip;
@@ -109,12 +109,10 @@ namespace RED.UI.Wpf
             BuildUi();
             ApplyConfigToUi();
             UpdateUiState(false);
+            StartForwardWatcher();
 
-            SourceInitialized += (s, e) => ApplyStartupDpiWindowSize();
-            SizeChanged += (s, e) => ApplyDpiCompensation();
             Loaded += (s, e) =>
             {
-                ApplyDpiCompensation();
                 if (!string.IsNullOrWhiteSpace(initialPath))
                 {
                     pathBox.Text = EnsureTrailingSlash(initialPath);
@@ -126,6 +124,11 @@ namespace RED.UI.Wpf
             };
             Closed += (s, e) =>
             {
+                if (forwardSignalTimer != null)
+                {
+                    forwardSignalTimer.Stop();
+                    forwardSignalTimer = null;
+                }
                 try
                 {
                     UpdateConfigFromUi();
@@ -217,48 +220,73 @@ namespace RED.UI.Wpf
             return template;
         }
 
-        private void ApplyStartupDpiWindowSize()
+        private void ApplyInitialWindowBounds()
         {
-            if (appliedStartupDpiSize)
+            double availableWidth = Math.Max(640d, SystemParameters.WorkArea.Width - 40d);
+            double availableHeight = Math.Max(480d, SystemParameters.WorkArea.Height - 40d);
+
+            MinWidth = Math.Min(PreferredMinWidth, availableWidth);
+            MinHeight = Math.Min(PreferredMinHeight, availableHeight);
+            Width = Math.Max(MinWidth, Math.Min(DefaultWindowWidth, availableWidth));
+            Height = Math.Max(MinHeight, Math.Min(DefaultWindowHeight, availableHeight));
+        }
+
+        private void StartForwardWatcher()
+        {
+            try { if (File.Exists(Program.ForwardSignalPath)) File.Delete(Program.ForwardSignalPath); } catch { }
+            forwardSignalTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+            forwardSignalTimer.Tick += ForwardSignalTimer_Tick;
+            forwardSignalTimer.Start();
+        }
+
+        private void ForwardSignalTimer_Tick(object sender, EventArgs e)
+        {
+            if (!File.Exists(Program.ForwardSignalPath))
             {
                 return;
             }
 
-            double scaleX;
-            double scaleY;
-            GetDpiScale(out scaleX, out scaleY);
-            MinWidth = MinPixelWidth / scaleX;
-            MinHeight = MinPixelHeight / scaleY;
-            Width = MockupPixelWidth / scaleX;
-            Height = MockupPixelHeight / scaleY;
-            appliedStartupDpiSize = true;
-        }
-
-        private void ApplyDpiCompensation()
-        {
-            if (rootGrid == null || ActualWidth <= 0 || ActualHeight <= 0)
+            string path;
+            try
+            {
+                path = File.ReadAllText(Program.ForwardSignalPath, System.Text.Encoding.UTF8).Trim();
+                File.Delete(Program.ForwardSignalPath);
+            }
+            catch
             {
                 return;
             }
 
-            double scaleX = 1d;
-            double scaleY = 1d;
-            GetDpiScale(out scaleX, out scaleY);
-
-            rootGrid.Width = ActualWidth * scaleX;
-            rootGrid.Height = ActualHeight * scaleY;
-            rootGrid.LayoutTransform = new ScaleTransform(1d / scaleX, 1d / scaleY);
+            ProcessForwardedPath(path);
         }
 
-        private void GetDpiScale(out double scaleX, out double scaleY)
+        private void ProcessForwardedPath(string path)
         {
-            scaleX = 1d;
-            scaleY = 1d;
-            PresentationSource source = PresentationSource.FromVisual(this);
-            if (source != null && source.CompositionTarget != null)
+            if (string.IsNullOrWhiteSpace(path))
             {
-                scaleX = source.CompositionTarget.TransformToDevice.M11;
-                scaleY = source.CompositionTarget.TransformToDevice.M22;
+                return;
+            }
+
+            if (WindowState == WindowState.Minimized)
+            {
+                WindowState = WindowState.Normal;
+            }
+            Activate();
+
+            if (selectedTab != "Search")
+            {
+                selectedTab = "Search";
+                RenderSelectedTab();
+            }
+
+            pathBox.Text = EnsureTrailingSlash(path);
+            if (scanButton.IsEnabled)
+            {
+                StartScan();
+            }
+            else
+            {
+                detailStatusText.Text = "Received a folder from Explorer. Finish the current operation, then scan again.";
             }
         }
 
@@ -366,6 +394,7 @@ namespace RED.UI.Wpf
                 Padding = new Thickness(0),
                 Tag = name
             };
+            SetAutomation(button, name + " tab");
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(64) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -428,8 +457,13 @@ namespace RED.UI.Wpf
                 return;
             }
 
+            UpdateConfigFromUi();
             contentHost.Children.Clear();
-            if (selectedTab == "Settings") contentHost.Children.Add(BuildSettingsTab());
+            if (selectedTab == "Settings")
+            {
+                contentHost.Children.Add(BuildSettingsTab());
+                ApplyConfigToUi();
+            }
             else if (selectedTab == "Filters") contentHost.Children.Add(BuildFiltersTab());
             else if (selectedTab == "About") contentHost.Children.Add(BuildAboutTab());
             else contentHost.Children.Add(BuildSearchTab());
@@ -455,9 +489,11 @@ namespace RED.UI.Wpf
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 Margin = new Thickness(0, 0, 480, 0)
             };
+            SetAutomation(pathBox, "Folder to scan", "Enter or paste the root folder RED++ should scan.");
             grid.Children.Add(pathBox);
 
             var browse = OutlineButton("Browse...", 170, 44);
+            SetAutomation(browse, "Browse for folder", "Choose the root folder RED++ should scan.");
             browse.HorizontalAlignment = HorizontalAlignment.Right;
             browse.VerticalAlignment = VerticalAlignment.Top;
             browse.Margin = new Thickness(0, 3, 300, 0);
@@ -642,6 +678,7 @@ namespace RED.UI.Wpf
                 Foreground = Text,
                 Margin = new Thickness(8)
             };
+            SetAutomation(list, "Review results", "Empty directories and empty files found during the last scan.");
             var gridView = new GridView();
             list.View = gridView;
             gridView.Columns.Add(new GridViewColumn { Header = "Status", Width = 130, DisplayMemberBinding = new Binding("StatusLabel") });
@@ -664,7 +701,7 @@ namespace RED.UI.Wpf
             Grid.SetColumn(right, 1);
             grid.Children.Add(right);
 
-            ignoreEmptyFiles = SettingCheck(left, "Treat zero-byte files as empty", "Directories containing only zero-byte files can be treated as empty.");
+            ignoreEmptyFiles = SettingCheck(left, "Treat ignored files as removable trash", "Directories containing only configured ignored files can still be treated as empty.");
             ignoreSystem = SettingCheck(left, "Ignore system directories (recommended)", null);
             ignoreHidden = SettingCheck(left, "Ignore hidden directories", null);
             hideDeletionErrors = SettingCheck(left, "Continue past deletion errors", null);
@@ -676,6 +713,7 @@ namespace RED.UI.Wpf
 
             respectGitIgnore = SettingCheck(right, "Respect .gitignore rules during scans", null);
             useMft = SettingCheck(right, "Use MFT turbo scan (administrator only)", "Standard scan is used when administrator-only scan is unavailable.");
+            deleteEmptyFiles = SettingCheck(right, "Include standalone zero-byte files", "Also review empty files that are not inside an empty directory.");
             right.Children.Add(Label("Deletion mode", 16, Text, FontWeights.SemiBold, new Thickness(0, 34, 0, 8)));
             deleteMode = new WpfComboBox
             {
@@ -686,6 +724,7 @@ namespace RED.UI.Wpf
                 BorderBrush = BorderStrong,
                 BorderThickness = new Thickness(1)
             };
+            SetAutomation(deleteMode, "Deletion mode", "Choose whether RED++ simulates, recycles, deletes directly, or moves eligible results.");
             foreach (DeleteModes mode in DeleteModeItem.GetList())
             {
                 deleteMode.Items.Add(new DeleteModeItem(mode));
@@ -703,6 +742,7 @@ namespace RED.UI.Wpf
                 FontSize = 16,
                 Margin = new Thickness(0, 0, 0, string.IsNullOrWhiteSpace(helper) ? 18 : 4)
             };
+            SetAutomation(cb, title, helper);
             parent.Children.Add(cb);
             if (!string.IsNullOrWhiteSpace(helper))
             {
@@ -783,28 +823,33 @@ namespace RED.UI.Wpf
             bar.Child = grid;
 
             scanButton = ActionButton("Scan", Blue, Geometry.Parse("M10,10 A8,8 0 1 1 22,22 M20,20 L30,30"));
+            SetAutomation(scanButton, "Scan", "Scan the selected folder for empty directories and empty files.");
             scanButton.Click += (s, e) => StartScan();
             grid.Children.Add(scanButton);
 
             deleteButton = ActionButton("Review & Delete", Red, Geometry.Parse("M10,11 L26,11 M13,11 L13,29 L23,29 L23,11 M15,7 L21,7 M16,15 L16,25 M20,15 L20,25"));
+            SetAutomation(deleteButton, "Review and delete", "Review eligible results and confirm before changing anything.");
             deleteButton.Margin = new Thickness(20, 0, 0, 0);
             deleteButton.Click += (s, e) => StartDelete();
             Grid.SetColumn(deleteButton, 1);
             grid.Children.Add(deleteButton);
 
             cancelButton = ActionButton("Cancel", BrushFrom("#27334a"), Geometry.Parse("M9,9 L27,27 M27,9 L9,27"));
+            SetAutomation(cancelButton, "Cancel current operation", "Cancel the scan or deletion currently in progress.");
             cancelButton.Margin = new Thickness(20, 0, 0, 0);
             cancelButton.Click += (s, e) => core?.CancelCurrentProcess();
             Grid.SetColumn(cancelButton, 2);
             grid.Children.Add(cancelButton);
 
             extrasButton = OutlineButton("Extras", 200, 68);
+            SetAutomation(extrasButton, "Extras menu", "Open session log and export options.");
             extrasButton.Margin = new Thickness(0, 0, 34, 0);
-            extrasButton.Click += (s, e) => ShowLog();
+            extrasButton.Click += (s, e) => ShowExtrasMenu();
             Grid.SetColumn(extrasButton, 4);
             grid.Children.Add(extrasButton);
 
             exitButton = OutlineButton("Exit", 216, 68);
+            SetAutomation(exitButton, "Exit RED++");
             exitButton.Click += (s, e) => Close();
             Grid.SetColumn(exitButton, 5);
             grid.Children.Add(exitButton);
@@ -880,6 +925,7 @@ namespace RED.UI.Wpf
                 BorderThickness = new Thickness(1),
                 VerticalAlignment = VerticalAlignment.Center
             };
+            SetAutomation(progressBar, "Operation progress");
             Grid.SetColumn(progressBar, 4);
             grid.Children.Add(progressBar);
         }
@@ -932,6 +978,21 @@ namespace RED.UI.Wpf
             return new TextBlock { Text = text, FontSize = size, Foreground = brush, FontWeight = weight, Margin = margin };
         }
 
+        private static void SetAutomation(FrameworkElement element, string name, string helpText = null)
+        {
+            if (element == null || string.IsNullOrWhiteSpace(name))
+            {
+                return;
+            }
+
+            System.Windows.Automation.AutomationProperties.SetName(element, name);
+            if (!string.IsNullOrWhiteSpace(helpText))
+            {
+                System.Windows.Automation.AutomationProperties.SetHelpText(element, helpText);
+                element.ToolTip = helpText;
+            }
+        }
+
         private WpfButton OutlineButton(string text, double width, double height, RoutedEventHandler click = null)
         {
             var button = new WpfButton
@@ -966,13 +1027,13 @@ namespace RED.UI.Wpf
 
         private void StartScan()
         {
-            var selectedDirectory = new DirectoryInfo(Environment.ExpandEnvironmentVariables(pathBox.Text.Trim('"')));
-            if (!selectedDirectory.Exists)
+            DirectoryInfo selectedDirectory;
+            if (!TryGetSelectedDirectory(out selectedDirectory))
             {
-                WpfMessageBox.Show(this, "Choose an existing local, UNC, or network folder before scanning.", "RED++", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
+            pathBox.Text = EnsureTrailingSlash(selectedDirectory.FullName);
             if (runData != null)
             {
                 runData.Dispose();
@@ -991,6 +1052,38 @@ namespace RED.UI.Wpf
             detailStatusText.Text = "Scanning for empty directories...";
             progressBar.IsIndeterminate = true;
             core.SearchingForEmptyDirectories();
+        }
+
+        private bool TryGetSelectedDirectory(out DirectoryInfo selectedDirectory)
+        {
+            selectedDirectory = null;
+            string rawPath = pathBox == null ? string.Empty : pathBox.Text;
+            rawPath = string.IsNullOrWhiteSpace(rawPath) ? string.Empty : rawPath.Trim().Trim('"');
+            if (string.IsNullOrWhiteSpace(rawPath))
+            {
+                WpfMessageBox.Show(this, "Choose an existing local, UNC, or network folder before scanning.", "RED++", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            try
+            {
+                string expandedPath = Environment.ExpandEnvironmentVariables(rawPath);
+                string fullPath = Path.GetFullPath(expandedPath);
+                selectedDirectory = new DirectoryInfo(fullPath);
+            }
+            catch (Exception ex) when (ex is ArgumentException || ex is NotSupportedException || ex is IOException || ex is UnauthorizedAccessException)
+            {
+                WpfMessageBox.Show(this, "That folder path is not valid.\n\n" + ex.Message, "RED++", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (!selectedDirectory.Exists)
+            {
+                WpfMessageBox.Show(this, "Choose an existing local, UNC, or network folder before scanning.", "RED++", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            return true;
         }
 
         private RuntimeData CreateRuntimeData(DirectoryInfo selectedDirectory)
@@ -1029,6 +1122,7 @@ namespace RED.UI.Wpf
                 {
                     activeCore.AddProtectedFolder(runData.StartFolder.FullName);
                 }
+                AddEmptyFileResults();
                 int total = e.EmptyFolderCount + e.EmptyFileCount;
                 detailStatusText.Text = total == 0
                     ? string.Format("Checked {0} directories. Nothing to delete yet.", e.FolderCount)
@@ -1119,6 +1213,19 @@ namespace RED.UI.Wpf
             RefreshResultsVisibility();
         }
 
+        private void AddEmptyFileResults()
+        {
+            if (runData == null || runData.EmptyFileResults == null)
+            {
+                return;
+            }
+
+            foreach (FileInfo file in runData.EmptyFileResults)
+            {
+                AddOrUpdateResult(new RedScanResultItem(file, DirectorySearchStatusTypes.Empty, "Empty file - zero bytes"));
+            }
+        }
+
         private void StartDelete()
         {
             if (core == null || runData == null)
@@ -1127,12 +1234,18 @@ namespace RED.UI.Wpf
             }
 
             UpdateConfigFromUi();
+            ApplyCurrentDeleteSettings();
+            if (!EnsureMoveToFolderTarget())
+            {
+                return;
+            }
+
             if (runData.DeleteMode != DeleteModes.Simulate)
             {
                 int protectedCount = runData.ProtectedFolderList.Count;
-                int deleteCount = runData.ScanResults.Count - protectedCount;
+                int deleteCount = Math.Max(0, runData.ScanResults.Count - protectedCount);
                 int fileDeleteCount = runData.EmptyFileResults.Count;
-                string message = string.Format("{0} empty directories and {1} empty files are eligible.\n\nRED++ will re-check every item immediately before changing it.", deleteCount, fileDeleteCount);
+                string message = BuildDeleteConfirmationMessage(deleteCount, fileDeleteCount, protectedCount);
                 if (WpfMessageBox.Show(this, message, "Review & Delete", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes)
                 {
                     return;
@@ -1145,6 +1258,69 @@ namespace RED.UI.Wpf
             progressBar.Value = 0;
             detailStatusText.Text = "Deletion started. RED++ will re-check each item before changing it.";
             core.StartDeleteProcess();
+        }
+
+        private void ApplyCurrentDeleteSettings()
+        {
+            if (runData == null)
+            {
+                return;
+            }
+
+            runData.DeleteMode = (DeleteModes)config.Options.DeleteMode;
+            runData.HideDeletionErrors = config.Options.HideDeletionErrors;
+            runData.PauseTime = config.Options.PauseBetweenDeletions;
+        }
+
+        private bool EnsureMoveToFolderTarget()
+        {
+            if (runData == null || runData.DeleteMode != DeleteModes.MoveToFolder)
+            {
+                return true;
+            }
+
+            using (var dlg = new Forms.FolderBrowserDialog())
+            {
+                dlg.Description = "Select the folder where eligible empty directories and empty files will be moved";
+                dlg.ShowNewFolderButton = true;
+                if (dlg.ShowDialog() != Forms.DialogResult.OK)
+                {
+                    detailStatusText.Text = "Move-to-folder deletion canceled. Choose a move target to continue.";
+                    return false;
+                }
+
+                SystemFunctions.MoveToFolderTarget = dlg.SelectedPath;
+                return true;
+            }
+        }
+
+        private string BuildDeleteConfirmationMessage(int deleteCount, int fileDeleteCount, int protectedCount)
+        {
+            string countSummary = string.Format("{0} empty directories and {1} empty files are eligible.", deleteCount, fileDeleteCount);
+            string safety = "RED++ will re-check every item immediately before changing it.";
+            if (protectedCount > 0)
+            {
+                countSummary += "\n" + string.Format("{0} protected directories will be skipped.", protectedCount);
+            }
+
+            switch (runData.DeleteMode)
+            {
+                case DeleteModes.MoveToFolder:
+                    return "Move eligible results to the selected folder?\n\n"
+                        + countSummary + "\n"
+                        + safety + "\n"
+                        + "Move target: " + SystemFunctions.MoveToFolderTarget;
+                case DeleteModes.Direct:
+                    return "Permanently delete eligible results?\n\n"
+                        + countSummary + "\n"
+                        + "Direct mode bypasses the Recycle Bin.\n"
+                        + safety;
+                default:
+                    return "Recycle eligible results?\n\n"
+                        + countSummary + "\n"
+                        + "Windows will move items to the Recycle Bin when available.\n"
+                        + safety;
+            }
         }
 
         private void UpdateUiState(bool busy)
@@ -1188,6 +1364,7 @@ namespace RED.UI.Wpf
             clipboardDetection.IsChecked = config.Options.ClipboardPathDetection;
             respectGitIgnore.IsChecked = config.Options.RespectGitIgnore;
             useMft.IsChecked = config.Options.UseMftScan;
+            deleteEmptyFiles.IsChecked = config.Options.DeleteEmptyFiles;
             if (deleteMode != null && deleteMode.Items.Count > 0)
             {
                 int index = Math.Max(0, Math.Min(deleteMode.Items.Count - 1, config.Options.DeleteModeInt));
@@ -1197,6 +1374,11 @@ namespace RED.UI.Wpf
 
         private void UpdateConfigFromUi()
         {
+            if (pathBox != null)
+            {
+                config.Volatile.LastUsedDirectory = pathBox.Text;
+            }
+
             if (ignoreEmptyFiles == null)
             {
                 return;
@@ -1212,11 +1394,11 @@ namespace RED.UI.Wpf
             config.Options.ClipboardPathDetection = clipboardDetection.IsChecked == true;
             config.Options.RespectGitIgnore = respectGitIgnore.IsChecked == true;
             config.Options.UseMftScan = useMft.IsChecked == true;
+            config.Options.DeleteEmptyFiles = deleteEmptyFiles.IsChecked == true;
             if (deleteMode != null && deleteMode.SelectedItem is DeleteModeItem item)
             {
                 config.Options.DeleteModeInt = (int)item.DeleteMode;
             }
-            config.Volatile.LastUsedDirectory = pathBox == null ? config.Volatile.LastUsedDirectory : pathBox.Text;
         }
 
         private void ShowLog()
@@ -1246,6 +1428,99 @@ namespace RED.UI.Wpf
                 }
             };
             win.ShowDialog();
+        }
+
+        private void ShowExtrasMenu()
+        {
+            var menu = new ContextMenu
+            {
+                PlacementTarget = extrasButton,
+                Placement = PlacementMode.Top,
+                Background = Panel2,
+                BorderBrush = Border,
+                Foreground = Text
+            };
+
+            bool hasResults = results.Count > 0;
+            menu.Items.Add(ExtrasMenuItem("View log", true, (s, e) => ShowLog()));
+            menu.Items.Add(new Separator());
+            menu.Items.Add(ExtrasMenuItem("Export results to file...", hasResults, (s, e) => ExportResultsToFile()));
+            menu.Items.Add(ExtrasMenuItem("Copy results to clipboard", hasResults, (s, e) => ExportResultsToClipboard()));
+            menu.IsOpen = true;
+        }
+
+        private MenuItem ExtrasMenuItem(string label, bool enabled, RoutedEventHandler click)
+        {
+            var item = new MenuItem
+            {
+                Header = label,
+                IsEnabled = enabled,
+                Foreground = Text,
+                Background = Panel2,
+                Padding = new Thickness(14, 8, 18, 8)
+            };
+            item.Click += click;
+            SetAutomation(item, label);
+            return item;
+        }
+
+        private void ExportResultsToFile()
+        {
+            List<string> paths = BuildReviewPathList();
+            if (paths.Count == 0)
+            {
+                detailStatusText.Text = "Scan results are needed before export.";
+                return;
+            }
+
+            try
+            {
+                using (var export = new RED.Helper.RedExportScanResults())
+                {
+                    export.ExportToFile(paths);
+                }
+                detailStatusText.Text = "Export finished.";
+            }
+            catch (Exception ex)
+            {
+                WpfMessageBox.Show(this, "RED++ could not export the current results.\n\n" + ex.Message, "Export failed", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private void ExportResultsToClipboard()
+        {
+            List<string> paths = BuildReviewPathList();
+            if (paths.Count == 0)
+            {
+                detailStatusText.Text = "Scan results are needed before export.";
+                return;
+            }
+
+            try
+            {
+                using (var export = new RED.Helper.RedExportScanResults())
+                {
+                    export.ExportToClipboard(paths);
+                }
+                detailStatusText.Text = "Results copied to the clipboard.";
+            }
+            catch (Exception ex)
+            {
+                WpfMessageBox.Show(this, "RED++ could not copy the current results.\n\n" + ex.Message, "Copy failed", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private List<string> BuildReviewPathList()
+        {
+            var paths = new List<string>();
+            foreach (ResultRow row in results)
+            {
+                if (!string.IsNullOrWhiteSpace(row.FullPath))
+                {
+                    paths.Add(row.FullPath);
+                }
+            }
+            return paths;
         }
 
         private void ToggleMaximize()
