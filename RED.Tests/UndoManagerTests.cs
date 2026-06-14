@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Xunit;
 
@@ -201,6 +202,46 @@ namespace RED
             {
                 try { Directory.Delete(evilSource, true); } catch { }
             }
+        }
+
+        [Fact]
+        public void Restore_NoRoots_SystemDirectoryTarget_IsRefused()
+        {
+            // A manifest that omits "roots" (legacy or stripped by a tamperer) must still
+            // be refused from a well-known system location — not merely fail on an OS
+            // access-denied. We assert the explicit refusal, not just the side effect.
+            string sysTarget = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "redpp-evil-" + Guid.NewGuid().ToString("N"));
+            string json =
+                "{ \"timestamp\": \"x\", \"deleteMode\": \"Direct\", \"entries\": [" +
+                "{ \"path\": \"" + Esc(sysTarget) + "\", \"mode\": \"Direct\" } ] }";
+            string path = WriteManifest(json);
+
+            var logs = new List<string>();
+            int restored, failed;
+            bool ok = UndoManager.Restore(path, out restored, out failed, m => logs.Add(m));
+
+            Assert.False(ok);
+            Assert.Equal(0, restored);
+            Assert.Contains(logs, l => l != null && l.Contains("Refused"));
+            Assert.False(Directory.Exists(sysTarget));
+        }
+
+        [Fact]
+        public void Restore_DevicePrefixPath_IsRefused()
+        {
+            string evil = @"\\?\C:\Windows\Temp\redpp-evil-" + Guid.NewGuid().ToString("N");
+            string json =
+                "{ \"timestamp\": \"x\", \"deleteMode\": \"Direct\", \"entries\": [" +
+                "{ \"path\": \"" + Esc(evil) + "\", \"mode\": \"Direct\" } ] }";
+            string path = WriteManifest(json);
+
+            var logs = new List<string>();
+            int restored, failed;
+            bool ok = UndoManager.Restore(path, out restored, out failed, m => logs.Add(m));
+
+            Assert.False(ok);
+            Assert.Equal(0, restored);
+            Assert.Contains(logs, l => l != null && l.Contains("Refused"));
         }
 
         [Fact]
