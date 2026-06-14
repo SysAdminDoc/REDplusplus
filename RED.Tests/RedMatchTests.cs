@@ -33,6 +33,19 @@ namespace RED.Tests
             Assert.Equal(expected, list.IsOnList(new DirectoryInfo(path)));
         }
 
+        [Theory]
+        [InlineData(@"+|C|temp/cache", @"C:\x\temp\cache\sub", true)]   // '/' path pattern matches '\' path
+        [InlineData(@"+|C|temp\cache", @"C:\x\temp\cache\sub", true)]   // '\' still works (regression guard)
+        [InlineData(@"+|P|c:/x/proj", @"C:\x\proj", true)]             // '/' exact-path rule
+        [InlineData(@"+|C|temp/cache", @"C:\x\tempcache\sub", false)]  // no false positive without the separator
+        public void DirectoryRule_NormalizesPathSeparators(string rule, string path, bool expected)
+        {
+            // A directory filter written with '/' must match the same as one written
+            // with '\'; previously only '\' was recognized as a path pattern.
+            var list = BuildDirList(rule);
+            Assert.Equal(expected, list.IsOnList(new DirectoryInfo(path)));
+        }
+
         [Fact]
         public void RegexNameRule_MatchesCaseInsensitive()
         {
