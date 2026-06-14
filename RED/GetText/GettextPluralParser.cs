@@ -148,12 +148,16 @@ namespace SecondLanguage
 				else if (Peek() == '/')
 				{
 					Advance();
-					value = BinaryOp(value, MatchValue(), (x, y) => x / y);
+					// A catalog header such as "plural=(n/0)" parses cleanly but the
+					// DivideByZeroException is thrown later, at evaluation time, far
+					// from any catch. Treat division/modulo by zero as 0 so a crafted
+					// or buggy Plural-Forms line can never crash a TranslatePlural call.
+					value = BinaryOp(value, MatchValue(), (x, y) => y == 0 ? 0UL : x / y);
 				}
 				else if (Peek() == '%')
 				{
 					Advance();
-					value = BinaryOp(value, MatchValue(), (x, y) => x % y);
+					value = BinaryOp(value, MatchValue(), (x, y) => y == 0 ? 0UL : x % y);
 				}
 				else
 				{

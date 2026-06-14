@@ -45,7 +45,12 @@ namespace NotBob.Config
                             RedirectCount++;
                             if (RedirectCount >= RedirectMax)
                             {
-                                UiAssist.MsgBoxError(string.Format(TXT.Translate("Redirect maximum [{0}] reached in configuration file"), RedirectMax));
+                                string redirectMsg = string.Format(TXT.Translate("Redirect maximum [{0}] reached in configuration file"), RedirectMax);
+                                // Never show a modal in headless mode — it would hang a scheduled task.
+                                if (SilentMode)
+                                    Console.Error.WriteLine(redirectMsg);
+                                else
+                                    UiAssist.MsgBoxError(redirectMsg);
                                 config.RedirectTo = string.Empty;
                                 break;
                             }
@@ -146,13 +151,21 @@ namespace NotBob.Config
                 }
                 else
                 {
-                    UiAssist.MsgBoxError("Config File is READ ONLY and cannot be saved.");
+                    string roMsg = TXT.Translate("Config File is READ ONLY and cannot be saved.");
+                    if (SilentMode)
+                        Console.Error.WriteLine(roMsg);
+                    else
+                        UiAssist.MsgBoxError(roMsg);
                 }
             }
             catch (Exception ex)
             {
                 string emsg = string.Format("{0}:{1}{2}", TXT.Translate("Error trying to save configuration file"), RedGetText.CrLf1, config.Runtime.ConfigFilename);
-                UiAssist.MsgBoxException(emsg, ex);
+                // Headless save failures must report to stderr, never a modal dialog.
+                if (SilentMode)
+                    Console.Error.WriteLine(emsg + " - " + ex.Message);
+                else
+                    UiAssist.MsgBoxException(emsg, ex);
                 config.IsReadOnly = true;
             }
         }

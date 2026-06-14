@@ -352,6 +352,9 @@ namespace RED
 		/// </summary>
 		private static int RunUndo(string logFile, bool quiet, string manifestArg)
 		{
+			// Undo is a non-interactive CLI path (documented `RED+.exe -undo`).
+			// Keep config loading dialog-free so a scripted/scheduled restore cannot hang.
+			ConfigAssist.SilentMode = true;
 			var log = new StringBuilder();
 			Action<string> logMsg = (msg) =>
 			{
@@ -399,18 +402,29 @@ namespace RED
 			if (File.Exists(arg)) return arg;
 
 			var manifests = UndoManager.ListManifests();
+
+			// Unambiguous matches first: exact filename or exact timestamp.
 			foreach (var m in manifests)
 			{
-				if (m.FileName.Equals(arg, StringComparison.OrdinalIgnoreCase))
-					return m.FilePath;
-				if (m.FileName.Contains(arg))
-					return m.FilePath;
-				if (m.Timestamp.ToString("yyyy-MM-dd_HH-mm-ss") == arg)
-					return m.FilePath;
-				if (m.Timestamp.ToString("s") == arg)
+				if (m.FileName.Equals(arg, StringComparison.OrdinalIgnoreCase)
+					|| m.Timestamp.ToString("yyyy-MM-dd_HH-mm-ss") == arg
+					|| m.Timestamp.ToString("s") == arg)
 					return m.FilePath;
 			}
-			return null;
+
+			// Fall back to a substring match, but only if it is unambiguous —
+			// restoring the wrong run would recreate the wrong directories.
+			string match = null;
+			int matchCount = 0;
+			foreach (var m in manifests)
+			{
+				if (m.FileName.IndexOf(arg, StringComparison.OrdinalIgnoreCase) >= 0)
+				{
+					match = m.FilePath;
+					matchCount++;
+				}
+			}
+			return matchCount == 1 ? match : null;
 		}
 
 		private static readonly System.Collections.Generic.Dictionary<string, DeleteModes> ModeAliases =
@@ -476,7 +490,17 @@ namespace RED
 					WriteLogFile(logFile, log, quiet);
 					return 1;
 				}
-				SystemFunctions.MoveToFolderTarget = Environment.ExpandEnvironmentVariables(moveTarget);
+				string expandedMoveTarget = Environment.ExpandEnvironmentVariables(moveTarget);
+				// A relative move target resolves against the process working directory,
+				// which for a scheduled task is typically C:\Windows\System32 — a surprising
+				// and dangerous destination. Require an absolute path.
+				if (!System.IO.Path.IsPathRooted(expandedMoveTarget))
+				{
+					errorMsg("Error: -moveto must be an absolute path: " + expandedMoveTarget);
+					WriteLogFile(logFile, log, quiet);
+					return 1;
+				}
+				SystemFunctions.MoveToFolderTarget = expandedMoveTarget;
 			}
 
 			bool hadErrors = false;

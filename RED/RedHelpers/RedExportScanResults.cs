@@ -100,11 +100,34 @@ namespace RED.Helper
             for (int i = 0; i < v.Count; i++)
             {
                 string kind = v[i].Kind == Match.ResultKind.File ? "file" : "directory";
-                string escapedPath = v[i].FullPath.Replace("\"", "\"\"");
-                string escapedReason = (v[i].StatusReason ?? string.Empty).Replace("\"", "\"\"");
-                lines.Add(string.Format("\"{0}\",\"{1}\",\"{2}\",\"{3}\"", kind, escapedPath, v[i].SearchStatus, escapedReason));
+                lines.Add(string.Format("\"{0}\",\"{1}\",\"{2}\",\"{3}\"",
+                    kind,
+                    EscapeCsvCell(v[i].FullPath),
+                    v[i].SearchStatus,
+                    EscapeCsvCell(v[i].StatusReason)));
             }
             File.WriteAllLines(filename, lines, Encoding.UTF8);
+        }
+
+        /// <summary>
+        /// Quotes a value for CSV and neutralizes spreadsheet formula injection
+        /// (CWE-1236): a directory named e.g. =cmd|'/c calc'!A1 would otherwise
+        /// execute when the export is opened in Excel/LibreOffice. Directory names
+        /// are fully attacker-controllable, so any cell starting with =, +, -, @,
+        /// tab or CR is prefixed with a single quote.
+        /// </summary>
+        private static string EscapeCsvCell(string value)
+        {
+            value = value ?? string.Empty;
+            if (value.Length > 0)
+            {
+                char c0 = value[0];
+                if (c0 == '=' || c0 == '+' || c0 == '-' || c0 == '@' || c0 == '\t' || c0 == '\r')
+                {
+                    value = "'" + value;
+                }
+            }
+            return value.Replace("\"", "\"\"");
         }
 
         private void WriteJson(RedScanResultItemList v, string filename)
