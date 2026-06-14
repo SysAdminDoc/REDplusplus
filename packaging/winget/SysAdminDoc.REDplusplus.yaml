@@ -1,5 +1,5 @@
 PackageIdentifier: SysAdminDoc.REDplusplus
-PackageVersion: 1.5.17
+PackageVersion: 1.5.18
 PackageLocale: en-US
 PackageName: RED++
 Publisher: SysAdminDoc
@@ -11,7 +11,7 @@ Commands:
   - red++
 Installers:
   - Architecture: x86
-    InstallerUrl: https://github.com/SysAdminDoc/REDplusplus/releases/download/v1.5.17/RED++_v1.5.17.zip
+    InstallerUrl: https://github.com/SysAdminDoc/REDplusplus/releases/download/v1.5.18/RED++_v1.5.18.zip
     InstallerSha256:
     NestedInstallerType: portable
     NestedInstallerFiles:

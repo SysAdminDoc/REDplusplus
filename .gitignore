@@ -16,3 +16,6 @@ CODEX_CHANGELOG.md
 # Planning docs (local only)
 ROADMAP.md
 RESEARCH.md
+
+# Local build/scratch (refasm, screenshots, smoke fixtures)
+tmp/
