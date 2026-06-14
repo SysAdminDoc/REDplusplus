@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Developer / CI
+- Add a first-class automated test project (`RED.Tests`, xUnit) covering the scan/delete engine's safety-critical parsers and undo logic: `.mo` catalog bounds and corrupt-header rejection, `Plural-Forms` divide/modulo-by-zero and deep-nesting hardening, USN/MFT record-parser bounds checks, filter-rule matching, `.gitignore` anchoring/negation/scoping, and undo restore round-trips plus corrupt-manifest rejection. Wired into CI so every push runs the suite (40 tests). Locks in the v1.5.18 P0 input-hardening fixes against regression.
+
 ## 1.5.18 (2026-06-14)
 
 ### Security & data safety
