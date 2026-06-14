@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Build / Runtime
+- Migrate from .NET Framework 4.8.1 (old-style csproj + `packages.config`) to an SDK-style project targeting `net9.0-windows` (WPF + WinForms). The verified scan/delete engine and every P/Invoke struct are unchanged; the 50-test xUnit suite and the headless safety smoke (empty-dir/file deletion, reparse-point/junction protection, deny-ACL fail-closed, AutoProtectRoot, recycle→undo round-trip) pass identically on the new runtime.
+- Replace the removed `Directory.GetAccessControl(path)` static with the `DirectoryInfo.GetAccessControl()` extension (same default ACL sections) in the deletion lock check.
+- Make version reporting single-file safe: read the file version from `Environment.ProcessPath` / the embedded `AssemblyFileVersion` attribute instead of `Assembly.Location` (which is empty in a published single-file bundle and previously crashed `-version`/`-json`).
+- Modern .NET fixes the .resx resource friction that forced a build-time workaround on 4.8.1: the WPF shell and WinForms fallback now build and render cleanly (icons and image resources load natively).
+- Release builds are now a **self-contained single-file** `win-x64` artifact (`dotnet publish -p:PublishSingleFile=true --self-contained`) — no .NET runtime install required on the target machine, preserving the "unzip and run" portability. CI builds and tests with `dotnet` (Visual Studio / MSBuild no longer required).
+
 ### Documentation
 - Drop the advertised "Enter to scan, Del to delete selected" keyboard shortcuts from the feature list: the default modern WPF shell is click-only by design, matching the project's no-keyboard-shortcuts convention.
 
