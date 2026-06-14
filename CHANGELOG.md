@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.15 (2026-06-13)
+
+### Modern UI
+- Make the WPF Search surface responsive at the default portable-app size: path input, Browse, review pane, and Result Legend now use adaptive grid columns instead of mockup-era fixed margins.
+- Tighten the title bar, tabs, command bar, empty state, legend, and status strip so the app feels intentional and complete at 1180x760 without clipping.
+- Add pressed-state feedback for WPF buttons and improve review-list scrolling/column density for long paths and narrow windows.
+- Wrap Settings and Filters content in scrollable shells so larger DPI/text settings do not hide controls.
+
 ## 1.5.14 (2026-06-13)
 
 ### Modern UI
