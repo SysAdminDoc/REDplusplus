@@ -45,6 +45,11 @@ namespace RED.UI.Wpf
         private Grid contentHost;
         private Border resultSurface;
         private Grid emptyState;
+        private System.Windows.Shapes.Path emptyIcon;
+        private TextBlock emptyTitle;
+        private TextBlock emptySubtitle;
+        private StackPanel emptyTrust;
+        private bool hasScanned;
         private ListView resultsList;
         private WpfTextBox pathBox;
         private WpfButton scanButton;
@@ -91,8 +96,17 @@ namespace RED.UI.Wpf
         private static readonly Brush Blue = BrushFrom("#2f6df2");
         private static readonly Brush BlueLight = BrushFrom("#7aa8ff");
         private static readonly Brush Red = BrushFrom("#dc3548");
+        // A brighter red than the legend swatch, for status text that must stay legible
+        // on the dark result surface (the #dc3548 swatch dips below AA at body size).
+        private static readonly Brush RedText = BrushFrom("#ff7a86");
         private static readonly Brush Green = BrushFrom("#67d16f");
+        private static readonly Brush Amber = BrushFrom("#ffca55");
         private static readonly Brush Pink = BrushFrom("#f17aa5");
+
+        // Keyboard-focus ring for the non-button controls (text box, combo, lists),
+        // which otherwise show only WPF's near-invisible dotted default on this dark
+        // surface. Matches the BlueLight ring the buttons already use (WCAG 2.4.7).
+        private static readonly Style FocusVisual = CreateFocusVisual();
         private static readonly Geometry IconSearch = Glyph("M17,8 A9,9 0 1 1 17,26 A9,9 0 1 1 17,8 M24,24 L32,32");
         private static readonly Geometry IconSettings = Glyph("M18,5 L20.6,9.7 L26,10.8 L22.4,15 L24.1,20.3 L18.8,19 L15.2,23.2 L12.6,18.5 L7.2,17.4 L10.8,13.2 L9.1,7.9 L14.4,9.2 Z M18,13 A5,5 0 1 1 17.9,13");
         private static readonly Geometry IconFilter = Glyph("M7,7 L31,7 L22,18 L22,29 L16,32 L16,18 Z");
@@ -219,7 +233,7 @@ namespace RED.UI.Wpf
             var border = new FrameworkElementFactory(typeof(System.Windows.Controls.Border));
             border.Name = "ButtonChrome";
             border.SetValue(System.Windows.Controls.Border.SnapsToDevicePixelsProperty, true);
-            border.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(2));
+            border.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(4));
             border.SetBinding(System.Windows.Controls.Border.BackgroundProperty, new Binding("Background") { RelativeSource = RelativeSource.TemplatedParent });
             border.SetBinding(System.Windows.Controls.Border.BorderBrushProperty, new Binding("BorderBrush") { RelativeSource = RelativeSource.TemplatedParent });
             border.SetBinding(System.Windows.Controls.Border.BorderThicknessProperty, new Binding("BorderThickness") { RelativeSource = RelativeSource.TemplatedParent });
@@ -238,7 +252,7 @@ namespace RED.UI.Wpf
             // hover/press feedback regardless of its base color.
             var overlay = new FrameworkElementFactory(typeof(System.Windows.Controls.Border));
             overlay.Name = "HoverOverlay";
-            overlay.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(2));
+            overlay.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(4));
             overlay.SetValue(System.Windows.Controls.Border.BackgroundProperty, Brushes.Transparent);
             overlay.SetValue(UIElement.IsHitTestVisibleProperty, false);
             layers.AppendChild(overlay);
@@ -247,7 +261,7 @@ namespace RED.UI.Wpf
             // button takes keyboard focus, so it is visible on any background.
             var focusRing = new FrameworkElementFactory(typeof(System.Windows.Controls.Border));
             focusRing.Name = "FocusRing";
-            focusRing.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(2));
+            focusRing.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(4));
             focusRing.SetValue(System.Windows.Controls.Border.BorderBrushProperty, Brushes.Transparent);
             focusRing.SetValue(System.Windows.Controls.Border.BorderThicknessProperty, new Thickness(2));
             focusRing.SetValue(UIElement.IsHitTestVisibleProperty, false);
@@ -270,6 +284,40 @@ namespace RED.UI.Wpf
             template.Triggers.Add(focus);
 
             return template;
+        }
+
+        // A focus-visual adorner (drawn over the focused control on keyboard focus):
+        // a 2px BlueLight rounded border so text box / combo / list focus is visible.
+        private static Style CreateFocusVisual()
+        {
+            var template = new ControlTemplate();
+            var border = new FrameworkElementFactory(typeof(System.Windows.Controls.Border));
+            border.SetValue(System.Windows.Controls.Border.BorderBrushProperty, BlueLight);
+            border.SetValue(System.Windows.Controls.Border.BorderThicknessProperty, new Thickness(2));
+            border.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(4));
+            border.SetValue(System.Windows.Controls.Border.SnapsToDevicePixelsProperty, true);
+            border.SetValue(FrameworkElement.MarginProperty, new Thickness(-2));
+            template.VisualTree = border;
+            var style = new Style();
+            style.Setters.Add(new Setter(Control.TemplateProperty, template));
+            return style;
+        }
+
+        // Maps a result's status word to its legend color so the review list is
+        // colour-coded (eligible = red, kept = muted, deleted = green, protected =
+        // blue, failed = amber). The colour is paired with the status word, never the
+        // only signal, so meaning never depends on colour alone.
+        private static Brush StatusToBrush(string statusLabel)
+        {
+            if (string.IsNullOrEmpty(statusLabel)) return Muted;
+            switch (statusLabel)
+            {
+                case "Eligible": return RedText;
+                case "Deleted": return Green;
+                case "Protected": return BlueLight;
+                case "Warning": return Amber;
+                default: return Muted; // Kept / Ignored / NeverEmpty / etc.
+            }
         }
 
         private void ApplyInitialWindowBounds()
@@ -575,6 +623,7 @@ namespace RED.UI.Wpf
                 VerticalAlignment = VerticalAlignment.Top,
                 HorizontalAlignment = HorizontalAlignment.Stretch
             };
+            pathBox.FocusVisualStyle = FocusVisual;
             SetAutomation(pathBox, "Folder to scan", "Enter or paste the root folder RED++ should scan.");
             pathRow.Children.Add(pathBox);
 
@@ -689,16 +738,18 @@ namespace RED.UI.Wpf
                 VerticalAlignment = VerticalAlignment.Center
             };
             grid.Children.Add(center);
-            center.Children.Add(IconPath(IconFolder, Muted2, 46, 2.5, new DoubleCollection(new[] { 5d, 4d }), new Thickness(0, 0, 0, 8)));
-            center.Children.Add(new TextBlock
+            emptyIcon = IconPath(IconFolder, Muted2, 46, 2.5, new DoubleCollection(new[] { 5d, 4d }), new Thickness(0, 0, 0, 8));
+            center.Children.Add(emptyIcon);
+            emptyTitle = new TextBlock
             {
                 Text = "Choose a folder to scan.",
                 Foreground = Text,
                 FontSize = 18,
                 TextAlignment = TextAlignment.Center,
                 Margin = new Thickness(0, 0, 0, 8)
-            });
-            center.Children.Add(new TextBlock
+            };
+            center.Children.Add(emptyTitle);
+            emptySubtitle = new TextBlock
             {
                 Text = "Review results before anything changes.",
                 Foreground = Muted,
@@ -706,11 +757,40 @@ namespace RED.UI.Wpf
                 LineHeight = 18,
                 TextAlignment = TextAlignment.Center,
                 Margin = new Thickness(0, 0, 0, 10)
-            });
-            center.Children.Add(TrustRow(IconSearch, BlueLight, "Pick a root folder, then scan."));
-            center.Children.Add(TrustRow(IconShield, Green, "Review eligible results."));
-            center.Children.Add(TrustRow(IconTrash, Pink, "Confirm before changes."));
+            };
+            center.Children.Add(emptySubtitle);
+            emptyTrust = new StackPanel();
+            emptyTrust.Children.Add(TrustRow(IconSearch, BlueLight, "Pick a root folder, then scan."));
+            emptyTrust.Children.Add(TrustRow(IconShield, Green, "Review eligible results."));
+            emptyTrust.Children.Add(TrustRow(IconTrash, Pink, "Confirm before changes."));
+            center.Children.Add(emptyTrust);
             return grid;
+        }
+
+        // Swaps the centre panel between the pre-scan prompt and a positive "all clean"
+        // state, so a completed scan with no results no longer tells the user to pick a
+        // folder they just scanned.
+        private void SetEmptyStateMode(bool clean)
+        {
+            if (emptyIcon == null) return;
+            if (clean)
+            {
+                emptyIcon.Data = IconCheck;
+                emptyIcon.Stroke = Green;
+                emptyIcon.StrokeDashArray = null;
+                emptyTitle.Text = "No empty directories found.";
+                emptySubtitle.Text = "RED++ scanned this folder and found nothing to remove.";
+                emptyTrust.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                emptyIcon.Data = IconFolder;
+                emptyIcon.Stroke = Muted2;
+                emptyIcon.StrokeDashArray = new DoubleCollection(new[] { 5d, 4d });
+                emptyTitle.Text = "Choose a folder to scan.";
+                emptySubtitle.Text = "Review results before anything changes.";
+                emptyTrust.Visibility = Visibility.Visible;
+            }
         }
 
         private UIElement TrustRow(Geometry icon, Brush brush, string text)
@@ -739,9 +819,30 @@ namespace RED.UI.Wpf
             ScrollViewer.SetHorizontalScrollBarVisibility(list, ScrollBarVisibility.Auto);
             ScrollViewer.SetVerticalScrollBarVisibility(list, ScrollBarVisibility.Auto);
             SetAutomation(list, "Review results", "Empty directories and empty files found during the last scan.");
+            list.FocusVisualStyle = FocusVisual;
+
+            // Comfortable, tappable rows for a destructive-review list.
+            var itemStyle = new Style(typeof(System.Windows.Controls.ListViewItem));
+            itemStyle.Setters.Add(new Setter(Control.MinHeightProperty, 28d));
+            itemStyle.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(4, 2, 4, 2)));
+            itemStyle.Setters.Add(new Setter(Control.VerticalContentAlignmentProperty, VerticalAlignment.Center));
+            list.ItemContainerStyle = itemStyle;
+
             var gridView = new GridView();
             list.View = gridView;
-            gridView.Columns.Add(new GridViewColumn { Header = "Status", Width = 96, DisplayMemberBinding = new Binding("StatusLabel") });
+
+            // Status as a coloured word (eligible = red, kept = muted, deleted =
+            // green, …) so the review list reflects the legend instead of leaving the
+            // computed status colour unused. The word carries the meaning; the colour
+            // reinforces it (never colour alone).
+            var statusTemplate = new DataTemplate();
+            var statusText = new FrameworkElementFactory(typeof(TextBlock));
+            statusText.SetBinding(TextBlock.TextProperty, new Binding("StatusLabel"));
+            statusText.SetBinding(TextBlock.ForegroundProperty, new Binding("StatusBrush"));
+            statusText.SetValue(TextBlock.FontWeightProperty, FontWeights.SemiBold);
+            statusTemplate.VisualTree = statusText;
+
+            gridView.Columns.Add(new GridViewColumn { Header = "Status", Width = 96, CellTemplate = statusTemplate });
             gridView.Columns.Add(new GridViewColumn { Header = "Name", Width = 170, DisplayMemberBinding = new Binding("Name") });
             gridView.Columns.Add(new GridViewColumn { Header = "Reason", Width = 220, DisplayMemberBinding = new Binding("Reason") });
             gridView.Columns.Add(new GridViewColumn { Header = "Path", Width = 460, DisplayMemberBinding = new Binding("FullPath") });
@@ -790,6 +891,7 @@ namespace RED.UI.Wpf
                 BorderBrush = BorderStrong,
                 BorderThickness = new Thickness(1)
             };
+            deleteMode.FocusVisualStyle = FocusVisual;
             SetAutomation(deleteMode, "Deletion mode", "Choose whether RED++ simulates, recycles, deletes directly, or moves eligible results.");
             foreach (DeleteModes mode in DeleteModeItem.GetList())
             {
@@ -859,6 +961,7 @@ namespace RED.UI.Wpf
                 MinHeight = 420,
                 FontSize = 15
             };
+            list.FocusVisualStyle = FocusVisual;
             panel.Children.Add(list);
         }
 
@@ -905,7 +1008,7 @@ namespace RED.UI.Wpf
             deleteButton.Click += (s, e) => StartDelete();
             primaryActions.Children.Add(deleteButton);
 
-            cancelButton = ActionButton("Cancel", BrushFrom("#27334a"), IconCancel, 140);
+            cancelButton = ActionButton("Cancel", Panel2, IconCancel, 140);
             SetAutomation(cancelButton, "Cancel current operation", "Cancel the scan or deletion currently in progress.");
             cancelButton.Margin = new Thickness(12, 0, 0, 0);
             cancelButton.Click += (s, e) => core?.CancelCurrentProcess();
@@ -935,7 +1038,7 @@ namespace RED.UI.Wpf
                 Width = width,
                 Height = 52,
                 Background = background,
-                BorderBrush = BrushFrom("#6f86ad"),
+                BorderBrush = BorderStrong,
                 BorderThickness = new Thickness(1),
                 Cursor = Cursors.Hand
             };
@@ -1189,9 +1292,10 @@ namespace RED.UI.Wpf
                 AddEmptyFileResults();
                 int total = e.EmptyFolderCount + e.EmptyFileCount;
                 detailStatusText.Text = total == 0
-                    ? string.Format("Checked {0} directories. Nothing to delete yet.", e.FolderCount)
+                    ? string.Format("Checked {0} {1} — no empty directories found.", e.FolderCount, e.FolderCount == 1 ? "directory" : "directories")
                     : string.Format("{0} empty directories and {1} empty files eligible.", e.EmptyFolderCount, e.EmptyFileCount);
                 itemCountText.Text = total + " items";
+                hasScanned = true;
                 UpdateUiState(false);
                 deleteButton.IsEnabled = total > 0;
                 progressBar.IsIndeterminate = false;
@@ -1207,12 +1311,12 @@ namespace RED.UI.Wpf
             activeCore.OnCancelled += (s, e) => Dispatcher.Invoke(() =>
             {
                 UpdateUiState(false);
-                detailStatusText.Text = "Operation canceled.";
+                detailStatusText.Text = "Canceled.";
             });
             activeCore.OnAborted += (s, e) => Dispatcher.Invoke(() =>
             {
                 UpdateUiState(false);
-                detailStatusText.Text = "Operation stopped.";
+                detailStatusText.Text = "Stopped after an error.";
             });
             activeCore.OnDeleteProcessChanged += (s, e) => Dispatcher.Invoke(() =>
             {
@@ -1220,7 +1324,9 @@ namespace RED.UI.Wpf
                 AddOrUpdateResult(e.ScanResult);
                 if (rowsByPath.ContainsKey(e.ScanResult.FullPath))
                 {
-                    rowsByPath[e.ScanResult.FullPath].StatusLabel = e.Status.ToString();
+                    ResultRow updatedRow = rowsByPath[e.ScanResult.FullPath];
+                    updatedRow.StatusLabel = e.Status.ToString();
+                    updatedRow.StatusBrush = StatusToBrush(updatedRow.StatusLabel);
                 }
                 progressBar.IsIndeterminate = false;
                 progressBar.Maximum = Math.Max(1, e.FolderCount);
@@ -1247,7 +1353,7 @@ namespace RED.UI.Wpf
             {
                 UpdateUiState(false);
                 deleteButton.IsEnabled = false;
-                detailStatusText.Text = string.Format("Deletion complete: {0} directories and {1} files changed.", e.DeletedFolderCount, e.DeletedFileCount);
+                detailStatusText.Text = BuildCompletionMessage(e.DeletedFolderCount, e.DeletedFileCount);
                 progressBar.IsIndeterminate = false;
                 progressBar.Value = 0;
                 progressText.Text = "0%";
@@ -1272,7 +1378,7 @@ namespace RED.UI.Wpf
             row.FullPath = item.FullPath;
             row.Reason = item.StatusReason;
             row.StatusLabel = item.SearchStatus == DirectorySearchStatusTypes.Empty ? "Eligible" : "Kept";
-            row.StatusBrush = item.SearchStatus == DirectorySearchStatusTypes.Empty ? Red : Muted;
+            row.StatusBrush = StatusToBrush(row.StatusLabel);
             itemCountText.Text = results.Count + " items";
             RefreshResultsVisibility();
         }
@@ -1387,13 +1493,35 @@ namespace RED.UI.Wpf
             }
         }
 
+        // Completion copy that matches the chosen mode. Critically, a dry run reports
+        // "would be removed / nothing was changed" instead of claiming files changed.
+        private string BuildCompletionMessage(int dirs, int files)
+        {
+            string d = dirs == 1 ? "directory" : "directories";
+            string f = files == 1 ? "file" : "files";
+            DeleteModes mode = runData != null ? runData.DeleteMode : DeleteModes.RecycleBin;
+            switch (mode)
+            {
+                case DeleteModes.Simulate:
+                    return string.Format("Dry run complete — {0} {1} and {2} {3} would be removed. Nothing was changed.", dirs, d, files, f);
+                case DeleteModes.MoveToFolder:
+                    return string.Format("Moved {0} {1} and {2} {3}.", dirs, d, files, f);
+                case DeleteModes.Direct:
+                    return string.Format("Deleted {0} {1} and {2} {3}.", dirs, d, files, f);
+                default:
+                    return string.Format("Recycled {0} {1} and {2} {3}.", dirs, d, files, f);
+            }
+        }
+
         private void UpdateUiState(bool busy)
         {
             scanButton.IsEnabled = !busy;
             cancelButton.IsEnabled = busy;
             extrasButton.IsEnabled = !busy;
-            readyText.Text = busy ? "●  Busy" : "●  Ready";
-            readyText.Foreground = busy ? BrushFrom("#e8c35b") : Text;
+            readyText.Text = busy ? "●  Working…" : "●  Ready";
+            readyText.Foreground = busy ? Amber : Green;
+            // Screen readers should hear the state word, not the decorative bullet.
+            System.Windows.Automation.AutomationProperties.SetName(readyText, busy ? "Working" : "Ready");
             if (!busy && deleteButton != null)
             {
                 // Enable delete only when something is actually eligible — rows that
@@ -1424,6 +1552,7 @@ namespace RED.UI.Wpf
             bool empty = results.Count == 0;
             emptyState.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
             resultsList.Visibility = empty ? Visibility.Collapsed : Visibility.Visible;
+            if (empty) SetEmptyStateMode(hasScanned);
         }
 
         private void ApplyConfigToUi()
