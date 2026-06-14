@@ -9,6 +9,9 @@
 - Add **Restore deletion** to the modern WPF shell's Extras menu: pick any kept undo manifest (newest first, with timestamp, mode, and item count) and restore it on a background thread with live status. Recovery no longer requires `-classic`.
 - Add **Import saved dry-run results...** to the modern WPF shell's Extras menu: load a saved `.json`/`.ndjson`/`.csv`/`.txt` dry-run and review the records in the results list (review/export only; re-scan to delete, and the engine re-checks every directory before acting). Review of saved runs no longer requires `-classic`.
 
+### Reliability
+- Derive batch-recycle outcomes (success/fail and the undo manifest) authoritatively from `Directory.Exists` rather than the shell sink's submission-order fallback. `IFileOperation` does not guarantee one `PostDeleteItem` per `DeleteItem` in order, so a coalesced/skipped callback could previously record an undo entry against the wrong path; the filesystem is now the ground truth.
+
 ### Security & data safety
 - Clamp the C-style (`SpecialFormatters`) printf width and precision to a bounded ceiling so a crafted format such as `%9999999d` can no longer drive a multi-megabyte allocation (memory-amplification DoS for callers that opt into the format callback).
 - Guard `Translator.RegisterTranslationsByCulture` against a malformed caller-supplied search pattern: a bad `string.Format` pattern is now skipped instead of throwing an uncaught `FormatException`.
