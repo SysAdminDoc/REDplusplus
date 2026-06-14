@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Security & data safety
+- Make the MFT/USN turbo scanner fail closed on an incomplete enumeration. The volume walk now treats any termination other than the EOF sentinel as truncated, and rejects a result set in which a directory referenced as a parent is missing its own record (the signature of a dropped USN record). In either case the scan falls back to the standard recursive walker instead of risking a non-empty directory being reported empty because its children were dropped.
+
 ### Developer / CI
 - Add a first-class automated test project (`RED.Tests`, xUnit) covering the scan/delete engine's safety-critical parsers and undo logic: `.mo` catalog bounds and corrupt-header rejection, `Plural-Forms` divide/modulo-by-zero and deep-nesting hardening, USN/MFT record-parser bounds checks, filter-rule matching, `.gitignore` anchoring/negation/scoping, and undo restore round-trips plus corrupt-manifest rejection. Wired into CI so every push runs the suite (40 tests). Locks in the v1.5.18 P0 input-hardening fixes against regression.
 
