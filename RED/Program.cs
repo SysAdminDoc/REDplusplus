@@ -343,6 +343,25 @@ namespace RED
 
 			if (saveProfileName != null)
 			{
+				// Validate the options now so the saved profile is guaranteed runnable,
+				// instead of silently saving a profile that fails every later -profile run.
+				if (modeOverride != null && !ModeAliases.ContainsKey(modeOverride))
+				{
+					if (!quiet) Console.Error.WriteLine("Error: unknown -mode '" + modeOverride + "' (use recycle|direct|move|simulate)");
+					Environment.ExitCode = 1;
+					return;
+				}
+				if (modeOverride != null && ModeAliases[modeOverride] == DeleteModes.MoveToFolder)
+				{
+					string expandedTarget = string.IsNullOrWhiteSpace(moveTarget) ? null : Environment.ExpandEnvironmentVariables(moveTarget);
+					if (string.IsNullOrWhiteSpace(expandedTarget) || !System.IO.Path.IsPathRooted(expandedTarget))
+					{
+						if (!quiet) Console.Error.WriteLine("Error: -mode move requires an absolute -moveto <dir>");
+						Environment.ExitCode = 1;
+						return;
+					}
+				}
+
 				var prof = new RedProfile
 				{
 					Name = saveProfileName,

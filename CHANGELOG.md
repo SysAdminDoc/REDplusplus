@@ -17,6 +17,7 @@
 - Add **Import saved dry-run results...** to the modern WPF shell's Extras menu: load a saved `.json`/`.ndjson`/`.csv`/`.txt` dry-run and review the records in the results list (review/export only; re-scan to delete, and the engine re-checks every directory before acting). Review of saved runs no longer requires `-classic`.
 
 ### CLI
+- Validate `-saveprofile` options before writing: an unknown `-mode`, or `-mode move` without an absolute `-moveto`, is now rejected with exit code 1 instead of silently saving a profile that fails every later `-profile` run. Profile names are trimmed and rejected if they exceed 128 characters or contain control characters (which would corrupt the `-listprofiles` output).
 - Add saved profiles: `-saveprofile <name>` stores the current options (paths, mode, empty-files, age/depth, gitignore/MFT/hidden/system toggles) as a named profile; `-profile <name>` runs it (command-line options still override); `-listprofiles` lists them. A scheduled task can now reference `-profile nightly` instead of a long argument list. Profiles live in a dedicated `RED+.profiles.json`, separate from the XML config.
 - Headless runs now print a "Run complete" summary line with total empty directories, empty files, deleted, failed, and wall-clock duration. The `-json` `meta` record (now schema 3) carries the same totals plus `elapsedMs`. (The modern GUI already shows the current directory being scanned in its status strip.)
 
@@ -30,6 +31,8 @@
 - Clamp the C-style (`SpecialFormatters`) printf width and precision to a bounded ceiling so a crafted format such as `%9999999d` can no longer drive a multi-megabyte allocation (memory-amplification DoS for callers that opt into the format callback).
 - Guard `Translator.RegisterTranslationsByCulture` against a malformed caller-supplied search pattern: a bad `string.Format` pattern is now skipped instead of throwing an uncaught `FormatException`.
 - Stop truncating the live run log when rotation cannot move it (e.g. the log is held open). The existing log is now preserved and appended to, keeping it intact as a forensic/undo aid.
+- Restore a default sub-object after loading a config whose child element was explicitly nil'd (e.g. a hand-edited `<Options xsi:nil="true"/>`), which would otherwise NullReference inside the dirty-state check — including in the load's `finally`, crashing a headless run with a non-deterministic exit code.
+- Run the scanned paths through the same bidi/zero-width/control-character sanitizer before writing the `-eventlog` summary, so a crafted folder name cannot reorder or corrupt the Windows Event Viewer entry.
 - Make the MFT/USN turbo scanner fail closed on an incomplete enumeration. The volume walk now treats any termination other than the EOF sentinel as truncated, and rejects a result set in which a directory referenced as a parent is missing its own record (the signature of a dropped USN record). In either case the scan falls back to the standard recursive walker instead of risking a non-empty directory being reported empty because its children were dropped.
 
 ### Developer / CI
