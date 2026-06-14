@@ -305,7 +305,17 @@ namespace SecondLanguage
 			List<Translation> translations = new List<Translation>();
 			foreach (string cultureName in CultureNamesFromCultureName(culture, specificCultureOnly))
 			{
-				string formattedSearchPattern = string.Format(searchPattern, cultureName);
+				string formattedSearchPattern;
+				try
+				{
+					formattedSearchPattern = string.Format(searchPattern, cultureName);
+				}
+				catch (FormatException)
+				{
+					// A malformed caller-supplied pattern (e.g. a stray '{') must not
+					// abort registration — skip it rather than throw.
+					continue;
+				}
 				translations.AddRange(RegisterTranslationsBySearchPattern(formattedSearchPattern, rootDirectory));
 			}
 			return translations.ToArray();

@@ -37,6 +37,13 @@ namespace SecondLanguage
 	/// </summary>
 	public static class SpecialFormatters
 	{
+		// The width/precision regex groups accept up to 7 digits, so a crafted
+		// format such as "%9999999d" would otherwise allocate a ~10 MB padding
+		// string (or format a float with millions of decimals) — a memory-
+		// amplification DoS for callers that opt into this format callback.
+		// Clamp both to a generous-but-bounded ceiling.
+		private const int MaxFieldWidth = 8192;
+
 		// See http://en.wikipedia.org/wiki/Printf#Format_placeholders for what can go here.
 		// I haven't yet coded support for all of these yet, but matching them is a start, and really,
 		// %s and %d covers 99% of uses.
@@ -89,9 +96,12 @@ namespace SecondLanguage
 
 				int width = 0;
 				if (widthString != "") { width = widthString == "*" ? getArg() as int? ?? 0 : int.Parse(widthString); }
+				if (width > MaxFieldWidth) { width = MaxFieldWidth; }
+				else if (width < -MaxFieldWidth) { width = -MaxFieldWidth; }
 
 				int? precision = null;
 				if (precisionString != "") { precision = precisionString == "*" ? getArg() as int? : int.Parse(precisionString); }
+				if (precision > MaxFieldWidth) { precision = MaxFieldWidth; }
 
 				object value = getArg() ?? "";
 				string s = value.ToString() ?? "";
