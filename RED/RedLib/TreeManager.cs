@@ -31,6 +31,20 @@ namespace RED
 		public static Color ColorProtected { get { return RED.UI.DarkTheme.Protected; } }
 		public static Color ColortoBeDeleted { get { return RED.UI.DarkTheme.Eligible; } }
 
+		/// <summary>
+		/// True when a node's status icon marks it as an eligible deletion candidate.
+		/// This is the single source of truth for "to be deleted" — derived from the
+		/// stable image key, never from the theme-dependent ForeColor, so a restyle
+		/// cannot change which nodes are eligible (or exported).
+		/// </summary>
+		internal static bool IsEligibleImageKey(string imageKey)
+		{
+			string key = imageKey ?? string.Empty;
+			return key.StartsWith("folder", StringComparison.OrdinalIgnoreCase)
+				&& key != "folder_warning"
+				&& key != "folder_never_empty";
+		}
+
 		private TreeView treeView = null;
 		private TreeNode rootNode = null;
 		private string rootPath = string.Empty;
@@ -188,9 +202,7 @@ namespace RED
 			{
 				node.ForeColor = ColorProtected;
 			}
-			else if (key.StartsWith("folder", StringComparison.OrdinalIgnoreCase)
-				&& key != "folder_warning"
-				&& key != "folder_never_empty")
+			else if (IsEligibleImageKey(key))
 			{
 				node.ForeColor = ColortoBeDeleted;
 			}
@@ -550,7 +562,19 @@ namespace RED
 
 		internal void UnprotectSelected()
 		{
-			unprotectNode(treeView.SelectedNode);
+			TreeNode node = treeView.SelectedNode;
+			if (node == null)
+			{
+				return;
+			}
+
+			TreeNode parent = node.Parent;
+			unprotectNode(node);
+
+			// Symmetry: ProtectNode walks UP and protects ancestors, so unprotect must
+			// release any ancestor that no longer has a protected descendant — otherwise
+			// ancestors stay visually (and on the protected list) protected forever.
+			releaseOrphanedAncestors(parent);
 		}
 
 		private void unprotectNode(TreeNode node)
@@ -559,24 +583,12 @@ namespace RED
 			// child) must be skipped rather than throwing while walking the tree.
 			if (node?.Tag is DirectoryInfo directory)
 			{
-				if (!this.nodePropsBackup.ContainsKey(directory.FullName))
+				if (restoreProtectedNodeVisual(node, directory))
 				{
-					// TODO: What to do when this info is missing, show error?
-					return;
-				}
-
-				// Restore props from backup values
-				string[] propList = ((string)this.nodePropsBackup[directory.FullName]).Split('|');
-
-				this.nodePropsBackup.Remove(directory.FullName);
-
-				node.ImageKey = propList[0];
-				node.SelectedImageKey = propList[0];
-				node.ForeColor = Color.FromArgb(Int32.Parse(propList[1]));
-
-				if (OnProtectionStatusChanged != null)
-				{
-					OnProtectionStatusChanged(this, new ProtectionStatusChangedEventArgs(directory.FullName, false));
+					if (OnProtectionStatusChanged != null)
+					{
+						OnProtectionStatusChanged(this, new ProtectionStatusChangedEventArgs(directory.FullName, false));
+					}
 				}
 
 				// Unprotect all subnodes
@@ -585,6 +597,64 @@ namespace RED
 					this.unprotectNode(subNode);
 				}
 			}
+		}
+
+		/// <summary>
+		/// Restores a node's pre-protection icon/colour and strips the "[Protected]"
+		/// label ProtectNode appended. Returns false when the node was not protected.
+		/// </summary>
+		private bool restoreProtectedNodeVisual(TreeNode node, DirectoryInfo directory)
+		{
+			if (node == null || directory == null || !this.nodePropsBackup.ContainsKey(directory.FullName))
+			{
+				return false;
+			}
+
+			string[] propList = ((string)this.nodePropsBackup[directory.FullName]).Split('|');
+			this.nodePropsBackup.Remove(directory.FullName);
+
+			node.ImageKey = propList[0];
+			node.SelectedImageKey = propList[0];
+			node.ForeColor = Color.FromArgb(Int32.Parse(propList[1]));
+
+			string protectedLabel = "  [" + TXT.Translate("Protected") + "]";
+			if (node.Text.EndsWith(protectedLabel, StringComparison.Ordinal))
+			{
+				node.Text = node.Text.Substring(0, node.Text.Length - protectedLabel.Length);
+			}
+
+			return true;
+		}
+
+		private void releaseOrphanedAncestors(TreeNode node)
+		{
+			// ProtectNode stops walking up at the root node, so mirror that boundary.
+			while (node != null && node != rootNode)
+			{
+				if (node.Tag is DirectoryInfo dir
+					&& this.nodePropsBackup.ContainsKey(dir.FullName)
+					&& !HasProtectedDescendant(dir.FullName))
+				{
+					if (restoreProtectedNodeVisual(node, dir) && OnProtectionStatusChanged != null)
+					{
+						OnProtectionStatusChanged(this, new ProtectionStatusChangedEventArgs(dir.FullName, false));
+					}
+				}
+				node = node.Parent;
+			}
+		}
+
+		private bool HasProtectedDescendant(string ancestorFullName)
+		{
+			string prefix = ancestorFullName.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+			foreach (string key in this.nodePropsBackup.Keys)
+			{
+				if (key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+				{
+					return true;
+				}
+			}
+			return false;
 		}
 
 		private void ProtectNode(TreeNode node)

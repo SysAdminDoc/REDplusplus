@@ -146,11 +146,23 @@ namespace RED.Match
 			return IsOnList(nameToCheck, pathToCheck, filesize, ignoreEmptyFiles, out delPattern);
 		}
 
+		private static string NormalizeSeparators(string s)
+		{
+			// Windows treats '/' and '\' as path separators and neither is a legal
+			// filename character, so a directory filter written with '/' (e.g.
+			// "temp/cache") must match the same as "temp\cache". Canonicalize to '\'.
+			return string.IsNullOrEmpty(s) ? s : s.Replace('/', '\\');
+		}
+
 		private string GetCheckText(string matchText, string nameToCheck, string pathToCheck)
 		{
 			if (FilterType == RedMatchFilterType.Directory)
 			{
-				return matchText.Contains(Path.DirectorySeparatorChar.ToString()) ? pathToCheck : nameToCheck;
+				// A pattern containing either separator is a path pattern; compare it
+				// against the full path. Previously only '\' was recognized, so a rule
+				// written with '/' silently degraded to name-only matching and never fired.
+				bool looksLikePath = matchText.IndexOf('\\') >= 0 || matchText.IndexOf('/') >= 0;
+				return looksLikePath ? pathToCheck : nameToCheck;
 			}
 			else
 			{
@@ -183,16 +195,16 @@ namespace RED.Match
 						hit = (nameToCheck == matchItem.MatchTextToCompare);
 						break;
 					case RedMatchMethodType.Contains:
-						textToCheck = GetCheckText(matchItem.MatchTextToCompare, nameToCheck, pathToCheck);
-						hit = textToCheck.Contains(matchItem.MatchTextToCompare);
+						textToCheck = NormalizeSeparators(GetCheckText(matchItem.MatchTextToCompare, nameToCheck, pathToCheck));
+						hit = textToCheck.Contains(NormalizeSeparators(matchItem.MatchTextToCompare));
 						break;
 					case RedMatchMethodType.Endswith:
-						textToCheck = GetCheckText(matchItem.MatchTextToCompare, nameToCheck, pathToCheck);
-						hit = textToCheck.EndsWith(matchItem.MatchTextToCompare);
+						textToCheck = NormalizeSeparators(GetCheckText(matchItem.MatchTextToCompare, nameToCheck, pathToCheck));
+						hit = textToCheck.EndsWith(NormalizeSeparators(matchItem.MatchTextToCompare));
 						break;
 					case RedMatchMethodType.Startwith:
-						textToCheck = GetCheckText(matchItem.MatchTextToCompare, nameToCheck, pathToCheck);
-						hit = textToCheck.StartsWith(matchItem.MatchTextToCompare);
+						textToCheck = NormalizeSeparators(GetCheckText(matchItem.MatchTextToCompare, nameToCheck, pathToCheck));
+						hit = textToCheck.StartsWith(NormalizeSeparators(matchItem.MatchTextToCompare));
 						break;
 					case RedMatchMethodType.RegExName:
 						hit = RedMatchItem.SafeIsMatch(matchItem.RegEx, nameToCheck);
@@ -203,7 +215,7 @@ namespace RED.Match
 						break;
 					case RedMatchMethodType.NameExactWithPath:
 						if (FilterType == RedMatchFilterType.Directory)
-							hit = (pathToCheck == matchItem.MatchTextToCompare);
+							hit = (NormalizeSeparators(pathToCheck) == NormalizeSeparators(matchItem.MatchTextToCompare));
 						break;
 				}
 
