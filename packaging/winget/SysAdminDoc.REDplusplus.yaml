@@ -10,7 +10,7 @@ InstallerType: zip
 Commands:
   - red++
 Installers:
-  - Architecture: x86
+  - Architecture: x64
     InstallerUrl: https://github.com/SysAdminDoc/REDplusplus/releases/download/v1.5.18/RED++_v1.5.18.zip
     InstallerSha256:
     NestedInstallerType: portable
