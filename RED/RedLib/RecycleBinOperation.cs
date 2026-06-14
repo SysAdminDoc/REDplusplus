@@ -211,8 +211,18 @@ namespace RED
 					foreach (string path in paths)
 					{
 						IShellItem item = SHCreateItemFromParsingName(path, IntPtr.Zero, ref IID_IShellItem);
-						fileOp.DeleteItem(item, null);
-						queued++;
+						try
+						{
+							fileOp.DeleteItem(item, null);
+							queued++;
+						}
+						finally
+						{
+							// DeleteItem AddRefs the item internally, so releasing our
+							// reference now keeps the batch from accumulating live shell
+							// RCWs across hundreds/thousands of queued directories.
+							Marshal.ReleaseComObject(item);
+						}
 					}
 
 					if (queued > 0)

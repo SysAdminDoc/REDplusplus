@@ -494,6 +494,18 @@ namespace RED
                 }
                 catch (IOException)
                 {
+                    // Re-verify emptiness first: the catch also fires for transient IO
+                    // errors, and content could have appeared since the pre-move check
+                    // (TOCTOU). Never recursively delete an unverified subtree.
+                    var refreshed = FastDirectoryEnumerator.GetFilesAndDirectories(new DirectoryInfo(path));
+                    if (refreshed.Files.Length > 0)
+                    {
+                        throw new Exception(TXT.Translate("Aborted move of the directory because it is no longer empty: {0}", RedAssist.DQuote(path)));
+                    }
+                    if (refreshed.Directories.Length > 0)
+                    {
+                        VerifySubtreeHasNoFiles(path);
+                    }
                     // Directory.Move cannot cross volumes — replicate, then remove the source
                     CopyDirectoryRecursive(path, destPath);
                     Directory.Delete(path, true);
