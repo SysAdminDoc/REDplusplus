@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.17 (2026-06-13)
+
+### Branding
+- Replace the legacy project icon resource with the new RED++ folder/search/check logo across the executable, WPF title bar, WinForms fallback, dialogs, and bundled help navigation.
+- Add the new RED++ banner artwork as a tracked README/help asset so the project page uses repo-owned branding instead of a hosted mockup image.
+
 ## 1.5.16 (2026-06-13)
 
 ### Modern UI
