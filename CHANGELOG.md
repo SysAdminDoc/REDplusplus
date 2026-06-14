@@ -2,11 +2,17 @@
 
 ## Unreleased
 
+### Documentation
+- Drop the advertised "Enter to scan, Del to delete selected" keyboard shortcuts from the feature list: the default modern WPF shell is click-only by design, matching the project's no-keyboard-shortcuts convention.
+
 ### Modern UI
 - Add **Restore deletion** to the modern WPF shell's Extras menu: pick any kept undo manifest (newest first, with timestamp, mode, and item count) and restore it on a background thread with live status. Recovery no longer requires `-classic`.
 - Add **Import saved dry-run results...** to the modern WPF shell's Extras menu: load a saved `.json`/`.ndjson`/`.csv`/`.txt` dry-run and review the records in the results list (review/export only; re-scan to delete, and the engine re-checks every directory before acting). Review of saved runs no longer requires `-classic`.
 
 ### Security & data safety
+- Clamp the C-style (`SpecialFormatters`) printf width and precision to a bounded ceiling so a crafted format such as `%9999999d` can no longer drive a multi-megabyte allocation (memory-amplification DoS for callers that opt into the format callback).
+- Guard `Translator.RegisterTranslationsByCulture` against a malformed caller-supplied search pattern: a bad `string.Format` pattern is now skipped instead of throwing an uncaught `FormatException`.
+- Stop truncating the live run log when rotation cannot move it (e.g. the log is held open). The existing log is now preserved and appended to, keeping it intact as a forensic/undo aid.
 - Make the MFT/USN turbo scanner fail closed on an incomplete enumeration. The volume walk now treats any termination other than the EOF sentinel as truncated, and rejects a result set in which a directory referenced as a parent is missing its own record (the signature of a dropped USN record). In either case the scan falls back to the standard recursive walker instead of risking a non-empty directory being reported empty because its children were dropped.
 
 ### Developer / CI
