@@ -142,7 +142,18 @@ namespace RED
 							if (!uint.TryParse(args[++i], out parsedMinAge))
 								parseError = "Error: -minage requires a non-negative whole number of hours";
 							else
+							{
+								// Guard against an implausibly large age that would silently
+								// disable the run (no directory is ever "old enough"). Clamp to
+								// 100 years and tell the user instead of failing quietly.
+								const uint MaxMinAgeHours = 24u * 365u * 100u;
+								if (parsedMinAge > MaxMinAgeHours)
+								{
+									Console.Error.WriteLine("Warning: -minage " + parsedMinAge + " hours is implausibly large and would disable the run; clamping to " + MaxMinAgeHours + " (100 years).");
+									parsedMinAge = MaxMinAgeHours;
+								}
 								minAgeOverride = parsedMinAge;
+							}
 						}
 						break;
 					case "-maxdepth":
@@ -157,7 +168,18 @@ namespace RED
 							if (!int.TryParse(args[++i], out parsedMaxDepth) || parsedMaxDepth < -1)
 								parseError = "Error: -maxdepth requires -1 or a positive whole number";
 							else
+							{
+								// -1 means infinite. Clamp any finite value to a sane ceiling
+								// (far beyond any real directory tree) so a typo'd huge depth
+								// cannot drive pathological recursion bookkeeping.
+								const int MaxScanDepth = 4096;
+								if (parsedMaxDepth > MaxScanDepth)
+								{
+									Console.Error.WriteLine("Warning: -maxdepth " + parsedMaxDepth + " exceeds the supported maximum; clamping to " + MaxScanDepth + ".");
+									parsedMaxDepth = MaxScanDepth;
+								}
 								maxDepthOverride = parsedMaxDepth;
+							}
 						}
 						break;
 					case "-gitignore":
