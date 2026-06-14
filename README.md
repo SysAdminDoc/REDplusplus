@@ -6,7 +6,8 @@
 
 **Fast, portable empty-directory scanner and cleaner for Windows** — GUI + headless CLI, filter rules, MFT turbo scan, one-click undo, network/UNC support, and zero installation required.
 
-![screenshot](help/img/screen-M02.png)
+<img width="1586" height="992" alt="Generated image 1 (7)" src="https://github.com/user-attachments/assets/4ec3a54b-6752-4777-9321-5b4c9be91a77" />
+
 
 ### Quick Start
 
