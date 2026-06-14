@@ -867,7 +867,8 @@ namespace RED.UI.Wpf
             var group = Frame("About");
             var stack = new StackPanel { Margin = new Thickness(28) };
             SetFrameContent(group, stack);
-            FileVersionInfo vi = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location);
+            // Environment.ProcessPath (apphost exe) is single-file safe; Assembly.Location is empty in a bundle.
+            FileVersionInfo vi = FileVersionInfo.GetVersionInfo(Environment.ProcessPath);
             stack.Children.Add(Label("RED++", 28, Text, FontWeights.SemiBold, new Thickness(0, 0, 0, 8)));
             stack.Children.Add(Label("Remove Empty Directories+ v" + vi.FileVersion, 18, Muted, FontWeights.Normal, new Thickness(0, 0, 0, 18)));
             stack.Children.Add(Label("Modern WPF shell using the existing RED++ scanner and deletion engine.", 16, Muted, FontWeights.Normal, new Thickness(0, 0, 0, 18)));

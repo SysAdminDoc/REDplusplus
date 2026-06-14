@@ -1,14 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net481</TargetFramework>
-    <LangVersion>9.0</LangVersion>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <!-- The engine assembly references WPF + WinForms; the test host must load the
+         Windows Desktop runtime to resolve those types when exercising internals. -->
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <AssemblyName>RED.Tests</AssemblyName>
     <RootNamespace>RED.Tests</RootNamespace>
-    <!-- The engine assembly is the WinExe; no entry point needed here. -->
-    <GenerateProgramFile>true</GenerateProgramFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,15 +22,11 @@
     </PackageReference>
   </ItemGroup>
 
-  <!-- Reference the compiled engine assembly directly. CI builds RED+.exe with
-       MSBuild first, then runs `dotnet test`; this keeps the verified engine
-       build authoritative and avoids rebuilding the WinForms/WPF resources
-       under the dotnet SDK. Internals are exposed via InternalsVisibleTo. -->
+  <!-- Reference the engine project directly now that both are SDK-style and on the
+       same TFM family. Internals are exposed via InternalsVisibleTo("RED.Tests")
+       in RED\Properties\AssemblyInfo.cs. -->
   <ItemGroup>
-    <Reference Include="RED+">
-      <HintPath>..\bin\Release\RED+.exe</HintPath>
-      <Private>true</Private>
-    </Reference>
+    <ProjectReference Include="..\RED\RED+.csproj" />
   </ItemGroup>
 
 </Project>
