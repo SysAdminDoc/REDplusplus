@@ -1520,11 +1520,150 @@ namespace RED.UI.Wpf
             };
 
             bool hasResults = results.Count > 0;
+
+            menu.Items.Add(BuildRestoreMenu());
+            menu.Items.Add(ExtrasMenuItem("Import saved dry-run results...", true, (s, e) => ImportDryRunResults()));
+            menu.Items.Add(new Separator());
             menu.Items.Add(ExtrasMenuItem("View log", true, (s, e) => ShowLog()));
             menu.Items.Add(new Separator());
             menu.Items.Add(ExtrasMenuItem("Export results to file...", hasResults, (s, e) => ExportResultsToFile()));
             menu.Items.Add(ExtrasMenuItem("Copy results to clipboard", hasResults, (s, e) => ExportResultsToClipboard()));
             menu.IsOpen = true;
+        }
+
+        // "Restore deletion" submenu: one entry per kept undo manifest (newest
+        // first), disabled when there is nothing to restore. Mirrors the classic
+        // shell so the recovery workflow no longer requires -classic.
+        private MenuItem BuildRestoreMenu()
+        {
+            List<UndoManager.ManifestInfo> manifests;
+            try { manifests = UndoManager.ListManifests(); }
+            catch { manifests = new List<UndoManager.ManifestInfo>(); }
+
+            var parent = new MenuItem
+            {
+                Header = "Restore deletion",
+                IsEnabled = manifests.Count > 0,
+                Foreground = Text,
+                Background = Panel2,
+                Padding = new Thickness(14, 8, 18, 8)
+            };
+            SetAutomation(parent, "Restore deletion", "Restore directories and empty files from a previous deletion run.");
+
+            foreach (UndoManager.ManifestInfo info in manifests)
+            {
+                string label = string.Format("{0}  ({1}, {2} item{3})",
+                    info.Timestamp.ToString("g"), info.DeleteMode, info.EntryCount,
+                    info.EntryCount == 1 ? "" : "s");
+                string path = info.FilePath;
+                var item = new MenuItem
+                {
+                    Header = label,
+                    Foreground = Text,
+                    Background = Panel2,
+                    Padding = new Thickness(14, 8, 18, 8)
+                };
+                SetAutomation(item, "Restore deletion from " + info.Timestamp.ToString("g"));
+                item.Click += (s, e) => RestoreFromManifest(path);
+                parent.Items.Add(item);
+            }
+            return parent;
+        }
+
+        private void RestoreFromManifest(string manifestPath)
+        {
+            UpdateUiState(true);
+            progressBar.IsIndeterminate = true;
+            detailStatusText.Text = "Restoring deleted items...";
+
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                int restored = 0, failed = 0;
+                Exception error = null;
+                try
+                {
+                    UndoManager.Restore(manifestPath, out restored, out failed,
+                        msg => Dispatcher.Invoke(() => detailStatusText.Text = msg));
+                }
+                catch (Exception ex) { error = ex; }
+
+                Dispatcher.Invoke(() =>
+                {
+                    UpdateUiState(false);
+                    progressBar.IsIndeterminate = false;
+                    if (error != null)
+                    {
+                        detailStatusText.Text = "Restore failed.";
+                        WpfMessageBox.Show(this, "RED++ could not restore the selected run.\n\n" + error.Message,
+                            "Restore failed", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+                    detailStatusText.Text = failed == 0
+                        ? string.Format("Restored {0} item{1}.", restored, restored == 1 ? "" : "s")
+                        : string.Format("Restored {0}, failed {1}. See the log for details.", restored, failed);
+                });
+            });
+        }
+
+        private void ImportDryRunResults()
+        {
+            string fileName;
+            using (var dlg = new Forms.OpenFileDialog())
+            {
+                dlg.Title = "Import Saved Dry-Run Results";
+                dlg.Filter = "Dry-run results (*.json;*.ndjson;*.csv;*.txt)|*.json;*.ndjson;*.csv;*.txt|All files (*.*)|*.*";
+                if (dlg.ShowDialog() != Forms.DialogResult.OK) { return; }
+                fileName = dlg.FileName;
+            }
+
+            RED.Helper.RedImportedScanResults imported;
+            try
+            {
+                imported = RED.Helper.RedImportScanResults.ReadFile(fileName);
+            }
+            catch (Exception ex)
+            {
+                WpfMessageBox.Show(this, "RED++ could not read that file.\n\n" + ex.Message,
+                    "Import failed", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (imported == null || imported.ReviewCount == 0)
+            {
+                detailStatusText.Text = "No reviewable records found in that file.";
+                return;
+            }
+
+            // Imported records are for review/export only in the modern shell: load
+            // them into the results list. Eligible (Empty) rows show as Eligible;
+            // everything else shows as Kept. Re-scan to delete (the engine re-checks
+            // every directory before acting regardless).
+            results.Clear();
+            rowsByPath.Clear();
+            core = null;
+            runData = null;
+
+            if (selectedTab != "Search")
+            {
+                selectedTab = "Search";
+                RenderSelectedTab();
+            }
+
+            int eligible = 0;
+            foreach (RED.Helper.RedImportedScanRoot root in imported.Roots)
+            {
+                foreach (RedScanResultItem item in root.Results)
+                {
+                    AddOrUpdateResult(item);
+                    if (item.SearchStatus == DirectorySearchStatusTypes.Empty) { eligible++; }
+                }
+            }
+
+            RefreshResultsVisibility();
+            detailStatusText.Text = string.Format(
+                "Imported {0} record{1} from {2}. {3} eligible. Re-scan the folder to delete.",
+                imported.ReviewCount, imported.ReviewCount == 1 ? "" : "s",
+                Path.GetFileName(fileName), eligible);
         }
 
         private MenuItem ExtrasMenuItem(string label, bool enabled, RoutedEventHandler click)
