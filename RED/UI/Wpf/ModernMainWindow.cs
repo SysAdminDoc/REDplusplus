@@ -75,9 +75,9 @@ namespace RED.UI.Wpf
         private bool appliedPhysicalStartupBounds;
 
         private const double DefaultWindowWidth = 1180d;
-        private const double DefaultWindowHeight = 760d;
+        private const double DefaultWindowHeight = 820d;
         private const double PreferredMinWidth = 1020d;
-        private const double PreferredMinHeight = 640d;
+        private const double PreferredMinHeight = 660d;
 
         private static readonly Brush Bg = BrushFrom("#0b1420");
         private static readonly Brush Bg2 = BrushFrom("#101b2a");
@@ -93,6 +93,23 @@ namespace RED.UI.Wpf
         private static readonly Brush Red = BrushFrom("#dc3548");
         private static readonly Brush Green = BrushFrom("#67d16f");
         private static readonly Brush Pink = BrushFrom("#f17aa5");
+        private static readonly Geometry IconSearch = Glyph("M17,8 A9,9 0 1 1 17,26 A9,9 0 1 1 17,8 M24,24 L32,32");
+        private static readonly Geometry IconSettings = Glyph("M18,5 L20.6,9.7 L26,10.8 L22.4,15 L24.1,20.3 L18.8,19 L15.2,23.2 L12.6,18.5 L7.2,17.4 L10.8,13.2 L9.1,7.9 L14.4,9.2 Z M18,13 A5,5 0 1 1 17.9,13");
+        private static readonly Geometry IconFilter = Glyph("M7,7 L31,7 L22,18 L22,29 L16,32 L16,18 Z");
+        private static readonly Geometry IconInfo = Glyph("M18,5 A13,13 0 1 1 17.9,5 M18,16 L18,27 M18,11 L18,11");
+        private static readonly Geometry IconTrash = Glyph("M10,11 L26,11 M13,11 L13,29 L23,29 L23,11 M15,7 L21,7 M16,15 L16,25 M20,15 L20,25");
+        private static readonly Geometry IconCancel = Glyph("M10,10 L28,28 M28,10 L10,28");
+        private static readonly Geometry IconFolder = Glyph("M7,14 L15,14 L18,17 L33,17 L33,30 L7,30 Z");
+        private static readonly Geometry IconHome = Glyph("M7,19 L20,8 L33,19 M12,18 L12,31 L28,31 L28,18 M17,31 L17,24 L23,24 L23,31");
+        private static readonly Geometry IconHidden = Glyph("M8,12 L32,12 L32,29 L8,29 Z");
+        private static readonly Geometry IconLock = Glyph("M12,17 L28,17 L28,31 L12,31 Z M16,17 L16,13 A4,4 0 0 1 24,13 L24,17 M20,22 L20,26");
+        private static readonly Geometry IconNeverEmpty = Glyph("M7,14 L15,14 L18,17 L33,17 L33,30 L7,30 Z M16,23 L24,23");
+        private static readonly Geometry IconWarning = Glyph("M20,7 L33,31 L7,31 Z M20,15 L20,23 M20,27 L20,27");
+        private static readonly Geometry IconShield = Glyph("M20,6 L31,11 L28,27 L20,33 L12,27 L9,11 Z M15,20 L19,24 L26,15");
+        private static readonly Geometry IconCheck = Glyph("M8,22 L16,30 L32,10");
+        private static readonly Geometry IconMinimize = Glyph("M10,20 L28,20");
+        private static readonly Geometry IconMaximize = Glyph("M11,11 L27,11 L27,27 L11,27 Z");
+        private static readonly Geometry IconClose = Glyph("M11,11 L27,27 M27,11 L11,27");
 
         public ModernMainWindow(string startPath, bool shouldAutoSearch)
         {
@@ -160,8 +177,8 @@ namespace RED.UI.Wpf
             rootGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(52) });
             rootGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(58) });
             rootGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-            rootGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(86) });
-            rootGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(40) });
+            rootGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(76) });
+            rootGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(34) });
             Content = rootGrid;
 
             BuildTitleBar();
@@ -249,13 +266,13 @@ namespace RED.UI.Wpf
             double scaleY;
             GetDpiScale(out scaleX, out scaleY);
 
-            double availablePhysicalWidth = Math.Max(640d, (SystemParameters.WorkArea.Width * scaleX) - 40d);
-            double availablePhysicalHeight = Math.Max(480d, (SystemParameters.WorkArea.Height * scaleY) - 40d);
+            double availableWidth = Math.Max(640d, SystemParameters.WorkArea.Width - (40d / scaleX));
+            double availableHeight = Math.Max(480d, SystemParameters.WorkArea.Height - (40d / scaleY));
 
-            MinWidth = Math.Min(PreferredMinWidth, availablePhysicalWidth) / scaleX;
-            MinHeight = Math.Min(PreferredMinHeight, availablePhysicalHeight) / scaleY;
-            Width = Math.Max(MinWidth, Math.Min(DefaultWindowWidth, availablePhysicalWidth) / scaleX);
-            Height = Math.Max(MinHeight, Math.Min(DefaultWindowHeight, availablePhysicalHeight) / scaleY);
+            MinWidth = Math.Min(PreferredMinWidth, availableWidth);
+            MinHeight = Math.Min(PreferredMinHeight, availableHeight);
+            Width = Math.Max(MinWidth, Math.Min(DefaultWindowWidth, availableWidth));
+            Height = Math.Max(MinHeight, Math.Min(DefaultWindowHeight, availableHeight));
             appliedPhysicalStartupBounds = true;
         }
 
@@ -378,26 +395,26 @@ namespace RED.UI.Wpf
 
             var chrome = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             Grid.SetColumn(chrome, 2);
-            chrome.Children.Add(ChromeButton("−", (s, e) => WindowState = WindowState.Minimized));
-            chrome.Children.Add(ChromeButton("□", (s, e) => ToggleMaximize()));
-            chrome.Children.Add(ChromeButton("×", (s, e) => Close()));
+            chrome.Children.Add(ChromeButton(IconMinimize, "Minimize", (s, e) => WindowState = WindowState.Minimized));
+            chrome.Children.Add(ChromeButton(IconMaximize, "Maximize or restore", (s, e) => ToggleMaximize()));
+            chrome.Children.Add(ChromeButton(IconClose, "Close", (s, e) => Close()));
             grid.Children.Add(chrome);
         }
 
-        private WpfButton ChromeButton(string text, RoutedEventHandler click)
+        private WpfButton ChromeButton(Geometry icon, string name, RoutedEventHandler click)
         {
             var button = new WpfButton
             {
-                Content = text,
+                Content = IconPath(icon, Text, 18, 2.3),
                 Width = 66,
                 Height = 50,
                 Background = Brushes.Transparent,
                 BorderBrush = Brushes.Transparent,
                 Foreground = Text,
-                FontSize = 22,
                 Padding = new Thickness(0),
                 Cursor = Cursors.Hand
             };
+            SetAutomation(button, name);
             button.Click += click;
             return button;
         }
@@ -415,10 +432,10 @@ namespace RED.UI.Wpf
 
             tabPanel = new StackPanel { Orientation = Orientation.Horizontal };
             nav.Child = tabPanel;
-            AddTab("Search", Geometry.Parse("M10,10 A8,8 0 1 1 22,22 M20,20 L30,30"));
-            AddTab("Settings", Geometry.Parse("M18,4 L20,10 L26,11 L22,16 L24,22 L18,20 L12,22 L14,16 L10,11 L16,10 Z M18,13 A5,5 0 1 1 17.9,13"));
-            AddTab("Filters", Geometry.Parse("M7,6 L31,6 L22,17 L22,29 L16,32 L16,17 Z"));
-            AddTab("About", Geometry.Parse("M18,5 A13,13 0 1 1 17.9,5 M18,16 L18,27 M18,11 L18,11"));
+            AddTab("Search", IconSearch);
+            AddTab("Settings", IconSettings);
+            AddTab("Filters", IconFilter);
+            AddTab("About", IconInfo);
         }
 
         private void AddTab(string name, Geometry icon)
@@ -438,17 +455,7 @@ namespace RED.UI.Wpf
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(58) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            var path = new System.Windows.Shapes.Path
-            {
-                Data = icon,
-                Stroke = Muted,
-                StrokeThickness = 2.4,
-                Stretch = Stretch.Uniform,
-                Width = 28,
-                Height = 28,
-                VerticalAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Center
-            };
+            var path = IconPath(icon, Muted, 28, 2.35);
             grid.Children.Add(path);
             var text = new TextBlock
             {
@@ -512,7 +519,7 @@ namespace RED.UI.Wpf
         private UIElement BuildSearchTab()
         {
             var group = Frame("Select Directory To Be Searched");
-            var grid = new Grid { Margin = new Thickness(20, 24, 20, 18) };
+            var grid = new Grid { Margin = new Thickness(16, 20, 16, 14) };
             SetFrameContent(group, grid);
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
@@ -530,20 +537,20 @@ namespace RED.UI.Wpf
             pathBox = new WpfTextBox
             {
                 Text = string.IsNullOrWhiteSpace(config.Volatile.LastUsedDirectory) ? @"C:\" : config.Volatile.LastUsedDirectory,
-                Height = 44,
-                FontSize = 18,
+                Height = 40,
+                FontSize = 17,
                 Foreground = Text,
                 Background = Bg,
                 BorderBrush = BorderStrong,
                 BorderThickness = new Thickness(1),
-                Padding = new Thickness(12, 8, 12, 8),
+                Padding = new Thickness(12, 7, 12, 7),
                 VerticalAlignment = VerticalAlignment.Top,
                 HorizontalAlignment = HorizontalAlignment.Stretch
             };
             SetAutomation(pathBox, "Folder to scan", "Enter or paste the root folder RED++ should scan.");
             pathRow.Children.Add(pathBox);
 
-            var browse = OutlineButton("Browse...", 156, 44);
+            var browse = OutlineButton("Browse...", 150, 40);
             SetAutomation(browse, "Browse for folder", "Choose the root folder RED++ should scan.");
             browse.HorizontalAlignment = HorizontalAlignment.Stretch;
             browse.VerticalAlignment = VerticalAlignment.Top;
@@ -556,7 +563,7 @@ namespace RED.UI.Wpf
                 Background = new LinearGradientBrush(ColorFrom("#0c1624"), ColorFrom("#142237"), 45),
                 BorderBrush = BorderStrong,
                 BorderThickness = new Thickness(1),
-                Margin = new Thickness(0, 20, 0, 0)
+                Margin = new Thickness(0, 14, 0, 0)
             };
             Grid.SetRow(resultSurface, 1);
             grid.Children.Add(resultSurface);
@@ -586,8 +593,8 @@ namespace RED.UI.Wpf
                 BorderThickness = new Thickness(1),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 VerticalAlignment = VerticalAlignment.Stretch,
-                Margin = new Thickness(0, 20, 0, 0),
-                Padding = new Thickness(20, 16, 20, 16)
+                Margin = new Thickness(0, 14, 0, 0),
+                Padding = new Thickness(14, 12, 14, 12)
             };
             var scroll = new ScrollViewer
             {
@@ -601,61 +608,46 @@ namespace RED.UI.Wpf
             {
                 Text = "Result Legend",
                 Foreground = Text,
-                FontSize = 18,
-                Margin = new Thickness(0, 0, 0, 16)
+                FontSize = 16,
+                Margin = new Thickness(0, 0, 0, 10)
             });
-            AddLegendRow(stack, Properties.Resources.x16_home, "Root");
-            AddLegendRow(stack, Properties.Resources.x16_folder, "Empty");
-            AddLegendRow(stack, Properties.Resources.x16_recyclebin1, "Contains 'Trash'");
-            AddLegendRow(stack, null, "Hidden", BrushFrom("#d6b323"));
-            AddLegendRow(stack, Properties.Resources.x16_protected, "Locked");
-            AddLegendRow(stack, Properties.Resources.x16_folder_ne, "Never Empty");
-            AddLegendRow(stack, Properties.Resources.x24_warning1, "Failed");
-            AddLegendRow(stack, Properties.Resources.x16_Shield1, "Protected");
-            AddLegendRow(stack, null, "Deleted", Green);
-            stack.Children.Add(new Border { Height = 1, Background = Border, Margin = new Thickness(0, 20, 0, 18) });
+            AddLegendRow(stack, IconHome, "Root", BrushFrom("#d7e6ff"));
+            AddLegendRow(stack, IconFolder, "Empty", BrushFrom("#f3c95f"));
+            AddLegendRow(stack, IconTrash, "Contains 'Trash'", BrushFrom("#79d59a"));
+            AddLegendRow(stack, IconHidden, "Hidden", BrushFrom("#d6b323"), new DoubleCollection(new[] { 3d, 3d }));
+            AddLegendRow(stack, IconLock, "Locked", BrushFrom("#d7b86a"));
+            AddLegendRow(stack, IconNeverEmpty, "Never Empty", BrushFrom("#f3c95f"));
+            AddLegendRow(stack, IconWarning, "Failed", BrushFrom("#ffca55"));
+            AddLegendRow(stack, IconShield, "Protected", BlueLight);
+            AddLegendRow(stack, IconCheck, "Deleted", Green);
+            stack.Children.Add(new Border { Height = 1, Background = Border, Margin = new Thickness(0, 8, 0, 9) });
             AddSwatch(stack, BrushFrom("#59677e"), "Will not be deleted");
             AddSwatch(stack, Red, "Will be deleted");
             AddSwatch(stack, Blue, "Protected");
             return outer;
         }
 
-        private void AddLegendRow(StackPanel stack, System.Drawing.Image image, string label, Brush outlineBrush = null)
+        private void AddLegendRow(StackPanel stack, Geometry icon, string label, Brush brush, DoubleCollection dash = null)
         {
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 11) };
-            if (image != null)
-            {
-                row.Children.Add(new WpfImage { Source = ToImageSource(image), Width = 22, Height = 22, Margin = new Thickness(0, 0, 14, 0) });
-            }
-            else
-            {
-                row.Children.Add(new Border
-                {
-                    Width = 22,
-                    Height = 18,
-                    Margin = new Thickness(0, 2, 14, 0),
-                    BorderBrush = outlineBrush ?? Border,
-                    BorderThickness = new Thickness(2),
-                    Background = Brushes.Transparent
-                });
-            }
-            row.Children.Add(new TextBlock { Text = label, Foreground = Muted, FontSize = 16, VerticalAlignment = VerticalAlignment.Center });
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 6) };
+            row.Children.Add(IconPath(icon, brush, 18, 2.05, dash, new Thickness(0, 0, 12, 0)));
+            row.Children.Add(new TextBlock { Text = label, Foreground = Muted, FontSize = 14, VerticalAlignment = VerticalAlignment.Center });
             stack.Children.Add(row);
         }
 
         private void AddSwatch(StackPanel stack, Brush brush, string label)
         {
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 13) };
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 7) };
             row.Children.Add(new Border
             {
-                Width = 22,
-                Height = 22,
+                Width = 18,
+                Height = 18,
                 Background = brush,
                 BorderBrush = BorderStrong,
                 BorderThickness = new Thickness(1),
-                Margin = new Thickness(0, 0, 14, 0)
+                Margin = new Thickness(0, 0, 12, 0)
             });
-            row.Children.Add(new TextBlock { Text = label, Foreground = Muted, FontSize = 16, VerticalAlignment = VerticalAlignment.Center });
+            row.Children.Add(new TextBlock { Text = label, Foreground = Muted, FontSize = 14, VerticalAlignment = VerticalAlignment.Center });
             stack.Children.Add(row);
         }
 
@@ -664,29 +656,17 @@ namespace RED.UI.Wpf
             var grid = new Grid();
             var center = new StackPanel
             {
-                Width = 420,
+                Width = 390,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
             };
             grid.Children.Add(center);
-            center.Children.Add(new System.Windows.Shapes.Path
-            {
-                Data = Geometry.Parse("M10,28 L10,76 L96,76 L96,24 L60,24 L50,12 L27,12 L18,28 Z"),
-                Stroke = Muted2,
-                StrokeThickness = 3.4,
-                StrokeDashArray = new DoubleCollection(new[] { 5d, 4d }),
-                Fill = Brushes.Transparent,
-                Width = 54,
-                Height = 44,
-                Stretch = Stretch.Fill,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Margin = new Thickness(0, 0, 0, 10)
-            });
+            center.Children.Add(IconPath(IconFolder, Muted2, 46, 2.5, new DoubleCollection(new[] { 5d, 4d }), new Thickness(0, 0, 0, 8)));
             center.Children.Add(new TextBlock
             {
                 Text = "Choose a folder to scan.",
                 Foreground = Text,
-                FontSize = 20,
+                FontSize = 18,
                 TextAlignment = TextAlignment.Center,
                 Margin = new Thickness(0, 0, 0, 8)
             });
@@ -694,14 +674,14 @@ namespace RED.UI.Wpf
             {
                 Text = "Review results before anything changes.",
                 Foreground = Muted,
-                FontSize = 15,
-                LineHeight = 20,
+                FontSize = 14,
+                LineHeight = 18,
                 TextAlignment = TextAlignment.Center,
-                Margin = new Thickness(0, 0, 0, 14)
+                Margin = new Thickness(0, 0, 0, 10)
             });
-            center.Children.Add(TrustRow(Geometry.Parse("M10,10 A8,8 0 1 1 22,22 M20,20 L30,30"), BlueLight, "Pick a root folder, then scan."));
-            center.Children.Add(TrustRow(Geometry.Parse("M16,2 L28,8 L25,24 L16,32 L7,24 L4,8 Z M10,16 L14,20 L23,11"), Green, "Review eligible results."));
-            center.Children.Add(TrustRow(Geometry.Parse("M10,11 L26,11 M13,11 L13,29 L23,29 L23,11 M15,7 L21,7 M16,15 L16,25 M20,15 L20,25"), Pink, "Confirm before changes."));
+            center.Children.Add(TrustRow(IconSearch, BlueLight, "Pick a root folder, then scan."));
+            center.Children.Add(TrustRow(IconShield, Green, "Review eligible results."));
+            center.Children.Add(TrustRow(IconTrash, Pink, "Confirm before changes."));
             return grid;
         }
 
@@ -711,18 +691,9 @@ namespace RED.UI.Wpf
             {
                 Orientation = Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Left,
-                Margin = new Thickness(76, 0, 0, 7)
+                Margin = new Thickness(58, 0, 0, 5)
             };
-            row.Children.Add(new System.Windows.Shapes.Path
-            {
-                Data = icon,
-                Stroke = brush,
-                StrokeThickness = 2.4,
-                Width = 18,
-                Height = 18,
-                Stretch = Stretch.Uniform,
-                Margin = new Thickness(0, 0, 12, 0)
-            });
+            row.Children.Add(IconPath(icon, brush, 16, 2.05, null, new Thickness(0, 0, 10, 0)));
             row.Children.Add(new TextBlock { Text = text, Foreground = Muted, FontSize = 14, VerticalAlignment = VerticalAlignment.Center });
             return row;
         }
@@ -886,7 +857,7 @@ namespace RED.UI.Wpf
             };
             Grid.SetRow(bar, 3);
             rootGrid.Children.Add(bar);
-            var grid = new Grid { Margin = new Thickness(20, 16, 20, 16) };
+            var grid = new Grid { Margin = new Thickness(20, 11, 20, 11) };
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             bar.Child = grid;
@@ -894,18 +865,18 @@ namespace RED.UI.Wpf
             var primaryActions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left };
             grid.Children.Add(primaryActions);
 
-            scanButton = ActionButton("Scan", Blue, Geometry.Parse("M10,10 A8,8 0 1 1 22,22 M20,20 L30,30"), 150);
+            scanButton = ActionButton("Scan", Blue, IconSearch, 150);
             SetAutomation(scanButton, "Scan", "Scan the selected folder for empty directories and empty files.");
             scanButton.Click += (s, e) => StartScan();
             primaryActions.Children.Add(scanButton);
 
-            deleteButton = ActionButton("Review & Delete", Red, Geometry.Parse("M10,11 L26,11 M13,11 L13,29 L23,29 L23,11 M15,7 L21,7 M16,15 L16,25 M20,15 L20,25"), 214);
+            deleteButton = ActionButton("Review & Delete", Red, IconTrash, 214);
             SetAutomation(deleteButton, "Review and delete", "Review eligible results and confirm before changing anything.");
             deleteButton.Margin = new Thickness(12, 0, 0, 0);
             deleteButton.Click += (s, e) => StartDelete();
             primaryActions.Children.Add(deleteButton);
 
-            cancelButton = ActionButton("Cancel", BrushFrom("#27334a"), Geometry.Parse("M9,9 L27,27 M27,9 L9,27"), 140);
+            cancelButton = ActionButton("Cancel", BrushFrom("#27334a"), IconCancel, 140);
             SetAutomation(cancelButton, "Cancel current operation", "Cancel the scan or deletion currently in progress.");
             cancelButton.Margin = new Thickness(12, 0, 0, 0);
             cancelButton.Click += (s, e) => core?.CancelCurrentProcess();
@@ -933,23 +904,14 @@ namespace RED.UI.Wpf
             var button = new WpfButton
             {
                 Width = width,
-                Height = 54,
+                Height = 52,
                 Background = background,
                 BorderBrush = BrushFrom("#6f86ad"),
                 BorderThickness = new Thickness(1),
                 Cursor = Cursors.Hand
             };
             var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-            row.Children.Add(new System.Windows.Shapes.Path
-            {
-                Data = icon,
-                Stroke = Text,
-                StrokeThickness = 2.6,
-                Width = 22,
-                Height = 22,
-                Stretch = Stretch.Uniform,
-                Margin = new Thickness(0, 0, 10, 0)
-            });
+            row.Children.Add(IconPath(icon, Text, 22, 2.45, null, new Thickness(0, 0, 10, 0)));
             row.Children.Add(new TextBlock { Text = text, Foreground = Text, FontSize = 16, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center });
             button.Content = row;
             return button;
@@ -974,21 +936,21 @@ namespace RED.UI.Wpf
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(280) });
             border.Child = grid;
 
-            readyText = new TextBlock { Text = "●  Ready", Foreground = Text, FontSize = 16, VerticalAlignment = VerticalAlignment.Center };
+            readyText = new TextBlock { Text = "●  Ready", Foreground = Text, FontSize = 15, VerticalAlignment = VerticalAlignment.Center };
             Grid.SetColumn(readyText, 0);
             grid.Children.Add(readyText);
-            itemCountText = new TextBlock { Text = "0 items", Foreground = Text, FontSize = 15, VerticalAlignment = VerticalAlignment.Center };
+            itemCountText = new TextBlock { Text = "0 items", Foreground = Text, FontSize = 14, VerticalAlignment = VerticalAlignment.Center };
             Grid.SetColumn(itemCountText, 1);
             grid.Children.Add(itemCountText);
-            detailStatusText = new TextBlock { Text = "Nothing to delete yet.", Foreground = Muted, FontSize = 15, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+            detailStatusText = new TextBlock { Text = "Nothing to delete yet.", Foreground = Muted, FontSize = 14, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
             Grid.SetColumn(detailStatusText, 2);
             grid.Children.Add(detailStatusText);
-            progressText = new TextBlock { Text = "0%", Foreground = Text, FontSize = 15, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Right };
+            progressText = new TextBlock { Text = "0%", Foreground = Text, FontSize = 14, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Right };
             Grid.SetColumn(progressText, 3);
             grid.Children.Add(progressText);
             progressBar = new ProgressBar
             {
-                Height = 14,
+                Height = 12,
                 Minimum = 0,
                 Maximum = 100,
                 Value = 0,
@@ -1613,6 +1575,38 @@ namespace RED.UI.Wpf
         private static Brush BrushFrom(string hex)
         {
             return new SolidColorBrush(ColorFrom(hex));
+        }
+
+        private static Geometry Glyph(string data)
+        {
+            var geometry = Geometry.Parse(data);
+            geometry.Freeze();
+            return geometry;
+        }
+
+        private static System.Windows.Shapes.Path IconPath(Geometry geometry, Brush brush, double size, double strokeThickness, DoubleCollection dash = null, Thickness? margin = null)
+        {
+            var path = new System.Windows.Shapes.Path
+            {
+                Data = geometry,
+                Stroke = brush,
+                StrokeThickness = strokeThickness,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                StrokeLineJoin = PenLineJoin.Round,
+                Fill = Brushes.Transparent,
+                Width = size,
+                Height = size,
+                Stretch = Stretch.Uniform,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = margin ?? new Thickness(0)
+            };
+            if (dash != null)
+            {
+                path.StrokeDashArray = dash;
+            }
+            return path;
         }
 
         private static Color ColorFrom(string hex)
