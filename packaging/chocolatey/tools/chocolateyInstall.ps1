@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $toolsDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $packageName = 'redplusplus.portable'
-$url = 'https://github.com/SysAdminDoc/REDplusplus/releases/download/v1.5.15/RED++_v1.5.15.zip'
+$url = 'https://github.com/SysAdminDoc/REDplusplus/releases/download/v1.5.16/RED++_v1.5.16.zip'
 $checksum = ''
 $checksumType = 'sha256'
 
