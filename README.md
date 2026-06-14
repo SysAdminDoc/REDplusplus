@@ -77,7 +77,7 @@ RED+.exe -silent -path "D:\Shares" -log cleanup.log
 
 ## Verify Your Download
 
-Every release ships a `SHA256SUMS` file and a signed build-provenance attestation. To verify the zip really came from this repository's CI:
+Every release ships a `SHA256SUMS` file, a CycloneDX software bill of materials (`bom.json`) that inventories every bundled dependency, and a signed build-provenance attestation. To verify the zip really came from this repository's CI:
 
 ```
 gh attestation verify RED++_v1.5.18.zip -R SysAdminDoc/REDplusplus
