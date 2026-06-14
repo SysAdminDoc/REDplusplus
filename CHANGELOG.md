@@ -10,6 +10,7 @@
 - Add **Import saved dry-run results...** to the modern WPF shell's Extras menu: load a saved `.json`/`.ndjson`/`.csv`/`.txt` dry-run and review the records in the results list (review/export only; re-scan to delete, and the engine re-checks every directory before acting). Review of saved runs no longer requires `-classic`.
 
 ### CLI
+- Add saved profiles: `-saveprofile <name>` stores the current options (paths, mode, empty-files, age/depth, gitignore/MFT/hidden/system toggles) as a named profile; `-profile <name>` runs it (command-line options still override); `-listprofiles` lists them. A scheduled task can now reference `-profile nightly` instead of a long argument list. Profiles live in a dedicated `RED+.profiles.json`, separate from the XML config.
 - Headless runs now print a "Run complete" summary line with total empty directories, empty files, deleted, failed, and wall-clock duration. The `-json` `meta` record (now schema 3) carries the same totals plus `elapsedMs`. (The modern GUI already shows the current directory being scanned in its status strip.)
 
 ### Reliability
