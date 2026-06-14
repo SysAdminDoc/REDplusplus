@@ -175,6 +175,35 @@ namespace RED
         }
 
         [Fact]
+        public void Restore_MoveSourceOutsideRoots_IsRefused()
+        {
+            // A tampered move-mode manifest naming a system path as the move SOURCE must
+            // not be allowed to relocate (and thereby destroy) it.
+            string original = Path.Combine(_root, "orig");
+            string evilSource = Path.Combine(Path.GetTempPath(), "redpp-sys-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(evilSource);
+            try
+            {
+                string json =
+                    "{ \"timestamp\": \"x\", \"deleteMode\": \"Move\", \"roots\": [\"" + Esc(_root) + "\"], \"entries\": [" +
+                    "{ \"path\": \"" + Esc(original) + "\", \"movedTo\": \"" + Esc(evilSource) + "\", \"mode\": \"Move\" } ] }";
+                string path = WriteManifest(json);
+
+                int restored, failed;
+                bool ok = UndoManager.Restore(path, out restored, out failed, null);
+
+                Assert.False(ok);
+                Assert.Equal(0, restored);
+                Assert.True(Directory.Exists(evilSource)); // not relocated/destroyed
+                Assert.False(Directory.Exists(original));
+            }
+            finally
+            {
+                try { Directory.Delete(evilSource, true); } catch { }
+            }
+        }
+
+        [Fact]
         public void Restore_EmptyManifest_ReturnsFalse()
         {
             string json = "{ \"timestamp\": \"x\", \"deleteMode\": \"Direct\", \"entries\": [] }";
