@@ -295,16 +295,20 @@ namespace RED
 				this.Data.AddLogMessage(TXT.Translate("Recycle Bin operation failed: {0}", ex.Message));
 			}
 
-			// Phase 3: report queued roots from their sink results, then resolve
-			// children from their ancestor's outcome
+			// Phase 3: derive each queued root's outcome authoritatively from the
+			// filesystem. IFileOperation does not guarantee one PostDeleteItem per
+			// DeleteItem in submission order, so the sink's positional fallback can
+			// attribute a result to the wrong path. A recycled directory is gone
+			// from its original path, so `!Directory.Exists` is the ground truth for
+			// both the success/fail decision and the undo manifest; the sink result
+			// is used only to enrich the failure message.
 			foreach (string path in queuedPaths)
 			{
 				int pos = positionByPath[path];
 				Match.RedScanResultItem scanResult = this.Data.ScanResults[pos];
 				RecycleBinOperation.ItemResult result;
-				bool deleted = resultByPath.TryGetValue(path, out result)
-					? (result.Succeeded || IsNotFoundHResult(result.HResult))
-					: !Directory.Exists(path); // no sink result (cancelled/skipped) — trust the filesystem
+				resultByPath.TryGetValue(path, out result);
+				bool deleted = !Directory.Exists(path);
 
 				if (deleted)
 				{
@@ -322,13 +326,14 @@ namespace RED
 				}
 			}
 
+			// Children vanished with their recursively-recycled ancestor: check each
+			// child's own path rather than re-deriving from the (possibly
+			// mis-attributed) ancestor sink result.
 			foreach (Tuple<int, Match.RedScanResultItem, string> child in deferredChildren)
 			{
-				bool parentDeleted = resultByPath.ContainsKey(child.Item3)
-					? (resultByPath[child.Item3].Succeeded || IsNotFoundHResult(resultByPath[child.Item3].HResult))
-					: !Directory.Exists(child.Item3);
+				bool deleted = !Directory.Exists(child.Item2.FullPath);
 
-				if (parentDeleted)
+				if (deleted)
 				{
 					this.DeletedCount++;
 					undoEntries.Add(new UndoManager.ManifestEntry { Path = child.Item2.FullPath, Mode = this.Data.DeleteMode.ToString(), MovedTo = null });
@@ -352,13 +357,6 @@ namespace RED
 			}
 
 			WriteUndoManifest();
-		}
-
-		private static bool IsNotFoundHResult(int hr)
-		{
-			const int E_FILENOTFOUND = unchecked((int)0x80070002);
-			const int E_PATHNOTFOUND = unchecked((int)0x80070003);
-			return hr == E_FILENOTFOUND || hr == E_PATHNOTFOUND;
 		}
 
 		/// <summary>
