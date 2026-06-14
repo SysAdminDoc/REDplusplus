@@ -71,5 +71,23 @@ namespace RED.Tests
             Assert.True(p.IsIgnored("cache", "cache"));
             Assert.False(p.IsIgnored("a", "a"));
         }
+
+        [Fact]
+        public void NamePattern_InSubdirGitignore_IsScopedToThatSubtree()
+        {
+            // A bare-name rule in a per-directory .gitignore must only affect that
+            // directory's subtree, not every directory of that name elsewhere (Git
+            // per-directory scope). Regression guard: previously it applied tree-wide.
+            string sub = Path.Combine(_root, "sub");
+            Directory.CreateDirectory(sub);
+            File.WriteAllText(Path.Combine(sub, ".gitignore"), "dist\n");
+
+            var atSub = RED.GitIgnoreParser.LoadFromAncestors(_root).ExtendForDirectory(sub, _root);
+
+            Assert.True(atSub.IsIgnored("dist", "sub/dist"));     // in scope -> ignored
+            Assert.True(atSub.IsIgnored("dist", "sub/a/dist"));   // deeper in scope -> ignored
+            Assert.False(atSub.IsIgnored("dist", "other/dist"));  // different subtree -> NOT ignored
+            Assert.False(atSub.IsIgnored("dist", "dist"));        // at root -> NOT ignored
+        }
     }
 }
