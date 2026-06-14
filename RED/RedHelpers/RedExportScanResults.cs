@@ -116,18 +116,28 @@ namespace RED.Helper
         /// are fully attacker-controllable, so any cell starting with =, +, -, @,
         /// tab or CR is prefixed with a single quote.
         /// </summary>
-        private static string EscapeCsvCell(string value)
+        internal static string EscapeCsvCell(string value)
         {
             value = value ?? string.Empty;
             if (value.Length > 0)
             {
                 char c0 = value[0];
-                if (c0 == '=' || c0 == '+' || c0 == '-' || c0 == '@' || c0 == '\t' || c0 == '\r')
+                // Some spreadsheets ignore leading whitespace and still evaluate a
+                // formula, so test the first non-whitespace character too — a cell like
+                // " =1+1" would otherwise slip past a first-character-only check.
+                string trimmed = value.TrimStart();
+                char cTrim = trimmed.Length > 0 ? trimmed[0] : '\0';
+                if (IsFormulaTrigger(c0) || c0 == '\t' || c0 == '\r' || IsFormulaTrigger(cTrim))
                 {
                     value = "'" + value;
                 }
             }
             return value.Replace("\"", "\"\"");
+        }
+
+        private static bool IsFormulaTrigger(char c)
+        {
+            return c == '=' || c == '+' || c == '-' || c == '@';
         }
 
         private void WriteJson(RedScanResultItemList v, string filename)
@@ -291,7 +301,10 @@ namespace RED.Helper
         private string GetFullPathText(TreeNode node)
         {
             string npath = string.Empty;
-            if (node != null && node.ForeColor == TreeManager.ColortoBeDeleted)
+            // Eligibility is decided from the status icon, not the (theme-dependent)
+            // ForeColor: a restyle or theme refresh must never silently drop eligible
+            // nodes from the exported deletion list or include kept ones.
+            if (node != null && TreeManager.IsEligibleImageKey(node.ImageKey))
             {
                 TreeNode pnode = node;
                 do
