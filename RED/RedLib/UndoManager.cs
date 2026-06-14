@@ -230,7 +230,13 @@ namespace RED
 					{
 						string latestContent = File.ReadAllText(ManifestPath, Encoding.UTF8).Trim();
 						string thisContent = File.ReadAllText(manifestPath, Encoding.UTF8).Trim();
-						// If latest is identical to this one, clean it up too
+						// The latest-pointer mirrors the most recent run. If it still
+						// holds the run we just restored, delete it too so a second
+						// restore does not re-create the directories we put back.
+						if (string.Equals(latestContent, thisContent, StringComparison.Ordinal))
+						{
+							File.Delete(ManifestPath);
+						}
 					}
 				}
 				catch { }
@@ -278,11 +284,14 @@ namespace RED
 
 				string json = BuildManifestJson(deleteMode, entries);
 
-				File.WriteAllText(timestampedPath, json, Encoding.UTF8);
+				// Write atomically: a crash or power loss mid-write must never leave
+				// a truncated manifest, because it is the only recovery path for a
+				// deletion run. Stage to a temp file, then move into place.
+				AtomicWrite(timestampedPath, json);
 				log?.Invoke(TXT.Translate("Undo manifest written: {0}", RedAssist.DQuote(timestampedPath)));
 
 				// Also write the latest-pointer for backward compatibility
-				try { File.WriteAllText(ManifestPath, json, Encoding.UTF8); }
+				try { AtomicWrite(ManifestPath, json); }
 				catch { }
 
 				RotateManifests(DefaultMaxManifests, log);
@@ -338,10 +347,45 @@ namespace RED
 			catch { }
 		}
 
+		private static void AtomicWrite(string path, string contents)
+		{
+			string tmp = path + ".tmp";
+			File.WriteAllText(tmp, contents, new UTF8Encoding(false));
+			if (File.Exists(path))
+			{
+				// File.Replace is atomic on NTFS and preserves nothing we need.
+				File.Replace(tmp, path, null);
+			}
+			else
+			{
+				File.Move(tmp, path);
+			}
+		}
+
 		private static string EscapeJson(string s)
 		{
 			if (s == null) return string.Empty;
-			return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+			var sb = new StringBuilder(s.Length + 8);
+			foreach (char c in s)
+			{
+				switch (c)
+				{
+					case '\\': sb.Append("\\\\"); break;
+					case '\"': sb.Append("\\\""); break;
+					case '\b': sb.Append("\\b"); break;
+					case '\f': sb.Append("\\f"); break;
+					case '\n': sb.Append("\\n"); break;
+					case '\r': sb.Append("\\r"); break;
+					case '\t': sb.Append("\\t"); break;
+					default:
+						if (c < 0x20)
+							sb.Append("\\u").Append(((int)c).ToString("x4"));
+						else
+							sb.Append(c);
+						break;
+				}
+			}
+			return sb.ToString();
 		}
 	}
 }

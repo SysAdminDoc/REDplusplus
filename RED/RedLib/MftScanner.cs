@@ -307,13 +307,22 @@ namespace RED
         private void ParseRecords(byte[] buffer, int bytesReturned, ref int recordCount, BackgroundWorker worker)
         {
             int offset = 8;
-            while (offset + 60 < bytesReturned)
+            // Smallest record we will read fields from: the RecordLength (4) +
+            // MajorVersion (2) need at least 6 bytes to dispatch on version.
+            while (offset + 6 <= bytesReturned)
             {
                 int recordLength = BitConverter.ToInt32(buffer, offset);
                 if (recordLength <= 0) break;
-                if (offset + recordLength > bytesReturned) break;
+                // Widen to long so a corrupt huge RecordLength cannot wrap past
+                // int.MaxValue and slip through the in-buffer bounds check.
+                if ((long)offset + recordLength > bytesReturned) break;
 
                 ushort majorVersion = BitConverter.ToUInt16(buffer, offset + 4);
+
+                // Each version has a fixed-field header that must fit entirely
+                // within this record before we read FRNs/attributes/name fields.
+                int headerSize = majorVersion >= 3 ? 76 : 60;
+                if (recordLength < headerSize) break;
 
                 Frn frn, parentFrn;
                 uint fileAttribs;
@@ -338,7 +347,11 @@ namespace RED
                     nameOffset = BitConverter.ToInt16(buffer, offset + 58);
                 }
 
-                if (nameLength > 0 && offset + nameOffset + nameLength <= bytesReturned)
+                // The name must lie within this record (not merely within the
+                // buffer): validate against recordLength to reject a crafted
+                // nameOffset/nameLength that points into an adjacent record.
+                if (nameLength > 0 && nameOffset >= headerSize
+                    && (long)nameOffset + nameLength <= recordLength)
                 {
                     string fileName = Encoding.Unicode.GetString(buffer, offset + nameOffset, nameLength);
 
