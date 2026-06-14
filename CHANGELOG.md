@@ -22,8 +22,11 @@
 
 ### Reliability
 - Derive batch-recycle outcomes (success/fail and the undo manifest) authoritatively from `Directory.Exists` rather than the shell sink's submission-order fallback. `IFileOperation` does not guarantee one `PostDeleteItem` per `DeleteItem` in order, so a coalesced/skipped callback could previously record an undo entry against the wrong path; the filesystem is now the ground truth.
+- Apply the same ground-truth rule to the empty-files recycle batch: each file's success and undo entry now come from `!File.Exists` rather than the sink's positional result list, so a coalesced callback can no longer log or record the wrong file as deleted.
 
 ### Security & data safety
+- Never delete a directory that contains a user-protected descendant. Protecting a folder only guarded that exact path, so an empty-eligible **ancestor** would still be deleted recursively and take the protected child with it (in both the direct and recycle-batch delete paths). A directory is now treated as protected when it, or anything beneath it, is on the protected list, and the protected-folder list is matched case-insensitively to follow Windows path semantics.
+- Harden the cross-volume Move-to-folder fallback: after copying the directory to the other volume, re-verify it is file-free and remove the source bottom-up by handle (which refuses a non-empty directory) instead of a blind recursive `Directory.Delete`, so content that appears after the copy can never be destroyed.
 - Clamp the C-style (`SpecialFormatters`) printf width and precision to a bounded ceiling so a crafted format such as `%9999999d` can no longer drive a multi-megabyte allocation (memory-amplification DoS for callers that opt into the format callback).
 - Guard `Translator.RegisterTranslationsByCulture` against a malformed caller-supplied search pattern: a bad `string.Format` pattern is now skipped instead of throwing an uncaught `FormatException`.
 - Stop truncating the live run log when rotation cannot move it (e.g. the log is held open). The existing log is now preserved and appended to, keeping it intact as a forensic/undo aid.
