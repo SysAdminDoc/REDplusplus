@@ -15,7 +15,7 @@ namespace RED
 		public RuntimeData()
 		{
 			this.LogMessages = new StringBuilder();
-			this.ProtectedFolderList = new Dictionary<string, bool>();
+			this.ProtectedFolderList = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
 			this.ScanResults = new RedScanResultItemList();
 
 			try
@@ -108,7 +108,7 @@ namespace RED
 		public int InfiniteLoopDetectionCount { get; set; }
 
 		public StringBuilder LogMessages = null;
-		public Dictionary<string, bool> ProtectedFolderList = new Dictionary<string, bool>();
+		public Dictionary<string, bool> ProtectedFolderList = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
 
 		public bool HideIgnoredDirectories { get; set; }
 		public bool RespectGitIgnore { get; set; }
