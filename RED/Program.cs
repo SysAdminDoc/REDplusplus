@@ -876,6 +876,8 @@ namespace RED
 			{
 				if (ext == ".csv") exporter.WriteCsvFile(list, exportFile);
 				else if (ext == ".json") exporter.WriteJsonFile(list, exportFile);
+				else if (ext == ".ps1") exporter.WritePs1File(list, exportFile);
+				else if (ext == ".html" || ext == ".htm") exporter.WriteHtmlFile(list, exportFile);
 				else File.WriteAllLines(exportFile, GetPathLines(results), Encoding.UTF8);
 			}
 		}
@@ -939,7 +941,7 @@ Options:
   -ignore-system   Ignore system directories for this run.
   -exclude <name>  Skip directories matching <name> (repeatable, composable).
   -protect <name>  Prevent deletion of dirs matching <name> (repeatable).
-  -export <file>   Write results to .txt / .csv / .json (by extension).
+  -export <file>   Write results to .txt / .csv / .json / .ps1 / .html (by extension).
   -json            Emit NDJSON to stdout (meta record, then result records).
   -quiet           Suppress stdout/stderr; use the process exit code/log file.
   -log <file>      Write a timestamped run log to <file>.
