@@ -350,6 +350,13 @@ namespace RED
 
         internal void ParseRecords(byte[] buffer, int bytesReturned, ref int recordCount, BackgroundWorker worker)
         {
+            // The buffer is the ground truth: never trust a caller-reported length larger
+            // than it (a corrupt/hostile FSCTL result) or a field read would run off the
+            // end. Clamp to the real buffer size; a non-positive count means nothing to do.
+            if (buffer == null) return;
+            if (bytesReturned > buffer.Length) bytesReturned = buffer.Length;
+            if (bytesReturned < 0) bytesReturned = 0;
+
             int offset = 8;
             // Smallest record we will read fields from: the RecordLength (4) +
             // MajorVersion (2) need at least 6 bytes to dispatch on version.
