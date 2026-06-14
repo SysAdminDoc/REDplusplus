@@ -130,7 +130,7 @@ Options:
 | `-hidden`, `-ignore-hidden` | Include or ignore hidden directories for this run. |
 | `-system`, `-ignore-system` | Include or ignore system directories for this run. |
 | `-export <file>` | Write results to `.txt` / `.csv` / `.json` (chosen by extension). |
-| `-json` | Emit NDJSON to stdout: one `meta` record, then one `result` record per directory. |
+| `-json` | Emit NDJSON to stdout: one `meta` record (version, run totals, and elapsed time), then one `result` record per directory. |
 | `-quiet` | Suppress stdout/stderr; use only the process exit code and optional `-log`. |
 | `-log <file>` | Write a timestamped run log. |
 | `-undo [manifest]` | Restore directories from the most recent (or specified) run. Up to 5 undo manifests are kept. |

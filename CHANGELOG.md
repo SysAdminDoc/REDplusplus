@@ -9,6 +9,9 @@
 - Add **Restore deletion** to the modern WPF shell's Extras menu: pick any kept undo manifest (newest first, with timestamp, mode, and item count) and restore it on a background thread with live status. Recovery no longer requires `-classic`.
 - Add **Import saved dry-run results...** to the modern WPF shell's Extras menu: load a saved `.json`/`.ndjson`/`.csv`/`.txt` dry-run and review the records in the results list (review/export only; re-scan to delete, and the engine re-checks every directory before acting). Review of saved runs no longer requires `-classic`.
 
+### CLI
+- Headless runs now print a "Run complete" summary line with total empty directories, empty files, deleted, failed, and wall-clock duration. The `-json` `meta` record (now schema 3) carries the same totals plus `elapsedMs`. (The modern GUI already shows the current directory being scanned in its status strip.)
+
 ### Reliability
 - Derive batch-recycle outcomes (success/fail and the undo manifest) authoritatively from `Directory.Exists` rather than the shell sink's submission-order fallback. `IFileOperation` does not guarantee one `PostDeleteItem` per `DeleteItem` in order, so a coalesced/skipped callback could previously record an undo entry against the wrong path; the filesystem is now the ground truth.
 
