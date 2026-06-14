@@ -13,6 +13,11 @@
 - Drop the advertised "Enter to scan, Del to delete selected" keyboard shortcuts from the feature list: the default modern WPF shell is click-only by design, matching the project's no-keyboard-shortcuts convention.
 
 ### Modern UI
+- Colour-code the review list: each result's Status is shown as a coloured word (eligible = red, kept = muted, deleted = green, protected = blue, failed = amber), so the destructive list now reflects the legend instead of leaving every row the same colour. The colour reinforces the status word and is never the only signal.
+- Give the path box, deletion-mode dropdown, filter lists, and result list a visible keyboard-focus ring (they previously showed only WPF's near-invisible dotted default on the dark surface) — WCAG 2.4.7.
+- Report a dry run honestly: it now says "… would be removed. Nothing was changed." instead of claiming directories and files were "changed", and the completion line matches the chosen mode (deleted / recycled / moved). Distinguish a user **Canceled** run from one **Stopped after an error**.
+- Use a legible red for the "eligible" status text, give result rows a comfortable minimum height, raise the idle status indicator to green / working to amber, and expose the plain state word ("Ready"/"Working") to screen readers instead of the decorative bullet.
+- Add a positive "no empty directories found" state for a completed scan with nothing to remove, and normalize one-off button colours and corner radii onto the shared palette.
 - Add **Restore deletion** to the modern WPF shell's Extras menu: pick any kept undo manifest (newest first, with timestamp, mode, and item count) and restore it on a background thread with live status. Recovery no longer requires `-classic`.
 - Add **Import saved dry-run results...** to the modern WPF shell's Extras menu: load a saved `.json`/`.ndjson`/`.csv`/`.txt` dry-run and review the records in the results list (review/export only; re-scan to delete, and the engine re-checks every directory before acting). Review of saved runs no longer requires `-classic`.
 
