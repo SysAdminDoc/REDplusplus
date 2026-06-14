@@ -26,6 +26,17 @@ jobs:
       - name: Engine unit tests
         run: dotnet test "RED.Tests/RED.Tests.csproj" -c Release --logger "console;verbosity=normal"
 
+      # Fail the build on any known-vulnerable direct or transitive NuGet package.
+      # dotnet list always exits 0, so detect the advisory table and throw.
+      - name: Dependency vulnerability gate
+        shell: pwsh
+        run: |
+          $out = (dotnet list "!RED+.sln" package --vulnerable --include-transitive | Out-String)
+          Write-Host $out
+          if ($out -match 'has the following vulnerable packages') {
+            throw 'Vulnerable NuGet packages detected — see the list above.'
+          }
+
       - name: Headless safety smoke
         shell: pwsh
         run: |
