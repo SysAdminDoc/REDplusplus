@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.5.18 (2026-06-14)
+
+### Security & data safety
+- Reject malformed `.mo` translation catalogs shorter than the 28-byte header instead of throwing an uncaught `IndexOutOfRangeException` (a crafted/truncated catalog dropped beside the portable exe could crash the app).
+- Treat division and modulo by zero in `Plural-Forms` expressions as `0` so a malformed or hostile plural rule (e.g. `plural=(n%0)`) can no longer crash a translation call at evaluation time.
+- Neutralize spreadsheet formula injection (CWE-1236) in CSV exports: directory names beginning with `=`, `+`, `-`, `@`, tab, or CR are quote-prefixed so they cannot execute when the export is opened in Excel/LibreOffice.
+- Require `-moveto` to be an absolute path; a relative target previously resolved against the process working directory (often `C:\Windows\System32` under Task Scheduler).
+- Harden the MFT/USN record parser against truncated or corrupt records: overflow-safe length checks, version-specific header-size validation, and name fields validated against the record length rather than only the buffer.
+
+### Reliability
+- Never show a modal dialog in the headless config load/save path: the redirect-limit, read-only, and save-failure messages now write to stderr in `-silent` mode, removing two ways a scheduled task could hang forever.
+- Set silent mode in the `-undo` CLI path so a scripted/scheduled restore cannot block on a config dialog.
+- Write undo manifests atomically (temp file + replace) so a crash or power loss mid-write can no longer leave a truncated, unusable manifest — the only recovery path for a deletion run.
+- Re-verify a directory is still empty before the cross-volume move fallback's recursive delete, closing a TOCTOU window where newly created content could be removed.
+- Release per-item shell COM objects during batch recycle so large batches no longer accumulate live runtime callable wrappers.
+- Resolve an ambiguous `-undo <token>` to a single manifest only when the substring match is unique, preventing restoration of the wrong run; clean up the latest-pointer after a successful restore so it cannot recreate already-restored directories.
+- Escape control characters when writing undo-manifest JSON.
+
+### Modern UI & accessibility
+- Restore a visible keyboard focus ring on every button (tabs, title-bar controls, primary actions, Browse, Extras, Exit). Focus was previously invisible because each button set its colors as local values that overrode the style triggers (WCAG 2.4.7).
+- Add consistent hover and pressed feedback to all buttons regardless of their base color, including the previously feedback-less window controls and the colored Scan/Delete actions.
+- Enable the Delete action only when results are genuinely eligible, not when only kept/protected rows are present.
+
 ## 1.5.17 (2026-06-13)
 
 ### Branding
