@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.16 (2026-06-13)
+
+### Modern UI
+- Replace mixed bitmap/text shell icons with a cohesive vector icon system for tabs, titlebar controls, primary actions, empty-state guidance, and the Result Legend.
+- Update the Search magnifying-glass icon everywhere it appears so the Search tab, Scan button, and onboarding guidance share the same premium line-icon treatment.
+- Refine the default WPF shell density to keep the right-side legend, empty state, command bar, and status strip polished at the portable default size.
+
 ## 1.5.15 (2026-06-13)
 
 ### Modern UI
