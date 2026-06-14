@@ -304,7 +304,10 @@ namespace RED
         /// next-FRN cursor). Handles both V2 (NTFS, 64-bit FRN) and V3 (ReFS,
         /// 128-bit FRN) records, dispatched by each record's MajorVersion field.
         /// </summary>
-        private void ParseRecords(byte[] buffer, int bytesReturned, ref int recordCount, BackgroundWorker worker)
+        // Number of MFT records parsed into the entry table (test seam).
+        internal int ParsedEntryCount { get { return entries.Count; } }
+
+        internal void ParseRecords(byte[] buffer, int bytesReturned, ref int recordCount, BackgroundWorker worker)
         {
             int offset = 8;
             // Smallest record we will read fields from: the RecordLength (4) +

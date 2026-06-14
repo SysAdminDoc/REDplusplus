@@ -19,3 +19,7 @@ RESEARCH.md
 
 # Local build/scratch (refasm, screenshots, smoke fixtures)
 tmp/
+
+# Local-only build shim (lets the legacy net481 project build under the bare
+# .NET SDK without Visual Studio). Not shipped; proper fix is the SDK migration.
+Directory.Build.targets
