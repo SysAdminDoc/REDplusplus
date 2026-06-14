@@ -415,6 +415,12 @@ namespace RED
 			if (string.IsNullOrWhiteSpace(path)) return false;
 			if (!Path.IsPathFullyQualified(path)) return false;
 			if (HasDotDotSegment(path)) return false;
+			// Reject Win32 device/namespace prefixes (\\?\, \\.\): RED++ never writes
+			// them to a manifest, and they bypass path normalization (MAX_PATH, trailing
+			// dot/space stripping), so a tampered manifest could otherwise create on-disk
+			// names the normal API would refuse.
+			string t = path.TrimStart();
+			if (t.StartsWith(@"\\?\", StringComparison.Ordinal) || t.StartsWith(@"\\.\", StringComparison.Ordinal)) return false;
 			string full;
 			try { full = Path.GetFullPath(path); }
 			catch { return false; }
@@ -423,16 +429,23 @@ namespace RED
 
 		/// <summary>
 		/// Structurally safe AND, when the manifest records its scan roots, inside one
-		/// of them. A legacy manifest with no roots passes on the structural checks alone.
+		/// of them. A manifest with no roots (legacy v1.5.18, or a tamperer who stripped
+		/// the field) passes the structural checks but is additionally refused from
+		/// well-known system locations, so it cannot be used to create/move into
+		/// C:\Windows, System32, or Program Files.
 		/// </summary>
 		private static bool IsRestoreTargetSafe(string path, IList<string> roots)
 		{
 			if (!IsPathStructurallySafe(path)) return false;
-			if (roots == null || roots.Count == 0) return true;
 
 			string full;
 			try { full = Path.GetFullPath(path); }
 			catch { return false; }
+
+			if (roots == null || roots.Count == 0)
+			{
+				return !IsUnderSystemDirectory(full);
+			}
 
 			foreach (string r in roots)
 			{
@@ -444,6 +457,29 @@ namespace RED
 				if (full.Equals(rootFull, StringComparison.OrdinalIgnoreCase)) return true;
 				string prefix = rootFull.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
 				if (full.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return true;
+			}
+			return false;
+		}
+
+		private static bool IsUnderSystemDirectory(string fullPath)
+		{
+			foreach (Environment.SpecialFolder f in new[]
+			{
+				Environment.SpecialFolder.Windows,
+				Environment.SpecialFolder.System,
+				Environment.SpecialFolder.SystemX86,
+				Environment.SpecialFolder.ProgramFiles,
+				Environment.SpecialFolder.ProgramFilesX86,
+			})
+			{
+				string sys;
+				try { sys = Environment.GetFolderPath(f); }
+				catch { continue; }
+				if (string.IsNullOrEmpty(sys)) continue;
+
+				if (fullPath.Equals(sys, StringComparison.OrdinalIgnoreCase)) return true;
+				string prefix = sys.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+				if (fullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return true;
 			}
 			return false;
 		}
