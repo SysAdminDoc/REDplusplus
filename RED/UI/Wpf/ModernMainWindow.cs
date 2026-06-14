@@ -200,24 +200,15 @@ namespace RED.UI.Wpf
             style.Setters.Add(new Setter(Control.VerticalContentAlignmentProperty, VerticalAlignment.Stretch));
             style.Setters.Add(new Setter(Control.TemplateProperty, CreateButtonTemplate()));
 
+            // Disabled is the only state safe to express as a Style trigger: every
+            // button below sets Background/BorderBrush as *local* values, which
+            // outrank Style-trigger setters. Hover/press/focus must therefore live
+            // in the ControlTemplate (see CreateButtonTemplate) so they apply to
+            // colored and transparent buttons alike — including keyboard focus,
+            // which was previously invisible on every button (WCAG 2.4.7).
             var disabled = new Trigger { Property = UIElement.IsEnabledProperty, Value = false };
             disabled.Setters.Add(new Setter(UIElement.OpacityProperty, 0.42));
-            disabled.Setters.Add(new Setter(Control.BackgroundProperty, BrushFrom("#1b2435")));
-            disabled.Setters.Add(new Setter(Control.BorderBrushProperty, BrushFrom("#34445c")));
             style.Triggers.Add(disabled);
-
-            var hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
-            hover.Setters.Add(new Setter(Control.BorderBrushProperty, BrushFrom("#7a8aa5")));
-            style.Triggers.Add(hover);
-
-            var pressed = new Trigger { Property = ButtonBase.IsPressedProperty, Value = true };
-            pressed.Setters.Add(new Setter(UIElement.OpacityProperty, 0.86));
-            pressed.Setters.Add(new Setter(Control.BorderBrushProperty, BlueLight));
-            style.Triggers.Add(pressed);
-
-            var focus = new Trigger { Property = UIElement.IsKeyboardFocusWithinProperty, Value = true };
-            focus.Setters.Add(new Setter(Control.BorderBrushProperty, BlueLight));
-            style.Triggers.Add(focus);
 
             return style;
         }
@@ -233,14 +224,51 @@ namespace RED.UI.Wpf
             border.SetBinding(System.Windows.Controls.Border.BorderBrushProperty, new Binding("BorderBrush") { RelativeSource = RelativeSource.TemplatedParent });
             border.SetBinding(System.Windows.Controls.Border.BorderThicknessProperty, new Binding("BorderThickness") { RelativeSource = RelativeSource.TemplatedParent });
 
+            var layers = new FrameworkElementFactory(typeof(Grid));
+
             var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
             presenter.SetValue(ContentPresenter.SnapsToDevicePixelsProperty, true);
             presenter.SetBinding(ContentPresenter.ContentProperty, new Binding("Content") { RelativeSource = RelativeSource.TemplatedParent });
             presenter.SetBinding(ContentPresenter.ContentTemplateProperty, new Binding("ContentTemplate") { RelativeSource = RelativeSource.TemplatedParent });
             presenter.SetBinding(ContentPresenter.HorizontalAlignmentProperty, new Binding("HorizontalContentAlignment") { RelativeSource = RelativeSource.TemplatedParent });
             presenter.SetBinding(ContentPresenter.VerticalAlignmentProperty, new Binding("VerticalContentAlignment") { RelativeSource = RelativeSource.TemplatedParent });
-            border.AppendChild(presenter);
+            layers.AppendChild(presenter);
+
+            // Tint overlay (above content, non-interactive) gives every button
+            // hover/press feedback regardless of its base color.
+            var overlay = new FrameworkElementFactory(typeof(System.Windows.Controls.Border));
+            overlay.Name = "HoverOverlay";
+            overlay.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(2));
+            overlay.SetValue(System.Windows.Controls.Border.BackgroundProperty, Brushes.Transparent);
+            overlay.SetValue(UIElement.IsHitTestVisibleProperty, false);
+            layers.AppendChild(overlay);
+
+            // Keyboard focus ring — an inner border that is transparent until the
+            // button takes keyboard focus, so it is visible on any background.
+            var focusRing = new FrameworkElementFactory(typeof(System.Windows.Controls.Border));
+            focusRing.Name = "FocusRing";
+            focusRing.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(2));
+            focusRing.SetValue(System.Windows.Controls.Border.BorderBrushProperty, Brushes.Transparent);
+            focusRing.SetValue(System.Windows.Controls.Border.BorderThicknessProperty, new Thickness(2));
+            focusRing.SetValue(UIElement.IsHitTestVisibleProperty, false);
+            focusRing.SetValue(FrameworkElement.MarginProperty, new Thickness(1));
+            layers.AppendChild(focusRing);
+
+            border.AppendChild(layers);
             template.VisualTree = border;
+
+            var hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
+            hover.Setters.Add(new Setter(System.Windows.Controls.Border.BackgroundProperty, BrushFrom("#1AFFFFFF"), "HoverOverlay"));
+            template.Triggers.Add(hover);
+
+            var pressed = new Trigger { Property = ButtonBase.IsPressedProperty, Value = true };
+            pressed.Setters.Add(new Setter(System.Windows.Controls.Border.BackgroundProperty, BrushFrom("#33000000"), "HoverOverlay"));
+            template.Triggers.Add(pressed);
+
+            var focus = new Trigger { Property = UIElement.IsKeyboardFocusedProperty, Value = true };
+            focus.Setters.Add(new Setter(System.Windows.Controls.Border.BorderBrushProperty, BlueLight, "FocusRing"));
+            template.Triggers.Add(focus);
+
             return template;
         }
 
@@ -1367,8 +1395,23 @@ namespace RED.UI.Wpf
             readyText.Foreground = busy ? BrushFrom("#e8c35b") : Text;
             if (!busy && deleteButton != null)
             {
-                deleteButton.IsEnabled = results.Count > 0;
+                // Enable delete only when something is actually eligible — rows that
+                // were merely kept (protected/never-empty) must not arm the button.
+                deleteButton.IsEnabled = EligibleResultCount() > 0;
             }
+        }
+
+        private int EligibleResultCount()
+        {
+            int count = 0;
+            foreach (ResultRow row in results)
+            {
+                if (string.Equals(row.StatusLabel, "Eligible", StringComparison.Ordinal))
+                {
+                    count++;
+                }
+            }
+            return count;
         }
 
         private void RefreshResultsVisibility()
