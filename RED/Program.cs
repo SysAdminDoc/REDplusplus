@@ -506,6 +506,7 @@ namespace RED
 			bool hadErrors = false;
 			int totalEmpty = 0, totalEmptyFiles = 0, totalDeleted = 0, totalFailed = 0;
 			var allResults = new System.Collections.Generic.List<RedScanResultItem>();
+			var runStopwatch = System.Diagnostics.Stopwatch.StartNew();
 
 			foreach (string rawPath in paths)
 			{
@@ -648,9 +649,22 @@ namespace RED
 				runData.Dispose();
 			}
 
+			runStopwatch.Stop();
+			double elapsedSeconds = runStopwatch.Elapsed.TotalSeconds;
+
+			// Run-impact summary: counts and wall-clock duration. (Reclaimed bytes are
+			// intentionally omitted — RED++ only removes empty directories and
+			// zero-byte files, so the figure would always be ~0.)
+			logMsg(string.Format(
+				"Run complete in {0:N1}s: {1} empty director{2}, {3} empty file{4}, {5} deleted, {6} failed",
+				elapsedSeconds,
+				totalEmpty, totalEmpty == 1 ? "y" : "ies",
+				totalEmptyFiles, totalEmptyFiles == 1 ? "" : "s",
+				totalDeleted, totalFailed));
+
 			if (jsonOutput && !quiet)
 			{
-				EmitJson(allResults);
+				EmitJson(allResults, totalEmpty, totalEmptyFiles, totalDeleted, totalFailed, runStopwatch.Elapsed.TotalMilliseconds);
 			}
 
 			if (!string.IsNullOrWhiteSpace(exportFile))
@@ -685,9 +699,13 @@ namespace RED
 		}
 
 		/// <summary>One NDJSON object per scanned result to stdout, for piping.</summary>
-		private static void EmitJson(System.Collections.Generic.List<RedScanResultItem> results)
+		private static void EmitJson(System.Collections.Generic.List<RedScanResultItem> results,
+			int emptyDirs, int emptyFiles, int deleted, int failed, double elapsedMs)
 		{
-			Console.WriteLine(string.Format("{{\"type\":\"meta\",\"schema\":2,\"version\":\"{0}\"}}", EscapeJson(GetFileVersion())));
+			Console.WriteLine(string.Format(
+				"{{\"type\":\"meta\",\"schema\":3,\"version\":\"{0}\",\"emptyDirectories\":{1},\"emptyFiles\":{2},\"deleted\":{3},\"failed\":{4},\"elapsedMs\":{5}}}",
+				EscapeJson(GetFileVersion()), emptyDirs, emptyFiles, deleted, failed,
+				((long)elapsedMs).ToString(System.Globalization.CultureInfo.InvariantCulture)));
 			foreach (RedScanResultItem item in results)
 			{
 				string kind = item.Kind == ResultKind.File ? "file" : "directory";
