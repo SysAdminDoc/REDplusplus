@@ -1,0 +1,119 @@
+using System;
+using System.IO;
+using Xunit;
+
+namespace RED
+{
+    // Undo restore round-trips and corrupt-manifest rejection. Restore recreates
+    // empty directories (lossless) and moves Move-mode entries back; a corrupt
+    // manifest must return null with no throw.
+    public sealed class UndoManagerTests : IDisposable
+    {
+        private readonly string _root;
+
+        public UndoManagerTests()
+        {
+            _root = Path.Combine(Path.GetTempPath(), "redpp-undo-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(_root);
+        }
+
+        public void Dispose()
+        {
+            try { Directory.Delete(_root, true); } catch { }
+        }
+
+        private string WriteManifest(string json)
+        {
+            string path = Path.Combine(_root, "manifest.json");
+            File.WriteAllText(path, json);
+            return path;
+        }
+
+        [Fact]
+        public void LoadManifestFromPath_CorruptJson_ReturnsNullNoThrow()
+        {
+            string path = WriteManifest("{ this is not valid json ]]");
+            var m = UndoManager.LoadManifestFromPath(path);
+            Assert.Null(m);
+        }
+
+        [Fact]
+        public void LoadManifestFromPath_MissingFile_ReturnsNull()
+        {
+            var m = UndoManager.LoadManifestFromPath(Path.Combine(_root, "nope.json"));
+            Assert.Null(m);
+        }
+
+        [Fact]
+        public void Restore_RecreatesDeletedEmptyDirectories()
+        {
+            string a = Path.Combine(_root, "a");
+            string b = Path.Combine(_root, "a", "b");
+            // (directories do not exist yet — simulate they were deleted)
+            string json =
+                "{ \"timestamp\": \"2026-06-14T00:00:00\", \"deleteMode\": \"Direct\", \"entries\": [" +
+                "{ \"path\": \"" + Esc(a) + "\", \"mode\": \"Direct\" }," +
+                "{ \"path\": \"" + Esc(b) + "\", \"mode\": \"Direct\" } ] }";
+            string path = WriteManifest(json);
+
+            int restored, failed;
+            bool ok = UndoManager.Restore(path, out restored, out failed, null);
+
+            Assert.True(ok);
+            Assert.Equal(2, restored);
+            Assert.Equal(0, failed);
+            Assert.True(Directory.Exists(a));
+            Assert.True(Directory.Exists(b));
+        }
+
+        [Fact]
+        public void Restore_RecreatesDeletedEmptyFile()
+        {
+            string f = Path.Combine(_root, "empty.txt");
+            string json =
+                "{ \"timestamp\": \"2026-06-14T00:00:00\", \"deleteMode\": \"Direct\", \"entries\": [" +
+                "{ \"path\": \"" + Esc(f) + "\", \"mode\": \"Direct\", \"isFile\": true } ] }";
+            string path = WriteManifest(json);
+
+            int restored, failed;
+            bool ok = UndoManager.Restore(path, out restored, out failed, null);
+
+            Assert.True(ok);
+            Assert.Equal(1, restored);
+            Assert.True(File.Exists(f));
+            Assert.Equal(0, new FileInfo(f).Length);
+        }
+
+        [Fact]
+        public void Restore_MoveModeEntry_MovesDirectoryBack()
+        {
+            string original = Path.Combine(_root, "orig");
+            string movedTo = Path.Combine(_root, "moved-aside");
+            Directory.CreateDirectory(movedTo); // the move destination still holds the dir
+            string json =
+                "{ \"timestamp\": \"2026-06-14T00:00:00\", \"deleteMode\": \"Move\", \"entries\": [" +
+                "{ \"path\": \"" + Esc(original) + "\", \"movedTo\": \"" + Esc(movedTo) + "\", \"mode\": \"Move\" } ] }";
+            string path = WriteManifest(json);
+
+            int restored, failed;
+            bool ok = UndoManager.Restore(path, out restored, out failed, null);
+
+            Assert.True(ok);
+            Assert.True(Directory.Exists(original));
+            Assert.False(Directory.Exists(movedTo));
+        }
+
+        [Fact]
+        public void Restore_EmptyManifest_ReturnsFalse()
+        {
+            string json = "{ \"timestamp\": \"x\", \"deleteMode\": \"Direct\", \"entries\": [] }";
+            string path = WriteManifest(json);
+            int restored, failed;
+            bool ok = UndoManager.Restore(path, out restored, out failed, null);
+            Assert.False(ok);
+            Assert.Equal(0, restored);
+        }
+
+        private static string Esc(string s) { return s.Replace("\\", "\\\\"); }
+    }
+}

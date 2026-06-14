@@ -18,8 +18,16 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
       - name: Build Release
         run: msbuild "!RED+.sln" /p:Configuration=Release /p:Platform="Any CPU"
+
+      - name: Engine unit tests
+        run: dotnet test "RED.Tests/RED.Tests.csproj" -c Release --logger "console;verbosity=normal"
 
       - name: Headless safety smoke
         shell: pwsh
