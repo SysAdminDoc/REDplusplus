@@ -165,7 +165,10 @@ namespace RED
 					log?.Invoke(TXT.Translate("Refused to restore unsafe or out-of-tree path: {0}", RedAssist.DQuote(entry.Path)));
 					continue;
 				}
-				if (!string.IsNullOrWhiteSpace(entry.MovedTo) && !IsPathStructurallySafe(entry.MovedTo))
+				// The move-back SOURCE is constrained to the recorded roots too (the scan
+				// root and the move-to folder), so a tampered manifest cannot point it at
+				// an arbitrary file/dir and have Move relocate (destroy) it from its origin.
+				if (!string.IsNullOrWhiteSpace(entry.MovedTo) && !IsRestoreTargetSafe(entry.MovedTo, manifest.Roots))
 				{
 					failed++;
 					log?.Invoke(TXT.Translate("Refused to restore from unsafe move source: {0}", RedAssist.DQuote(entry.MovedTo)));
