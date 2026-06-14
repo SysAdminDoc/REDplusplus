@@ -18,6 +18,10 @@ namespace RED
 					EventLog.CreateEventSource(SourceName, LogName);
 				}
 
+				// Folder names reach the Event Viewer here; neutralize bidi/zero-width/
+				// control characters as the console and log lines already do.
+				scanPaths = RED.Helper.RedAssist.SanitizeDisplay(scanPaths);
+
 				string message = string.Format(
 					"RED++ scan completed.\r\n" +
 					"Paths: {0}\r\n" +
