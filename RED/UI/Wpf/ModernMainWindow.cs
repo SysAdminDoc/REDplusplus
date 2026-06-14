@@ -818,6 +818,14 @@ namespace RED.UI.Wpf
             };
             ScrollViewer.SetHorizontalScrollBarVisibility(list, ScrollBarVisibility.Auto);
             ScrollViewer.SetVerticalScrollBarVisibility(list, ScrollBarVisibility.Auto);
+            // A whole-volume scan can return hundreds of thousands of rows. The ListView
+            // virtualizes by default; tune it for that scale — recycle containers instead
+            // of creating/destroying one per scroll, and defer realization until the
+            // scrollbar thumb is released. (Row state binds to the ResultRow view-model,
+            // never the container, so recycling cannot leak state across rows.)
+            VirtualizingPanel.SetIsVirtualizing(list, true);
+            VirtualizingPanel.SetVirtualizationMode(list, VirtualizationMode.Recycling);
+            ScrollViewer.SetIsDeferredScrollingEnabled(list, true);
             SetAutomation(list, "Review results", "Empty directories and empty files found during the last scan.");
             list.FocusVisualStyle = FocusVisual;
 
