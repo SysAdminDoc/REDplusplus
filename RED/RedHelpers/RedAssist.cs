@@ -189,5 +189,33 @@ namespace RED.Helper
 
             return respx;
         }
+
+        /// <summary>
+        /// True for a path with no working Recycle Bin: a UNC share, or a Network /
+        /// Removable drive. Deleting there is permanent (the shell bypasses the bin), so
+        /// the UI/CLI should say "deleted", not "recycled" — undo still recreates the
+        /// empty directories/files regardless.
+        /// </summary>
+        internal static bool IsNoRecycleBinPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return false;
+
+            // UNC (\\server\share or \\?\UNC\server\share) never has a Recycle Bin.
+            string trimmed = path.TrimStart();
+            if (trimmed.StartsWith(@"\\?\UNC\", StringComparison.OrdinalIgnoreCase)) return true;
+            if (trimmed.StartsWith(@"\\", StringComparison.Ordinal) && !trimmed.StartsWith(@"\\?\", StringComparison.Ordinal)) return true;
+
+            try
+            {
+                string root = Path.GetPathRoot(path);
+                if (string.IsNullOrEmpty(root)) return false;
+                var di = new DriveInfo(root);
+                return di.DriveType == DriveType.Network || di.DriveType == DriveType.Removable;
+            }
+            catch
+            {
+                return false;
+            }
+        }
     }
 }

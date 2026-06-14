@@ -30,6 +30,7 @@
 - Headless runs now print a "Run complete" summary line with total empty directories, empty files, deleted, failed, and wall-clock duration. The `-json` `meta` record (now schema 3) carries the same totals plus `elapsedMs`. (The modern GUI already shows the current directory being scanned in its status strip.)
 
 ### Reliability
+- Be honest about a Recycle-Bin delete on a UNC share / network / removable drive: those locations have no Recycle Bin, so the shell deletes permanently. The headless run now logs a one-time note and the modern shell says so at delete start, instead of implying the items were recycled. Undo still recreates the empty directories regardless.
 - Treat `/` and `\` as the same separator in directory filter rules, so a path rule written with forward slashes (e.g. `temp/cache`) matches the same as one written with backslashes instead of silently degrading to name-only matching and never firing.
 - Derive the classic tree's exported deletion list from each node's status icon rather than its theme-dependent `ForeColor`, so a restyle or theme refresh can no longer silently drop eligible nodes from the export or include kept ones.
 - Make the classic tree's protect/unprotect symmetric: unprotecting a folder now also releases the ancestors that protecting it had marked (when no other protected descendant remains) and strips the `[Protected]` label, instead of leaving ancestors stuck visually and on the protected list.
