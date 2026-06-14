@@ -379,10 +379,10 @@ namespace RED.UI.Wpf
             Grid.SetColumn(title, 0);
             title.Children.Add(new WpfImage
             {
-                Source = ToImageSource(Properties.Resources.iconProject),
-                Width = 24,
-                Height = 24,
-                Margin = new Thickness(0, 0, 8, 0)
+                Source = ToImageSource(Properties.Resources.x128_Project),
+                Width = 30,
+                Height = 30,
+                Margin = new Thickness(0, 0, 10, 0)
             });
             title.Children.Add(new TextBlock
             {

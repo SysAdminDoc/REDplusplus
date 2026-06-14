@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-1.5.16-blue)
+![Version](https://img.shields.io/badge/version-1.5.17-blue)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2B-lightgrey)
 
@@ -6,7 +6,7 @@
 
 **Fast, portable empty-directory scanner and cleaner for Windows** — GUI + headless CLI, filter rules, MFT turbo scan, one-click undo, network/UNC support, and zero installation required.
 
-<img width="1586" height="992" alt="Generated image 1 (7)" src="https://github.com/user-attachments/assets/4ec3a54b-6752-4777-9321-5b4c9be91a77" />
+<img width="2084" height="460" alt="RED++ banner showing the folder search and review logo" src="help/img/banner.png" />
 
 
 ### Quick Start
@@ -14,7 +14,7 @@
 **Portable** — download, unzip, run:
 
 ```
-curl -Lo RED++.zip https://github.com/SysAdminDoc/REDplusplus/releases/latest/download/RED++_v1.5.16.zip
+curl -Lo RED++.zip https://github.com/SysAdminDoc/REDplusplus/releases/latest/download/RED++_v1.5.17.zip
 tar -xf RED++.zip
 RED+.exe
 ```
@@ -81,7 +81,7 @@ RED+.exe -silent -path "D:\Shares" -log cleanup.log
 Every release ships a `SHA256SUMS` file and a signed build-provenance attestation. To verify the zip really came from this repository's CI:
 
 ```
-gh attestation verify RED++_v1.5.16.zip -R SysAdminDoc/REDplusplus
+gh attestation verify RED++_v1.5.17.zip -R SysAdminDoc/REDplusplus
 ```
 
 ## Code Signing & SmartScreen
