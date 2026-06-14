@@ -104,6 +104,77 @@ namespace RED
         }
 
         [Fact]
+        public void Restore_PathInsideRoots_IsRestored()
+        {
+            string inside = Path.Combine(_root, "good");
+            string json =
+                "{ \"timestamp\": \"2026-06-14T00:00:00\", \"deleteMode\": \"Direct\", " +
+                "\"roots\": [\"" + Esc(_root) + "\"], \"entries\": [" +
+                "{ \"path\": \"" + Esc(inside) + "\", \"mode\": \"Direct\" } ] }";
+            string path = WriteManifest(json);
+
+            int restored, failed;
+            bool ok = UndoManager.Restore(path, out restored, out failed, null);
+
+            Assert.True(ok);
+            Assert.Equal(1, restored);
+            Assert.True(Directory.Exists(inside));
+        }
+
+        [Fact]
+        public void Restore_PathOutsideRoots_IsRefused()
+        {
+            // A tampered manifest pointing outside the cleaned tree must be rejected.
+            string outside = Path.Combine(Path.GetTempPath(), "redpp-evil-" + Guid.NewGuid().ToString("N"), "x");
+            string json =
+                "{ \"timestamp\": \"2026-06-14T00:00:00\", \"deleteMode\": \"Direct\", " +
+                "\"roots\": [\"" + Esc(_root) + "\"], \"entries\": [" +
+                "{ \"path\": \"" + Esc(outside) + "\", \"mode\": \"Direct\" } ] }";
+            string path = WriteManifest(json);
+
+            int restored, failed;
+            bool ok = UndoManager.Restore(path, out restored, out failed, null);
+
+            Assert.False(ok);
+            Assert.Equal(0, restored);
+            Assert.Equal(1, failed);
+            Assert.False(Directory.Exists(outside));
+        }
+
+        [Fact]
+        public void Restore_DotDotTraversalPath_IsRefused()
+        {
+            // ".." traversal is refused even when the manifest records no roots.
+            string evil = Path.Combine(_root, "..", "redpp-escape-" + Guid.NewGuid().ToString("N"));
+            string json =
+                "{ \"timestamp\": \"x\", \"deleteMode\": \"Direct\", \"entries\": [" +
+                "{ \"path\": \"" + Esc(evil) + "\", \"mode\": \"Direct\" } ] }";
+            string path = WriteManifest(json);
+
+            int restored, failed;
+            bool ok = UndoManager.Restore(path, out restored, out failed, null);
+
+            Assert.False(ok);
+            Assert.Equal(0, restored);
+            Assert.False(Directory.Exists(Path.GetFullPath(evil)));
+        }
+
+        [Fact]
+        public void Restore_RelativePath_IsRefused()
+        {
+            string json =
+                "{ \"timestamp\": \"x\", \"deleteMode\": \"Direct\", \"entries\": [" +
+                "{ \"path\": \"relative\\\\sub\", \"mode\": \"Direct\" } ] }";
+            string path = WriteManifest(json);
+
+            int restored, failed;
+            bool ok = UndoManager.Restore(path, out restored, out failed, null);
+
+            Assert.False(ok);
+            Assert.Equal(0, restored);
+        }
+
+        [Fact]
         public void Restore_EmptyManifest_ReturnsFalse()
         {
             string json = "{ \"timestamp\": \"x\", \"deleteMode\": \"Direct\", \"entries\": [] }";
