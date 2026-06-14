@@ -27,6 +27,18 @@ namespace RED.Config
         internal bool IsReadOnly { get; set; }
         internal bool Exists { get { return File.Exists(Filename); } }
 
+        /// <summary>
+        /// Settings schema version. Bump this when a settings field is renamed or
+        /// restructured, and add the matching step to <c>ConfigAssist.MigrateIfNeeded</c>.
+        /// A file written by an older RED++ has no attribute and deserializes to 0,
+        /// triggering migration; a file from a newer RED++ has a higher value and is left
+        /// untouched (its unknown fields are simply ignored by the serializer).
+        /// </summary>
+        internal const int CurrentSchemaVersion = 1;
+
+        [XmlAttribute("schemaVersion")]
+        public int SchemaVersion { get; set; }
+
         public string CreatedBy { get { return _CreatedBy; } set { SetField(ref _CreatedBy, value); } }
         private string _CreatedBy;
 
@@ -51,6 +63,7 @@ namespace RED.Config
 
         internal void SetToDefaults()
         {
+            SchemaVersion = CurrentSchemaVersion;
             Options.SetToDefaults();
             Filters.SetToDefaults();
             Volatile.SetToDefaults();
