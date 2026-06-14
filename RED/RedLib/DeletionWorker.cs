@@ -34,6 +34,29 @@ namespace RED
 		private readonly System.Collections.Generic.HashSet<string> deletedParents =
 			new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+		/// <summary>
+		/// True when <paramref name="fullPath"/> is itself user-protected OR is an
+		/// ancestor of any protected path. A directory that merely contains a protected
+		/// descendant must never be deleted: a recursive delete of the ancestor destroys
+		/// the protected child, and the per-item protection check on the child's own
+		/// path is then bypassed (the child is reported as already-deleted-by-parent).
+		/// Comparison is case-insensitive to match Windows path semantics and the
+		/// OrdinalIgnoreCase ProtectedFolderList.
+		/// </summary>
+		internal static bool IsProtectedOrAncestorOfProtected(string fullPath, System.Collections.Generic.ICollection<string> protectedPaths)
+		{
+			if (string.IsNullOrEmpty(fullPath) || protectedPaths == null || protectedPaths.Count == 0)
+				return false;
+			string prefix = fullPath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+			foreach (string p in protectedPaths)
+			{
+				if (string.IsNullOrEmpty(p)) continue;
+				if (string.Equals(p, fullPath, StringComparison.OrdinalIgnoreCase)) return true;
+				if (p.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return true;
+			}
+			return false;
+		}
+
 		public DeletionWorker()
 		{
 			WorkerReportsProgress = true;
@@ -114,8 +137,9 @@ namespace RED
 						MovedTo = null
 					});
 				}
-				// Do not delete one time protected folders
-				else if (!this.Data.ProtectedFolderList.ContainsKey(scanResult.FullPath))
+				// Never delete a protected folder, nor any directory that contains a
+				// protected descendant (a recursive delete would take the child with it).
+				else if (!IsProtectedOrAncestorOfProtected(scanResult.FullPath, this.Data.ProtectedFolderList.Keys))
 				{
 					try
 					{
@@ -155,6 +179,7 @@ namespace RED
 				else
 				{
 					status = DirectoryDeletionStatusTypes.Protected;
+					this.ProtectedCount++;
 				}
 
 				this.ReportProgress(1, new DeleteProcessUpdateEventArgs(this.ListPos, scanResult, status, this.Data.ScanResults.Count));
@@ -218,8 +243,9 @@ namespace RED
 
 				Match.RedScanResultItem scanResult = this.Data.ScanResults[pos];
 
-				if (this.Data.ProtectedFolderList.ContainsKey(scanResult.FullPath))
+				if (IsProtectedOrAncestorOfProtected(scanResult.FullPath, this.Data.ProtectedFolderList.Keys))
 				{
+					this.ProtectedCount++;
 					this.ReportProgress(1, new DeleteProcessUpdateEventArgs(pos, scanResult, DirectoryDeletionStatusTypes.Protected, total));
 					continue;
 				}
@@ -409,20 +435,26 @@ namespace RED
 			bool showErrors = this.Data.DeleteMode == DeleteModes.RecycleBinShowErrors && !NotBob.Config.ConfigAssist.SilentMode;
 			bool showConfirm = this.Data.DeleteMode == DeleteModes.RecycleBinWithQuestion && !NotBob.Config.ConfigAssist.SilentMode;
 
-			List<RecycleBinOperation.ItemResult> results = RecycleBinOperation.RecycleBatch(
+			RecycleBinOperation.RecycleBatch(
 				paths, showConfirm, showErrors,
 				() => CancellationPending, null);
 
-			for (int i = 0; i < results.Count; i++)
+			// Derive each file's outcome from the filesystem, not the sink's positional
+			// result list: IFileOperation does not guarantee one PostDeleteItem per
+			// DeleteItem in submission order, so trusting results[i] can attribute a
+			// success/failure (and the undo entry) to the wrong file. A recycled file is
+			// gone from its origin, so !File.Exists is the ground truth (matches the
+			// directory batch path).
+			foreach (string filePath in paths)
 			{
-				RecycleBinOperation.ItemResult r = results[i];
-				if (r.Succeeded)
+				bool deleted = !File.Exists(filePath);
+				if (deleted)
 				{
-					this.Data.AddLogMessage(TXT.Translate("Successfully deleted empty file: {0}", RedAssist.DQuote(r.Path)));
+					this.Data.AddLogMessage(TXT.Translate("Successfully deleted empty file: {0}", RedAssist.DQuote(filePath)));
 					this.DeletedFileCount++;
 					undoEntries.Add(new UndoManager.ManifestEntry
 					{
-						Path = r.Path,
+						Path = filePath,
 						Mode = this.Data.DeleteMode.ToString(),
 						MovedTo = null,
 						IsFile = true
@@ -430,7 +462,7 @@ namespace RED
 				}
 				else
 				{
-					this.Data.AddLogMessage(TXT.Translate("Failed to delete empty file: {0} - HRESULT 0x{1:X8}", RedAssist.DQuote(r.Path), r.HResult));
+					this.Data.AddLogMessage(TXT.Translate("Failed to delete empty file: {0}", RedAssist.DQuote(filePath)));
 					this.FailedFileCount++;
 				}
 			}

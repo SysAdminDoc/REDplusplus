@@ -48,8 +48,9 @@ namespace RED
 		{
 			CurrentProcessStep = WorkflowSteps.StartSearchingForEmptyDirs;
 
-			// Rest folder list
-			RunData.ProtectedFolderList = new Dictionary<string, bool>();
+			// Reset protected-folder list. Case-insensitive to match Windows path
+			// semantics (a protect entry must match the scan result regardless of casing).
+			RunData.ProtectedFolderList = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
 
 			// Start async empty directory search worker
 			SearchEmptyFoldersWorker = new FindEmptyDirectoryWorker();
