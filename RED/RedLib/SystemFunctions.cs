@@ -374,7 +374,10 @@ namespace RED
         {
             try
             {
-                var acl = System.IO.Directory.GetAccessControl(path);
+                // .NET (Core) removed the static Directory.GetAccessControl; the
+                // DirectoryInfo.GetAccessControl() extension is the 1:1 replacement
+                // (same default AccessControlSections: Access | Owner | Group).
+                var acl = new System.IO.DirectoryInfo(path).GetAccessControl();
                 var rules = acl.GetAccessRules(true, true, typeof(System.Security.Principal.SecurityIdentifier));
                 var identity = WindowsIdentity.GetCurrent();
                 var principal = new WindowsPrincipal(identity);

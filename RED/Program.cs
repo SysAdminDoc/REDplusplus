@@ -851,8 +851,23 @@ namespace RED
 
 		private static string GetFileVersion()
 		{
-			var vi = System.Diagnostics.FileVersionInfo.GetVersionInfo(System.Reflection.Assembly.GetExecutingAssembly().Location);
-			return vi.FileVersion;
+			// Single-file safe: Assembly.Location is empty in a published single-file
+			// bundle, which would throw here. Environment.ProcessPath is the apphost
+			// exe (it carries the version resource); fall back to the embedded
+			// AssemblyFileVersion attribute if the path is unavailable.
+			try
+			{
+				string path = Environment.ProcessPath;
+				if (!string.IsNullOrEmpty(path))
+				{
+					string fv = System.Diagnostics.FileVersionInfo.GetVersionInfo(path).FileVersion;
+					if (!string.IsNullOrEmpty(fv)) return fv;
+				}
+			}
+			catch { }
+			var attr = (System.Reflection.AssemblyFileVersionAttribute)Attribute.GetCustomAttribute(
+				System.Reflection.Assembly.GetExecutingAssembly(), typeof(System.Reflection.AssemblyFileVersionAttribute));
+			return attr != null ? attr.Version : "0.0.0";
 		}
 
 		private static void PrintUsage()

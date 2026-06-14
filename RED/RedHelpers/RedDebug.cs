@@ -21,7 +21,9 @@ namespace RED.Helper
             try
             {
                 Assembly asm = Assembly.GetExecutingAssembly();
-                FileVersionInfo vi = FileVersionInfo.GetVersionInfo(asm.Location);
+                // Environment.ProcessPath (the apphost exe) is valid in single-file
+                // builds where asm.Location is empty.
+                FileVersionInfo vi = FileVersionInfo.GetVersionInfo(Environment.ProcessPath);
                 info.Append(string.Format("File Version={0}", vi.FileVersion.ToString()));
                 info.Append(string.Format(", Product Version={0}", asm.GetName().Version.ToString()));
 #if DEBUG

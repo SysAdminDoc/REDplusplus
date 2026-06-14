@@ -97,8 +97,9 @@ namespace RED.UI
 
             // Update labels
             lblRedStats.Text = string.Format("{0}: {1}", TXT.Words.DeletedSoFar, RedConfig.Volatile.CountOfDeletions);
-            // NotBob - use file version info rather than product version
-            FileVersionInfo vi = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location);
+            // NotBob - use file version info rather than product version.
+            // Environment.ProcessPath is single-file safe (Assembly.Location is empty there).
+            FileVersionInfo vi = FileVersionInfo.GetVersionInfo(Environment.ProcessPath);
             lbAppTitle.Text = string.Format("{0} v{1}", RedGetText.Red.Title, vi.FileVersion.ToString());
 #if DEBUG
             lbAppTitle.Text += " (DBUG)";
