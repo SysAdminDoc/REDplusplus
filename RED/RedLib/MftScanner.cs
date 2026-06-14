@@ -247,6 +247,8 @@ namespace RED
             {
                 byte[] buffer = new byte[128 * 1024];
                 int recordCount = 0;
+                bool enumerationComplete = false;
+                int bytesReturned;
 
                 if (isReFs)
                 {
@@ -259,12 +261,13 @@ namespace RED
                         MinMajorVersion = 2,
                         MaxMajorVersion = 3
                     };
-                    int bytesReturned;
-                    while (DeviceIoControl(hVolume, FSCTL_ENUM_USN_DATA,
-                        ref enumData, Marshal.SizeOf(enumData),
-                        buffer, buffer.Length, out bytesReturned, IntPtr.Zero))
+                    while (true)
                     {
-                        if (bytesReturned <= 8) break;
+                        bool ok = DeviceIoControl(hVolume, FSCTL_ENUM_USN_DATA,
+                            ref enumData, Marshal.SizeOf(enumData),
+                            buffer, buffer.Length, out bytesReturned, IntPtr.Zero);
+                        if (!ok) { enumerationComplete = IsEnumerationEofError(); break; }
+                        if (bytesReturned <= 8) { enumerationComplete = true; break; }
                         if (worker != null && worker.CancellationPending) return false;
                         enumData.StartFileReferenceNumber = BitConverter.ToUInt64(buffer, 0);
                         ParseRecords(buffer, bytesReturned, ref recordCount, worker);
@@ -279,24 +282,62 @@ namespace RED
                         LowUsn = 0,
                         HighUsn = long.MaxValue
                     };
-                    int bytesReturned;
-                    while (DeviceIoControl(hVolume, FSCTL_ENUM_USN_DATA,
-                        ref enumData, Marshal.SizeOf(enumData),
-                        buffer, buffer.Length, out bytesReturned, IntPtr.Zero))
+                    while (true)
                     {
-                        if (bytesReturned <= 8) break;
+                        bool ok = DeviceIoControl(hVolume, FSCTL_ENUM_USN_DATA,
+                            ref enumData, Marshal.SizeOf(enumData),
+                            buffer, buffer.Length, out bytesReturned, IntPtr.Zero);
+                        if (!ok) { enumerationComplete = IsEnumerationEofError(); break; }
+                        if (bytesReturned <= 8) { enumerationComplete = true; break; }
                         if (worker != null && worker.CancellationPending) return false;
                         enumData.StartFileReferenceNumber = BitConverter.ToUInt64(buffer, 0);
                         ParseRecords(buffer, bytesReturned, ref recordCount, worker);
                     }
                 }
 
-                return entries.Count > 0;
+                // Fail closed: an aborted/truncated enumeration (any termination
+                // other than the EOF sentinel) or a buffer that yielded no records
+                // means the entry set is unreliable. A directory whose children
+                // were dropped would look empty, so the caller must fall back to
+                // the standard recursive walker rather than risk a false-empty.
+                if (!enumerationComplete || entries.Count == 0)
+                    return false;
+
+                // Integrity check: every directory referenced as a parent must have
+                // its own record. A missing parent record is the signature of a
+                // dropped USN record, which can hide real children. Treat it as an
+                // incomplete enumeration and fall back.
+                if (!IsEnumerationConsistent())
+                    return false;
+
+                return true;
             }
             finally
             {
                 CloseHandle(hVolume);
             }
+        }
+
+        // True only when the USN walk ended at the EOF sentinel. Must be called
+        // immediately after DeviceIoControl returns false, before any other
+        // managed call can overwrite the thread's last Win32 error.
+        private static bool IsEnumerationEofError()
+        {
+            const int ERROR_HANDLE_EOF = 38;
+            return Marshal.GetLastWin32Error() == ERROR_HANDLE_EOF;
+        }
+
+        // Returns false if any parent FRN referenced by an enumerated record lacks
+        // its own record (excluding the volume root, whose record the enumeration
+        // may legitimately omit). A dangling parent means records were dropped.
+        internal bool IsEnumerationConsistent()
+        {
+            foreach (Frn parent in childrenOf.Keys)
+            {
+                if (parent.Equals(rootFrn)) continue;
+                if (!entries.ContainsKey(parent)) return false;
+            }
+            return true;
         }
 
         /// <summary>
