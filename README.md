@@ -54,6 +54,7 @@ RED+.exe -silent -path "D:\Shares" -log cleanup.log
 - Headless CLI mode for scripted/scheduled operation
 - Single-instance enforcement
 - Persistent log file (RED++.log)
+- Writes a local crash report (`RED++.crash-*.txt`) on an unexpected error — no telemetry; attach it to a GitHub issue
 - Explorer context menu integration
 - Environment variable expansion in path input
 
