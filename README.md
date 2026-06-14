@@ -50,7 +50,7 @@ RED+.exe -silent -path "D:\Shares" -log cleanup.log
 - Extended directory and file name matching with sophisticated filter syntax
 - Dedicated grid for display and editing of filter rules
 - Translation-ready via .po files (template included, community translations welcome)
-- Export scan results to TXT, CSV, or JSON; import saved dry-run results for GUI review
+- Export scan results to TXT, CSV, JSON, a re-runnable PowerShell removal script, or a self-contained HTML report; import saved dry-run results for GUI review
 - Headless CLI mode for scripted/scheduled operation
 - Single-instance enforcement
 - Persistent log file (RED++.log)
@@ -129,7 +129,7 @@ Options:
 | `-mft`, `-no-mft` | Enable or disable MFT turbo scan for this run; MFT still requires administrator rights. |
 | `-hidden`, `-ignore-hidden` | Include or ignore hidden directories for this run. |
 | `-system`, `-ignore-system` | Include or ignore system directories for this run. |
-| `-export <file>` | Write results to `.txt` / `.csv` / `.json` (chosen by extension). |
+| `-export <file>` | Write results to `.txt` / `.csv` / `.json` / `.ps1` / `.html` (chosen by extension). |
 | `-json` | Emit NDJSON to stdout: one `meta` record (version, run totals, and elapsed time), then one `result` record per directory. |
 | `-quiet` | Suppress stdout/stderr; use only the process exit code and optional `-log`. |
 | `-log <file>` | Write a timestamped run log. |

@@ -57,7 +57,7 @@ namespace RED.Helper
             using (SaveFileDialog dlg = new SaveFileDialog())
             {
                 dlg.Title = TXT.Translate("Export scan results");
-                dlg.Filter = TXT.Translate("Text files|*.txt|CSV files|*.csv|JSON files|*.json|All files|*.*");
+                dlg.Filter = TXT.Translate("Text files|*.txt|CSV files|*.csv|JSON files|*.json|PowerShell removal script|*.ps1|HTML report|*.html|All files|*.*");
                 dlg.FilterIndex = 1;
                 dlg.DefaultExt = "txt";
                 dlg.FileName = "RED++_EmptyDirectories";
@@ -74,6 +74,14 @@ namespace RED.Helper
                 else if (ext == ".json")
                 {
                     WriteJson(v, dlg.FileName);
+                }
+                else if (ext == ".ps1")
+                {
+                    WritePowerShellScript(v, dlg.FileName);
+                }
+                else if (ext == ".html" || ext == ".htm")
+                {
+                    WriteHtmlReport(v, dlg.FileName);
                 }
                 else
                 {
@@ -92,6 +100,18 @@ namespace RED.Helper
         public void WriteJsonFile(RedScanResultItemList v, string filename)
         {
             WriteJson(v, filename);
+        }
+
+        /// <summary>Public entry for the headless CLI -export path.</summary>
+        public void WritePs1File(RedScanResultItemList v, string filename)
+        {
+            WritePowerShellScript(v, filename);
+        }
+
+        /// <summary>Public entry for the headless CLI -export path.</summary>
+        public void WriteHtmlFile(RedScanResultItemList v, string filename)
+        {
+            WriteHtmlReport(v, filename);
         }
 
         private void WriteCsv(RedScanResultItemList v, string filename)
@@ -177,6 +197,112 @@ namespace RED.Helper
                 }
             }
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Emits a reviewable PowerShell removal script (rmlint-style): the eligible
+        /// directories as a list, a fail-safe `$Execute = $false` default, and a
+        /// per-directory re-check that it is still file-free immediately before removal
+        /// (Recycle Bin by default). The decision (this list) is decoupled from the
+        /// action (running the script), which suits change-controlled / scheduled use.
+        /// </summary>
+        private void WritePowerShellScript(RedScanResultItemList v, string filename)
+        {
+            var dirs = new List<string>();
+            for (int i = 0; i < v.Count; i++)
+            {
+                if (v[i].Kind == Match.ResultKind.Directory && v[i].SearchStatus == DirectorySearchStatusTypes.Empty)
+                {
+                    dirs.Add(v[i].FullPath);
+                }
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine("# RED++ removal script - review before running.");
+            sb.AppendLine("# Each directory below was reported EMPTY by a RED++ dry-run.");
+            sb.AppendLine("# SAFETY: nothing is removed until you set $Execute = $true, and every");
+            sb.AppendLine("#   directory is re-checked to still contain no files immediately before removal.");
+            sb.AppendLine("# Generated " + DateTime.Now.ToString("yyyy-MM-dd HH:mm") + " - " + dirs.Count + (dirs.Count == 1 ? " eligible directory." : " eligible directories."));
+            sb.AppendLine();
+            sb.AppendLine("$Execute = $false   # set $true to actually remove the directories");
+            sb.AppendLine("$Recycle = $true    # $true = Recycle Bin (recoverable); $false = permanent delete");
+            sb.AppendLine();
+            sb.AppendLine("$targets = @(");
+            for (int i = 0; i < dirs.Count; i++)
+            {
+                sb.AppendLine("  '" + dirs[i].Replace("'", "''") + "'" + (i < dirs.Count - 1 ? "," : ""));
+            }
+            sb.AppendLine(")");
+            sb.AppendLine();
+            sb.AppendLine("Add-Type -AssemblyName Microsoft.VisualBasic");
+            sb.AppendLine("$removed = 0; $skipped = 0");
+            sb.AppendLine("foreach ($t in $targets) {");
+            sb.AppendLine("  if (-not (Test-Path -LiteralPath $t)) { Write-Host \"skip (already gone): $t\"; $skipped++; continue }");
+            sb.AppendLine("  $files = @(Get-ChildItem -LiteralPath $t -Recurse -Force -File -ErrorAction SilentlyContinue)");
+            sb.AppendLine("  if ($files.Count -gt 0) { Write-Warning \"skip (not empty - $($files.Count) file(s)): $t\"; $skipped++; continue }");
+            sb.AppendLine("  if (-not $Execute) { Write-Host \"would remove: $t\"; continue }");
+            sb.AppendLine("  try {");
+            sb.AppendLine("    if ($Recycle) { [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory($t, 'OnlyErrorDialogs', 'SendToRecycleBin') }");
+            sb.AppendLine("    else { Remove-Item -LiteralPath $t -Recurse -Force }");
+            sb.AppendLine("    Write-Host \"removed: $t\"; $removed++");
+            sb.AppendLine("  } catch { Write-Warning \"failed: $t -- $($_.Exception.Message)\"; $skipped++ }");
+            sb.AppendLine("}");
+            sb.AppendLine("Write-Host \"RED++ removal: removed=$removed skipped=$skipped (Execute=$Execute, Recycle=$Recycle)\"");
+
+            // UTF-8 with BOM so Windows PowerShell 5.1 reads non-ASCII paths correctly.
+            File.WriteAllText(filename, sb.ToString(), new UTF8Encoding(true));
+        }
+
+        /// <summary>
+        /// Emits a single self-contained HTML audit report (no external assets) of the
+        /// full result set with run metadata and each row's status reason.
+        /// </summary>
+        private void WriteHtmlReport(RedScanResultItemList v, string filename)
+        {
+            int eligible = 0, files = 0, dirs = 0;
+            for (int i = 0; i < v.Count; i++)
+            {
+                if (v[i].Kind == Match.ResultKind.File) files++; else dirs++;
+                if (v[i].SearchStatus == DirectorySearchStatusTypes.Empty) eligible++;
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine("<!DOCTYPE html>");
+            sb.AppendLine("<html lang=\"en\"><head><meta charset=\"utf-8\">");
+            sb.AppendLine("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+            sb.AppendLine("<title>RED++ scan report</title>");
+            sb.AppendLine("<style>");
+            sb.AppendLine("body{background:#1e1e2e;color:#cdd6f4;font:14px/1.5 'Segoe UI',system-ui,sans-serif;margin:24px}");
+            sb.AppendLine("h1{color:#f38ba8;margin:0 0 4px} .meta{color:#a6adc8;margin:0 0 16px}");
+            sb.AppendLine("table{border-collapse:collapse;width:100%}");
+            sb.AppendLine("th,td{text-align:left;padding:6px 10px;border-bottom:1px solid #313244;vertical-align:top}");
+            sb.AppendLine("th{color:#89b4fa;position:sticky;top:0;background:#181825}");
+            sb.AppendLine("td.path{font-family:Consolas,monospace;word-break:break-all}");
+            sb.AppendLine(".s-Empty{color:#f38ba8} .s-Ignore,.s-NeverEmpty{color:#a6adc8} .s-Error{color:#fab387}");
+            sb.AppendLine("</style></head><body>");
+            sb.AppendLine("<h1>RED++ scan report</h1>");
+            sb.AppendLine("<p class=\"meta\">Generated " + HtmlEscape(DateTime.Now.ToString("yyyy-MM-dd HH:mm"))
+                + " &middot; " + v.Count + (v.Count == 1 ? " result" : " results")
+                + " (" + dirs + (dirs == 1 ? " directory, " : " directories, ") + files + (files == 1 ? " file, " : " files, ")
+                + eligible + " eligible for deletion).</p>");
+            sb.AppendLine("<table><thead><tr><th>Kind</th><th>Path</th><th>Status</th><th>Reason</th></tr></thead><tbody>");
+            for (int i = 0; i < v.Count; i++)
+            {
+                string kind = v[i].Kind == Match.ResultKind.File ? "file" : "directory";
+                string status = v[i].SearchStatus.ToString();
+                sb.AppendLine("<tr><td>" + kind + "</td><td class=\"path\">" + HtmlEscape(v[i].FullPath)
+                    + "</td><td class=\"s-" + HtmlEscape(status) + "\">" + HtmlEscape(status)
+                    + "</td><td>" + HtmlEscape(v[i].StatusReason) + "</td></tr>");
+            }
+            sb.AppendLine("</tbody></table></body></html>");
+
+            File.WriteAllText(filename, sb.ToString(), new UTF8Encoding(false));
+        }
+
+        private static string HtmlEscape(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return string.Empty;
+            return s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;").Replace("'", "&#39;");
         }
 
         private List<string> GetExportText(RedScanResultItemList v)
