@@ -71,9 +71,9 @@ RED+.exe -silent -path "D:\Shares" -log cleanup.log
 
 ## System Requirements
 
-- Windows 10 22H2, Windows 11, or Windows Server 2022/2025
-- Microsoft .NET Framework 4.8.1
-- No installer required. Unzip and run.
+- Windows 10 22H2, Windows 11, or Windows Server 2022/2025 (64-bit / x64)
+- No runtime to install — the release is a self-contained single-file build that bundles .NET 9. Just unzip and run.
+- No installer required.
 
 ## Verify Your Download
 
