@@ -81,6 +81,16 @@ namespace SecondLanguage
 			_buffer = buffer;
 			Encoding = Encoding.ASCII;
 
+			// The header is a fixed 28-byte structure (magic, revision, string
+			// count, two table offsets, hash-table size + offset). A truncated or
+			// crafted .mo shorter than that would otherwise throw an uncaught
+			// IndexOutOfRangeException out of ParseUInt32 below; fail fast with a
+			// catchable IOException so the loader falls back to untranslated text.
+			if (_buffer.LongLength < 28)
+			{
+				throw new IOException("Not a .mo file (header truncated).");
+			}
+
 			uint magic = ParseUInt32(0);
 			if (magic == 0x950412de)
 			{
