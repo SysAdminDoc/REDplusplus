@@ -22,6 +22,11 @@ namespace RED
 		{
 			[DataMember(Name = "timestamp")] public string Timestamp { get; set; }
 			[DataMember(Name = "deleteMode")] public string DeleteMode { get; set; }
+			// The scan root(s) the run cleaned. Restore refuses any entry that is not
+			// inside one of these, so a tampered/corrupt manifest cannot redirect a
+			// recreate or a move-back to an arbitrary location. Absent in legacy
+			// manifests, in which case only the structural checks apply.
+			[DataMember(Name = "roots", IsRequired = false)] public List<string> Roots { get; set; }
 			[DataMember(Name = "entries")] public List<ManifestEntry> Entries { get; set; }
 		}
 
@@ -146,6 +151,24 @@ namespace RED
 			{
 				if (string.IsNullOrWhiteSpace(entry.Path))
 				{
+					continue;
+				}
+
+				// A restore recreates directories and moves payloads back to paths read
+				// verbatim from the manifest. Refuse anything that is not a fully-qualified
+				// path free of ".." and (when the manifest records its roots) inside the
+				// originally-cleaned tree, so a tampered or corrupt manifest cannot be
+				// turned into an arbitrary create/move primitive.
+				if (!IsRestoreTargetSafe(entry.Path, manifest.Roots))
+				{
+					failed++;
+					log?.Invoke(TXT.Translate("Refused to restore unsafe or out-of-tree path: {0}", RedAssist.DQuote(entry.Path)));
+					continue;
+				}
+				if (!string.IsNullOrWhiteSpace(entry.MovedTo) && !IsPathStructurallySafe(entry.MovedTo))
+				{
+					failed++;
+					log?.Invoke(TXT.Translate("Refused to restore from unsafe move source: {0}", RedAssist.DQuote(entry.MovedTo)));
 					continue;
 				}
 
@@ -274,6 +297,11 @@ namespace RED
 
 		internal static void WriteManifest(string deleteMode, IList<ManifestEntry> entries, Action<string> log)
 		{
+			WriteManifest(deleteMode, entries, null, log);
+		}
+
+		internal static void WriteManifest(string deleteMode, IList<ManifestEntry> entries, IList<string> roots, Action<string> log)
+		{
 			if (entries == null || entries.Count == 0) return;
 			try
 			{
@@ -282,7 +310,7 @@ namespace RED
 				string timestampedName = ManifestPrefix + timestamp + ManifestSuffix;
 				string timestampedPath = Path.Combine(dir, timestampedName);
 
-				string json = BuildManifestJson(deleteMode, entries);
+				string json = BuildManifestJson(deleteMode, entries, roots);
 
 				// Write atomically: a crash or power loss mid-write must never leave
 				// a truncated manifest, because it is the only recovery path for a
@@ -299,12 +327,25 @@ namespace RED
 			catch { }
 		}
 
-		private static string BuildManifestJson(string deleteMode, IList<ManifestEntry> entries)
+		private static string BuildManifestJson(string deleteMode, IList<ManifestEntry> entries, IList<string> roots)
 		{
 			var sb = new StringBuilder();
 			sb.AppendLine("{");
 			sb.AppendLine("  \"timestamp\": \"" + DateTime.Now.ToString("o") + "\",");
 			sb.AppendLine("  \"deleteMode\": \"" + EscapeJson(deleteMode) + "\",");
+			if (roots != null && roots.Count > 0)
+			{
+				sb.Append("  \"roots\": [");
+				bool firstRoot = true;
+				foreach (string r in roots)
+				{
+					if (string.IsNullOrWhiteSpace(r)) continue;
+					if (!firstRoot) sb.Append(", ");
+					sb.Append("\"" + EscapeJson(r) + "\"");
+					firstRoot = false;
+				}
+				sb.AppendLine("],");
+			}
 			sb.AppendLine("  \"entries\": [");
 			for (int i = 0; i < entries.Count; i++)
 			{
@@ -360,6 +401,57 @@ namespace RED
 			{
 				File.Move(tmp, path);
 			}
+		}
+
+		/// <summary>
+		/// A restore target must be a fully-qualified path with no ".." segment (before
+		/// or after normalization). Rejects relative paths, device paths, and traversal.
+		/// </summary>
+		private static bool IsPathStructurallySafe(string path)
+		{
+			if (string.IsNullOrWhiteSpace(path)) return false;
+			if (!Path.IsPathFullyQualified(path)) return false;
+			if (HasDotDotSegment(path)) return false;
+			string full;
+			try { full = Path.GetFullPath(path); }
+			catch { return false; }
+			return !HasDotDotSegment(full);
+		}
+
+		/// <summary>
+		/// Structurally safe AND, when the manifest records its scan roots, inside one
+		/// of them. A legacy manifest with no roots passes on the structural checks alone.
+		/// </summary>
+		private static bool IsRestoreTargetSafe(string path, IList<string> roots)
+		{
+			if (!IsPathStructurallySafe(path)) return false;
+			if (roots == null || roots.Count == 0) return true;
+
+			string full;
+			try { full = Path.GetFullPath(path); }
+			catch { return false; }
+
+			foreach (string r in roots)
+			{
+				if (string.IsNullOrWhiteSpace(r)) continue;
+				string rootFull;
+				try { rootFull = Path.GetFullPath(r); }
+				catch { continue; }
+
+				if (full.Equals(rootFull, StringComparison.OrdinalIgnoreCase)) return true;
+				string prefix = rootFull.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+				if (full.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return true;
+			}
+			return false;
+		}
+
+		private static bool HasDotDotSegment(string path)
+		{
+			foreach (string seg in path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+			{
+				if (seg == "..") return true;
+			}
+			return false;
 		}
 
 		private static string EscapeJson(string s)
