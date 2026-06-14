@@ -21,22 +21,71 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
 
-      - name: Setup NuGet
-        uses: NuGet/setup-nuget@v2
+      # Self-contained single-file: no .NET runtime install required on the target
+      # machine, preserving RED++'s "unzip and run" portability. Larger artifact
+      # (~65 MB) than a framework-dependent build, but no external dependency. WPF +
+      # reflection-based resource loading are not trim-safe, so trimming is left off.
+      - name: Publish self-contained single-file
+        run: dotnet publish "RED/RED+.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish
 
-      - name: Restore NuGet packages
-        run: nuget restore "!RED+.sln"
+      # Gate the release on the actual shipping artifact passing the safety
+      # invariants (empty-dir/file deletion; reparse-point, deny-ACL, and
+      # AutoProtectRoot protection). Never ship a file-deleting tool that fails this.
+      - name: Safety smoke on published artifact
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Join-Path $PWD 'publish\RED+.exe'
+          if (!(Test-Path $exe)) { throw "Missing published RED+.exe at $exe" }
 
-      - name: Build Release
-        run: msbuild "!RED+.sln" /p:Configuration=Release /p:Platform="Any CPU"
+          $root = Join-Path $env:RUNNER_TEMP ("redpp-rel-" + [guid]::NewGuid().ToString("N"))
+          $junctionTarget = $root + '-junction-target'
+          New-Item -ItemType Directory -Path $root | Out-Null
+          try {
+            $emptyDir = Join-Path $root 'empty-child'
+            $nonEmpty = Join-Path $root 'non-empty'
+            $junction = Join-Path $root 'junction'
+            $deny = Join-Path $root 'deny-access'
+            New-Item -ItemType Directory -Path $emptyDir, $nonEmpty, $junctionTarget, $deny | Out-Null
+            Set-Content -Path (Join-Path $nonEmpty 'keep.txt') -Value 'content' -NoNewline
+            New-Item -ItemType File -Path (Join-Path $root 'empty-file.txt') | Out-Null
+            New-Item -ItemType Junction -Path $junction -Target $junctionTarget | Out-Null
+
+            $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+            icacls "$deny" /deny ($currentUser + ':(OI)(CI)(R)') | Out-Null
+            try {
+              & $exe -silent -path $root -emptyfiles -mode direct | Tee-Object -Variable output
+              if ($LASTEXITCODE -ne 0) { throw "RED++ exited with $LASTEXITCODE`n$output" }
+            } finally {
+              icacls "$deny" /remove:d "$currentUser" | Out-Null
+            }
+
+            if (($output -join "`n") -notmatch 'Found 1 empty directories') { throw "Unexpected found-directory count" }
+            if (!(Test-Path $root)) { throw 'Root deleted despite AutoProtectRoot' }
+            if (Test-Path $emptyDir) { throw 'Empty child not deleted' }
+            if (!(Test-Path (Join-Path $nonEmpty 'keep.txt'))) { throw 'Non-empty payload deleted' }
+            if (!(Test-Path $junction)) { throw 'Junction deleted' }
+            if (!(Test-Path $junctionTarget)) { throw 'Junction target deleted' }
+            if (!(Test-Path $deny)) { throw 'Deny-ACL dir deleted' }
+            if (Test-Path (Join-Path $root 'empty-file.txt')) { throw 'Empty file not deleted' }
+
+            & $exe -version | Tee-Object -Variable ver
+            if (($ver -join "`n") -notmatch 'RED\+\+\s+\d+\.\d+\.\d+') { throw "Unexpected -version output: $ver" }
+          }
+          finally {
+            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -LiteralPath $junctionTarget -Recurse -Force -ErrorAction SilentlyContinue
+          }
 
       - name: Create release archive
         run: |
           mkdir release
-          copy bin\Release\RED+.exe release\
+          copy publish\RED+.exe release\
           copy LICENSE release\
           xcopy help release\help\ /E /I
           xcopy language release\language\ /E /I
