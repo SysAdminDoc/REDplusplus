@@ -81,7 +81,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ inputs.version }}" "RED++_${{ inputs.version }}.zip" SHA256SUMS "packaging\winget\SysAdminDoc.REDplusplus.yaml" --title "RED++ ${{ inputs.version }}" --generate-notes
+          gh release create "${{ inputs.version }}" "RED++_${{ inputs.version }}.zip" "release\RED+.exe" SHA256SUMS "packaging\winget\SysAdminDoc.REDplusplus.yaml" --title "RED++ ${{ inputs.version }}" --generate-notes
 
       - name: VirusTotal scan
         id: virustotal
