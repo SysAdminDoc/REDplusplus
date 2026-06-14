@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-1.5.13-blue)
+![Version](https://img.shields.io/badge/version-1.5.14-blue)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2B-lightgrey)
 
@@ -14,7 +14,7 @@
 **Portable** — download, unzip, run:
 
 ```
-curl -Lo RED++.zip https://github.com/SysAdminDoc/REDplusplus/releases/latest/download/RED++_v1.5.13.zip
+curl -Lo RED++.zip https://github.com/SysAdminDoc/REDplusplus/releases/latest/download/RED++_v1.5.14.zip
 tar -xf RED++.zip
 RED+.exe
 ```
@@ -36,7 +36,7 @@ RED+.exe -silent -path "D:\Shares" -log cleanup.log
 
 ## Features
 
-- Modern WPF user interface with per-monitor DPI awareness and a legacy WinForms fallback
+- Modern WPF user interface with screen-aware sizing and a legacy WinForms fallback
 - Shows empty directories before deleting them with confirmation summary
 - Supports multiple delete modes (Recycle Bin, Direct, Simulate, Move to folder)
 - Allows whitelisting and blacklisting of directories by using filter lists
@@ -81,7 +81,7 @@ RED+.exe -silent -path "D:\Shares" -log cleanup.log
 Every release ships a `SHA256SUMS` file and a signed build-provenance attestation. To verify the zip really came from this repository's CI:
 
 ```
-gh attestation verify RED++_v1.5.13.zip -R SysAdminDoc/REDplusplus
+gh attestation verify RED++_v1.5.14.zip -R SysAdminDoc/REDplusplus
 ```
 
 ## Code Signing & SmartScreen
