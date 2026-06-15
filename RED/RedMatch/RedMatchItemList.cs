@@ -195,11 +195,11 @@ namespace RED.Match
 						hit = textToCheck.StartsWith(matchItem.MatchTextToCompare);
 						break;
 					case RedMatchMethodType.RegExName:
-						hit = matchItem.RegEx.IsMatch(nameToCheck);
+						hit = RedMatchItem.SafeIsMatch(matchItem.RegEx, nameToCheck);
 						break;
 					case RedMatchMethodType.RegExPath:
 						if (FilterType == RedMatchFilterType.Directory)
-							hit = matchItem.RegEx.IsMatch(pathToCheck);
+							hit = RedMatchItem.SafeIsMatch(matchItem.RegEx, pathToCheck);
 						break;
 					case RedMatchMethodType.NameExactWithPath:
 						if (FilterType == RedMatchFilterType.Directory)

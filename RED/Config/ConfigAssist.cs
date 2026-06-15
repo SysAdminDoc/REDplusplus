@@ -39,6 +39,10 @@ namespace NotBob.Config
                     {
                         config = ConfigAssist.Load<RedConfiguration>(filename);
 
+                        // A crafted/corrupt file can deserialize with a nil child object;
+                        // restore any missing sub-object before anything dereferences it.
+                        config?.EnsureSubObjects();
+
                         // Does the config file redirect to another location?
                         if (!string.IsNullOrWhiteSpace(config.RedirectTo))
                         {

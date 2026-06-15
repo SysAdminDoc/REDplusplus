@@ -509,9 +509,14 @@ namespace RED
                     {
                         VerifySubtreeHasNoFiles(path);
                     }
-                    // Directory.Move cannot cross volumes — replicate, then remove the source
+                    // Directory.Move cannot cross volumes — replicate, then remove the
+                    // source. Re-verify file-free one last time and delete bottom-up by
+                    // handle (which refuses a non-empty directory) instead of a blind
+                    // recursive Directory.Delete that would destroy anything that appeared
+                    // after the copy.
                     CopyDirectoryRecursive(path, destPath);
-                    Directory.Delete(path, true);
+                    VerifySubtreeHasNoFiles(path);
+                    DeleteEmptySubtreeByHandle(path);
                 }
                 movedToDestination = destPath;
                 return;

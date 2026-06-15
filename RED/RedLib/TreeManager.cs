@@ -555,10 +555,10 @@ namespace RED
 
 		private void unprotectNode(TreeNode node)
 		{
-			if (node != null)
+			// A node whose Tag is missing or not a DirectoryInfo (e.g. a placeholder
+			// child) must be skipped rather than throwing while walking the tree.
+			if (node?.Tag is DirectoryInfo directory)
 			{
-				DirectoryInfo directory = ((DirectoryInfo)node.Tag);
-
 				if (!this.nodePropsBackup.ContainsKey(directory.FullName))
 				{
 					// TODO: What to do when this info is missing, show error?
@@ -589,10 +589,8 @@ namespace RED
 
 		private void ProtectNode(TreeNode node)
 		{
-			if (node != null)
+			if (node?.Tag is DirectoryInfo directory)
 			{
-				DirectoryInfo directory = (DirectoryInfo)node.Tag;
-
 				if (nodePropsBackup.ContainsKey(directory.FullName))
 				{
 					return;
