@@ -78,6 +78,22 @@ namespace RED
 				error = "Profile name is required.";
 				return false;
 			}
+			profile.Name = profile.Name.Trim();
+			// A control character (tab/newline) would corrupt the tab-delimited
+			// -listprofiles output; an unbounded name bloats the store.
+			if (profile.Name.Length > 128)
+			{
+				error = "Profile name must be 128 characters or fewer.";
+				return false;
+			}
+			foreach (char c in profile.Name)
+			{
+				if (char.IsControl(c))
+				{
+					error = "Profile name must not contain control characters.";
+					return false;
+				}
+			}
 			try
 			{
 				List<RedProfile> all = LoadAll();

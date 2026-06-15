@@ -173,6 +173,15 @@ namespace RED
                 }
                 else
                 {
+                    // A per-directory .gitignore's bare-name rule is scoped to that
+                    // directory's own subtree, exactly like a path pattern. Without this
+                    // guard a deep ".gitignore" line such as `dist` would wrongly ignore
+                    // every `dist` folder tree-wide (siblings and ancestors included).
+                    if (!string.IsNullOrEmpty(rule.ScopeDir)
+                        && !pathToCheck.StartsWith(rule.ScopeDir + "/", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
                     text = name;
                 }
 

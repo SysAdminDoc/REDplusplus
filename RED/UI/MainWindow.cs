@@ -1787,7 +1787,7 @@ namespace RED.UI
                         }
                     }
 
-                    RunData.ProtectedFolderList = new Dictionary<string, bool>();
+                    RunData.ProtectedFolderList = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
                     RunData.StartFolder = imported.Roots.Count == 1 ? imported.Roots[0].RootDirectory : null;
 
                     var directoryRoots = new List<RedImportedScanRoot>();

@@ -32,8 +32,10 @@ namespace RED.Match
 					if (matchMethod == RedMatchMethodType.RegExName || matchMethod == RedMatchMethodType.RegExPath)
 					{
 						// All other match methods compare case-insensitively (names are
-						// lowercased before matching) — regex rules must behave the same
-						RegEx = new Regex(ExpandRegEx(matchText), RegexOptions.IgnoreCase);
+						// lowercased before matching) — regex rules must behave the same.
+						// Bound backtracking so a pathological user pattern (e.g. "(a+)+$")
+						// cannot wedge the scan thread; a timeout is treated as no-match.
+						RegEx = new Regex(ExpandRegEx(matchText), RegexOptions.IgnoreCase, System.TimeSpan.FromSeconds(1));
 					}
 					MatchText = matchText.Trim();
 					MatchTextToCompare = MatchText.ToLowerInvariant();
@@ -64,6 +66,17 @@ namespace RED.Match
 				}
 			}
 			return respx;
+		}
+
+		/// <summary>
+		/// Bounded regex match: a user pattern that exhausts its match timeout is
+		/// treated as no-match rather than throwing out of the hot scan loop.
+		/// </summary>
+		internal static bool SafeIsMatch(Regex regex, string input)
+		{
+			if (regex == null) return false;
+			try { return regex.IsMatch(input); }
+			catch (RegexMatchTimeoutException) { return false; }
 		}
 
 		internal static string FormatToString(RedMatchItem item)

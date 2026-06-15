@@ -57,6 +57,22 @@ namespace RED.Config
             UI.SetToDefaults();
         }
 
+        /// <summary>
+        /// Replaces any null sub-object with a fresh default. A hand-crafted config that
+        /// nils a child (e.g. <c>&lt;Options xsi:nil="true"/&gt;</c>) would otherwise
+        /// deserialize with a null member and NullReference inside the DataIsDirty
+        /// getter/setter — including in ConfigLoad's finally, where it could crash a
+        /// headless run with a non-deterministic exit code.
+        /// </summary>
+        internal void EnsureSubObjects()
+        {
+            if (Options == null) Options = new ConfigOptions();
+            if (Filters == null) Filters = new ConfigFilters();
+            if (UI == null) UI = new ConfigUI();
+            if (Volatile == null) Volatile = new ConfigVolatile();
+            if (Runtime == null) Runtime = new ConfigRuntime();
+        }
+
         public void PopulateRuntime(string configFilename, string executableName, string productName, string productVersion)
         {
             Runtime.CreatedBy = string.Format("{0} {1}", productName, productVersion);

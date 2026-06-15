@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Text.RegularExpressions;
 using RED.Match;
 using Xunit;
 
@@ -37,6 +39,21 @@ namespace RED.Tests
             var list = BuildDirList("+|RN|^temp[0-9]+$");
             Assert.True(list.IsOnList(new DirectoryInfo(@"C:\x\Temp42")));
             Assert.False(list.IsOnList(new DirectoryInfo(@"C:\x\temp")));
+        }
+
+        [Fact]
+        public void RegexRule_PathologicalPattern_DoesNotHangAndYieldsNoMatch()
+        {
+            // A catastrophic-backtracking pattern against a long name must hit the
+            // bounded match timeout and resolve to "no match" instead of wedging the
+            // scan thread. Regression guard for the missing regex matchTimeout.
+            var list = BuildDirList("+|RN|/(a+)+$/");
+            var dir = new DirectoryInfo(@"C:\x\" + new string('a', 44) + "!");
+            var sw = Stopwatch.StartNew();
+            bool hit = list.IsOnList(dir);
+            sw.Stop();
+            Assert.False(hit);
+            Assert.True(sw.ElapsedMilliseconds < 5000, "regex match should time out fast, took " + sw.ElapsedMilliseconds + "ms");
         }
 
         [Fact]
