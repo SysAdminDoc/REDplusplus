@@ -84,6 +84,13 @@ namespace RED.Config
         public bool UseMftScan { get { return _UseMftScan; } set { SetField(ref _UseMftScan, value); } }
         private bool _UseMftScan;
 
+        /// <summary>
+        /// When true, every delete mode behaves as Simulate and no filesystem
+        /// mutation is permitted. Intended for managed/report-only deployments.
+        /// </summary>
+        public bool DeletionLockout { get { return _DeletionLockout; } set { SetField(ref _DeletionLockout, value); } }
+        private bool _DeletionLockout;
+
         [XmlIgnore]
         public override bool DataIsDirty
         {
