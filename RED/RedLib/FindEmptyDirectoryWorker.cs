@@ -179,7 +179,6 @@ namespace RED
 				{
 					string emsg = TXT.Translate("Detected possible infinite - loop somewhere in the target path {0} (symbolic links can cause this)", RedAssist.DQuote(startFolder.FullName));
 					this.RunData.AddLogMessage(emsg);
-					throw new Exception(emsg);
 				}
 			}
 			catch (Exception ex)

@@ -7,6 +7,7 @@
 
 ### CLI
 - Add `-delete` / `-yes` as explicit-intent aliases for `-silent`, so CI pipelines can express scan-and-delete in one self-documenting command: `RED+.exe -path X --delete -mode recycle -log Y`.
+- Infinite-loop-detected directories no longer abort the entire scan; the affected subtrees are marked Error and skipped, while the remaining results are still eligible for deletion. Addresses upstream RED issues #17 and #8.
 - A headless scan that is cancelled mid-run (e.g. via timeout) now proceeds to delete the directories found so far instead of discarding partial results. The undo manifest covers the partial run.
 - Expose `ignoredFileCount` as a structured field in NDJSON result records and JSON file exports (schema bumped from v3 to v4). JSON consumers can now programmatically distinguish "empty with ignored files" from "truly empty" without parsing the reason text.
 
