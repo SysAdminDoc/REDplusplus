@@ -16,6 +16,8 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <Deterministic>true</Deterministic>
+    <!-- Audit transitive NuGet dependencies for known vulnerabilities at restore. -->
+    <NuGetAuditMode>all</NuGetAuditMode>
     <!-- Embed CI source paths (not local dev paths) in PDBs for reproducibility. -->
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true' or '$(TF_BUILD)' == 'true'">true</ContinuousIntegrationBuild>
 
