@@ -34,14 +34,17 @@ jobs:
           $epoch = git log -1 --format=%ct
           echo "SOURCE_DATE_EPOCH=$epoch" >> $env:GITHUB_ENV
 
-      - name: Publish self-contained single-file
-        run: dotnet publish "RED/RED+.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish
+      - name: Publish self-contained single-file (x64)
+        run: dotnet publish "RED/RED+.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish-x64
 
-      - name: Safety smoke on published artifact
+      - name: Publish self-contained single-file (arm64)
+        run: dotnet publish "RED/RED+.csproj" -c Release -r win-arm64 --self-contained true -p:PublishSingleFile=true -o publish-arm64
+
+      - name: Safety smoke on published artifact (x64)
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $exe = Join-Path $PWD 'publish\RED+.exe'
+          $exe = Join-Path $PWD 'publish-x64\RED+.exe'
           if (!(Test-Path $exe)) { throw "Missing published RED+.exe at $exe" }
 
           $root = Join-Path $env:RUNNER_TEMP ("redpp-rel-" + [guid]::NewGuid().ToString("N"))
@@ -83,14 +86,24 @@ jobs:
             Remove-Item -LiteralPath $junctionTarget -Recurse -Force -ErrorAction SilentlyContinue
           }
 
-      - name: Create release archive
+      - name: Create release archives
+        shell: pwsh
         run: |
-          mkdir release
-          copy publish\RED+.exe release\
-          copy LICENSE release\
-          xcopy help release\help\ /E /I
-          xcopy language release\language\ /E /I
-          Compress-Archive -Path release\* -DestinationPath "RED++_${{ inputs.version }}.zip"
+          # x64 archive
+          New-Item -ItemType Directory -Path release-x64 | Out-Null
+          Copy-Item publish-x64\RED+.exe release-x64\
+          Copy-Item LICENSE release-x64\
+          xcopy help release-x64\help\ /E /I /Q
+          xcopy language release-x64\language\ /E /I /Q
+          Compress-Archive -Path release-x64\* -DestinationPath "RED++_${{ inputs.version }}.zip"
+
+          # arm64 archive
+          New-Item -ItemType Directory -Path release-arm64 | Out-Null
+          Copy-Item publish-arm64\RED+.exe release-arm64\
+          Copy-Item LICENSE release-arm64\
+          xcopy help release-arm64\help\ /E /I /Q
+          xcopy language release-arm64\language\ /E /I /Q
+          Compress-Archive -Path release-arm64\* -DestinationPath "RED++_${{ inputs.version }}_arm64.zip"
 
       - name: Generate SBOM (CycloneDX)
         shell: pwsh
@@ -103,11 +116,13 @@ jobs:
       - name: Generate checksums
         shell: pwsh
         run: |
-          $zip = "RED++_${{ inputs.version }}.zip"
-          $zipHash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          $zipX64 = "RED++_${{ inputs.version }}.zip"
+          $zipArm = "RED++_${{ inputs.version }}_arm64.zip"
           $lines = @(
-            "{0}  {1}" -f $zipHash, $zip
-            "{0}  {1}" -f (Get-FileHash "release\RED+.exe" -Algorithm SHA256).Hash.ToLower(), "RED+.exe"
+            "{0}  {1}" -f (Get-FileHash $zipX64 -Algorithm SHA256).Hash.ToLower(), $zipX64
+            "{0}  {1}" -f (Get-FileHash "release-x64\RED+.exe" -Algorithm SHA256).Hash.ToLower(), "RED+.exe (x64)"
+            "{0}  {1}" -f (Get-FileHash $zipArm -Algorithm SHA256).Hash.ToLower(), $zipArm
+            "{0}  {1}" -f (Get-FileHash "release-arm64\RED+.exe" -Algorithm SHA256).Hash.ToLower(), "RED+.exe (arm64)"
             "{0}  {1}" -f (Get-FileHash "bom.json" -Algorithm SHA256).Hash.ToLower(), "bom.json"
           )
           Set-Content -Path SHA256SUMS -Value $lines -Encoding ascii
@@ -117,13 +132,36 @@ jobs:
         run: |
           $version = "${{ inputs.version }}".TrimStart("v")
           $tag = "${{ inputs.version }}"
-          $zip = "RED++_${{ inputs.version }}.zip"
-          $zipHash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToUpperInvariant()
+          $zipX64 = "RED++_${{ inputs.version }}.zip"
+          $zipArm = "RED++_${{ inputs.version }}_arm64.zip"
+          $hashX64 = (Get-FileHash $zipX64 -Algorithm SHA256).Hash.ToUpperInvariant()
+          $hashArm = (Get-FileHash $zipArm -Algorithm SHA256).Hash.ToUpperInvariant()
           $manifest = "packaging\winget\SysAdminDoc.REDplusplus.yaml"
           $content = Get-Content -Path $manifest -Raw
           $content = $content -replace '(?m)^PackageVersion:.*$', "PackageVersion: $version"
-          $content = $content -replace '(?m)^    InstallerUrl:.*$', "    InstallerUrl: https://github.com/SysAdminDoc/REDplusplus/releases/download/$tag/$zip"
-          $content = $content -replace '(?m)^    InstallerSha256:.*$', "    InstallerSha256: $zipHash"
+          $content = $content -replace '(?m)^(  - Architecture: x64\s*\n    InstallerUrl:).*$', "`$1 https://github.com/SysAdminDoc/REDplusplus/releases/download/$tag/$zipX64"
+          $content = $content -replace '(?m)^(    InstallerSha256:).*$(?=[\s\S]*?Architecture: x64)', "`$1 $hashX64"
+          $content = $content -replace '(?m)^(  - Architecture: arm64\s*\n    InstallerUrl:).*$', "`$1 https://github.com/SysAdminDoc/REDplusplus/releases/download/$tag/$zipArm"
+          # Simpler approach: rewrite the entire Installers block
+          $newInstallers = @"
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/SysAdminDoc/REDplusplus/releases/download/$tag/$zipX64
+    InstallerSha256: $hashX64
+    NestedInstallerType: portable
+    NestedInstallerFiles:
+      - RelativeFilePath: RED+.exe
+        PortableCommandAlias: red++
+  - Architecture: arm64
+    InstallerUrl: https://github.com/SysAdminDoc/REDplusplus/releases/download/$tag/$zipArm
+    InstallerSha256: $hashArm
+    NestedInstallerType: portable
+    NestedInstallerFiles:
+      - RelativeFilePath: RED+.exe
+        PortableCommandAlias: red++
+"@
+          $content = $content -replace '(?ms)^Installers:.*?(?=^ManifestType:)', $newInstallers
+          $content = $content -replace '(?m)^PackageVersion:.*$', "PackageVersion: $version"
           Set-Content -Path $manifest -Value $content -Encoding utf8
           if (Get-Command winget -ErrorAction SilentlyContinue) {
             winget validate $manifest
@@ -134,14 +172,16 @@ jobs:
         with:
           subject-path: |
             RED++_${{ inputs.version }}.zip
-            release/RED+.exe
+            RED++_${{ inputs.version }}_arm64.zip
+            release-x64/RED+.exe
+            release-arm64/RED+.exe
             bom.json
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ inputs.version }}" "RED++_${{ inputs.version }}.zip" "release\RED+.exe" SHA256SUMS bom.json "packaging\winget\SysAdminDoc.REDplusplus.yaml" --title "RED++ ${{ inputs.version }}" --generate-notes
+          gh release create "${{ inputs.version }}" "RED++_${{ inputs.version }}.zip" "RED++_${{ inputs.version }}_arm64.zip" "release-x64\RED+.exe" SHA256SUMS bom.json "packaging\winget\SysAdminDoc.REDplusplus.yaml" --title "RED++ ${{ inputs.version }}" --generate-notes
 
       - name: VirusTotal scan
         id: virustotal
