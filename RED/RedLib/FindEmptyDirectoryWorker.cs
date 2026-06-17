@@ -25,7 +25,12 @@ namespace RED
 
 		public DeletionErrorEventArgs ErrorInfo { get; set; }
 
-		public int PossibleEndlessLoop { get; set; }
+		private int _possibleEndlessLoop;
+		public int PossibleEndlessLoop
+		{
+			get { return Volatile.Read(ref _possibleEndlessLoop); }
+			set { Volatile.Write(ref _possibleEndlessLoop, value); }
+		}
 
 		/// <summary>
 		/// Maximum parallel subdirectory enumeration threads. 0 = serial (default).
@@ -227,7 +232,10 @@ namespace RED
 					// rules match here, so a truly-named trash file is excluded
 					if (this.RunData.IgnoreFileNameList.IsOnList(file, 0, false, out pattern)) continue;
 
-					this.RunData.EmptyFileResults.Add(file);
+					lock (_syncRoot)
+					{
+						this.RunData.EmptyFileResults.Add(file);
+					}
 					this.RunData.AddLogMessage(TXT.Translate("Empty file queued for deletion: {0}", RedAssist.DQuote(file.FullName)));
 				}
 				catch { }
@@ -246,7 +254,7 @@ namespace RED
 
 			if (depth > SuspiciousDepth)
 			{
-				this.PossibleEndlessLoop++;
+				Interlocked.Increment(ref _possibleEndlessLoop);
 				this.RunData.AddLogMessage(TXT.Translate("Suspiciously deep directory nesting at {0} - possible filesystem loop", RedAssist.DQuote(startDir.FullName)));
 				this.ReportDirectoryStatus(startDir, DirectorySearchStatusTypes.Error, TXT.Translate("Aborted - possible infinite-loop detected"));
 				return DirectorySearchStatusTypes.Error;
