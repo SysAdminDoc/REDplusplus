@@ -50,7 +50,7 @@ namespace RED
 
 		public static string ManifestPath
 		{
-			get { return RuntimeData.GetWritableDataFilePath(LatestManifestName); }
+			get { return RuntimeData.GetTrustedDataFilePath(LatestManifestName); }
 		}
 
 		public static bool HasManifest
@@ -93,7 +93,9 @@ namespace RED
 					});
 				}
 
-				// Also check the legacy single-file manifest if no timestamped files exist
+				// Also check the single-file latest pointer if no timestamped files exist.
+				// Do not auto-load legacy portable manifests from the exe directory: on a
+				// shared install that file is attacker-writable by other local users.
 				if (result.Count == 0 && File.Exists(ManifestPath))
 				{
 					Manifest m = LoadManifestFromPath(ManifestPath);
@@ -142,6 +144,12 @@ namespace RED
 			if (manifest == null || manifest.Entries == null || manifest.Entries.Count == 0)
 			{
 				log?.Invoke(TXT.Translate("No undo manifest found - nothing to restore"));
+				return false;
+			}
+
+			bool trustedManifest = IsTrustedManifestPath(manifestPath);
+			if (!trustedManifest && !IsExplicitLegacyManifestSafe(manifest, log))
+			{
 				return false;
 			}
 
@@ -246,26 +254,31 @@ namespace RED
 
 			if (failed == 0)
 			{
-				try { File.Delete(manifestPath); }
-				catch { }
-				// Also remove the latest-symlink if it pointed here
-				try
+				if (trustedManifest)
 				{
-					if (!manifestPath.Equals(ManifestPath, StringComparison.OrdinalIgnoreCase)
-						&& File.Exists(ManifestPath))
+					string restoredContent = null;
+					try { restoredContent = File.ReadAllText(manifestPath, Encoding.UTF8).Trim(); }
+					catch { }
+					try { File.Delete(manifestPath); }
+					catch { }
+					// Also remove the latest-pointer if it pointed here
+					try
 					{
-						string latestContent = File.ReadAllText(ManifestPath, Encoding.UTF8).Trim();
-						string thisContent = File.ReadAllText(manifestPath, Encoding.UTF8).Trim();
-						// The latest-pointer mirrors the most recent run. If it still
-						// holds the run we just restored, delete it too so a second
-						// restore does not re-create the directories we put back.
-						if (string.Equals(latestContent, thisContent, StringComparison.Ordinal))
+						if (!manifestPath.Equals(ManifestPath, StringComparison.OrdinalIgnoreCase)
+							&& File.Exists(ManifestPath))
 						{
-							File.Delete(ManifestPath);
+							string latestContent = File.ReadAllText(ManifestPath, Encoding.UTF8).Trim();
+							// The latest-pointer mirrors the most recent run. If it still
+							// holds the run we just restored, delete it too so a second
+							// restore does not re-create the directories we put back.
+							if (restoredContent != null && string.Equals(latestContent, restoredContent, StringComparison.Ordinal))
+							{
+								File.Delete(ManifestPath);
+							}
 						}
 					}
+					catch { }
 				}
-				catch { }
 			}
 
 			return failed == 0 && restored > 0;
@@ -406,6 +419,55 @@ namespace RED
 			}
 		}
 
+		private static bool IsTrustedManifestPath(string manifestPath)
+		{
+			if (string.IsNullOrWhiteSpace(manifestPath)) return false;
+			try
+			{
+				string full = Path.GetFullPath(manifestPath);
+				string trustedDir = Path.GetFullPath(RuntimeData.GetTrustedDataDirectory());
+				return IsUnderDirectory(full, trustedDir);
+			}
+			catch { return false; }
+		}
+
+		private static bool IsExplicitLegacyManifestSafe(Manifest manifest, Action<string> log)
+		{
+			foreach (ManifestEntry entry in manifest.Entries)
+			{
+				if (entry == null) continue;
+
+				if (!IsExplicitLegacyPathAllowed(entry.Path))
+				{
+					log?.Invoke(TXT.Translate("Refused to restore an explicit manifest outside the current user's safe profile boundary: {0}", RedAssist.DQuote(entry.Path)));
+					return false;
+				}
+
+				if (!string.IsNullOrWhiteSpace(entry.MovedTo) && !IsExplicitLegacyPathAllowed(entry.MovedTo))
+				{
+					log?.Invoke(TXT.Translate("Refused to restore an explicit manifest whose move source is outside the current user's safe profile boundary: {0}", RedAssist.DQuote(entry.MovedTo)));
+					return false;
+				}
+			}
+			return true;
+		}
+
+		private static bool IsExplicitLegacyPathAllowed(string path)
+		{
+			if (!IsPathStructurallySafe(path)) return false;
+
+			string full;
+			try { full = Path.GetFullPath(path); }
+			catch { return false; }
+
+			if (IsUnderSystemDirectory(full)) return false;
+			if (IsUnderSensitiveUserDirectory(full)) return false;
+
+			string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+			if (string.IsNullOrWhiteSpace(profile)) return false;
+			return IsUnderDirectory(full, profile);
+		}
+
 		/// <summary>
 		/// A restore target must be a fully-qualified path with no ".." segment (before
 		/// or after normalization). Rejects relative paths, device paths, and traversal.
@@ -482,6 +544,35 @@ namespace RED
 				if (fullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return true;
 			}
 			return false;
+		}
+
+		private static bool IsUnderSensitiveUserDirectory(string fullPath)
+		{
+			foreach (Environment.SpecialFolder f in new[]
+			{
+				Environment.SpecialFolder.Startup,
+				Environment.SpecialFolder.CommonStartup,
+			})
+			{
+				string dir;
+				try { dir = Environment.GetFolderPath(f); }
+				catch { continue; }
+				if (string.IsNullOrWhiteSpace(dir)) continue;
+				if (IsUnderDirectory(fullPath, dir)) return true;
+			}
+			return false;
+		}
+
+		private static bool IsUnderDirectory(string fullPath, string directory)
+		{
+			if (string.IsNullOrWhiteSpace(fullPath) || string.IsNullOrWhiteSpace(directory)) return false;
+
+			string full = Path.GetFullPath(fullPath);
+			string dir = Path.GetFullPath(directory);
+			if (full.Equals(dir, StringComparison.OrdinalIgnoreCase)) return true;
+
+			string prefix = dir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+			return full.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
 		}
 
 		private static bool HasDotDotSegment(string path)

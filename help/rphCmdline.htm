@@ -52,7 +52,7 @@
     -json            Emit NDJSON: one meta record, then result records.
     -quiet           Suppress stdout/stderr; use the exit code and optional log.
     -log &lt;file&gt;      Write a timestamped run log.
-    -undo            Restore the last deletion run.
+    -undo [manifest] Restore the last deletion run from the protected undo store.
     -help, -version  Show help or version.
 </pre>
 <p>Preview a cleanup without touching anything:</p>
@@ -61,6 +61,7 @@
 <pre>RED+.exe -silent -path &quot;\\server\share\folder&quot; -log &quot;cleanup.log&quot;</pre>
 <p>Restore the previous deletion run:</p>
 <pre>RED+.exe -undo -log &quot;restore.log&quot;</pre>
+<p>Undo manifests are stored under the current user's protected LocalAppData folder. A raw manifest file path is treated as an explicit legacy restore and is constrained to the current user's safe profile boundary.</p>
 <h4>Exit Codes</h4>
 <ul>
 <li><span class="sx">0</span> Success, or simulate/dry-run found nothing.</li>
