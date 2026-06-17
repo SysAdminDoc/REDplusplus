@@ -964,13 +964,13 @@ namespace RED
 			int emptyDirs, int emptyFiles, int deleted, int failed, double elapsedMs)
 		{
 			Console.WriteLine(string.Format(
-				"{{\"type\":\"meta\",\"schema\":3,\"version\":\"{0}\",\"emptyDirectories\":{1},\"emptyFiles\":{2},\"deleted\":{3},\"failed\":{4},\"elapsedMs\":{5}}}",
+				"{{\"type\":\"meta\",\"schema\":4,\"version\":\"{0}\",\"emptyDirectories\":{1},\"emptyFiles\":{2},\"deleted\":{3},\"failed\":{4},\"elapsedMs\":{5}}}",
 				EscapeJson(GetFileVersion()), emptyDirs, emptyFiles, deleted, failed,
 				((long)elapsedMs).ToString(System.Globalization.CultureInfo.InvariantCulture)));
 			foreach (RedScanResultItem item in results)
 			{
 				string kind = item.Kind == ResultKind.File ? "file" : "directory";
-				Console.WriteLine(string.Format("{{\"type\":\"result\",\"kind\":\"{0}\",\"path\":\"{1}\",\"status\":\"{2}\",\"reason\":\"{3}\"}}", kind, EscapeJson(item.FullPath), item.SearchStatus, EscapeJson(item.StatusReason)));
+				Console.WriteLine(string.Format("{{\"type\":\"result\",\"kind\":\"{0}\",\"path\":\"{1}\",\"status\":\"{2}\",\"reason\":\"{3}\",\"ignoredFileCount\":{4}}}", kind, EscapeJson(item.FullPath), item.SearchStatus, EscapeJson(item.StatusReason), item.IgnoredFileCount));
 			}
 		}
 

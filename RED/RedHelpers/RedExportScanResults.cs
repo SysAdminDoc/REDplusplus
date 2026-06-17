@@ -169,7 +169,7 @@ namespace RED.Helper
                 string kind = v[i].Kind == Match.ResultKind.File ? "file" : "directory";
                 string escapedPath = EscapeJson(v[i].FullPath);
                 string escapedReason = EscapeJson(v[i].StatusReason);
-                sb.AppendFormat("  {{ \"kind\": \"{0}\", \"path\": \"{1}\", \"status\": \"{2}\", \"reason\": \"{3}\" }}", kind, escapedPath, v[i].SearchStatus, escapedReason);
+                sb.AppendFormat("  {{ \"kind\": \"{0}\", \"path\": \"{1}\", \"status\": \"{2}\", \"reason\": \"{3}\", \"ignoredFileCount\": {4} }}", kind, escapedPath, v[i].SearchStatus, escapedReason, v[i].IgnoredFileCount);
                 if (i < v.Count - 1) sb.Append(",");
                 sb.AppendLine();
             }
