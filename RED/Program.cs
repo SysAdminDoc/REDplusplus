@@ -926,6 +926,21 @@ namespace RED
 					totalEmpty, totalEmptyFiles, totalDeleted, totalFailed, exitCode);
 			}
 
+			if (config.Options.CheckForUpdates)
+			{
+				try
+				{
+					string stateFile = RuntimeData.GetWritableDataFilePath("RED+.updatecheck");
+					string currentVer = GetFileVersion();
+					var updateResult = UpdateCheck.Check(currentVer, stateFile);
+					if (updateResult != null && updateResult.NewerAvailable)
+					{
+						logMsg(string.Format("A newer version is available: v{0} - {1}", updateResult.LatestVersion, updateResult.ReleaseUrl));
+					}
+				}
+				catch { }
+			}
+
 			return exitCode;
 		}
 
