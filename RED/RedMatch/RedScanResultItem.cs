@@ -44,6 +44,13 @@ namespace RED.Match
 		public string KeptReasonDetail { get; set; }
 
 		/// <summary>
+		/// Number of ignored (trash) files in this directory at scan time.
+		/// Zero means truly empty; positive means empty-except-for-ignored-files.
+		/// Set by the scan worker; the MFT path leaves it at zero (no file data).
+		/// </summary>
+		public int IgnoredFileCount { get; set; }
+
+		/// <summary>
 		/// A concrete, human-readable reason this folder appears as it does — answers
 		/// the category's top confusion ("why is this folder not deletable?").
 		/// </summary>
@@ -58,6 +65,8 @@ namespace RED.Match
 				switch (SearchStatus)
 				{
 					case DirectorySearchStatusTypes.Empty:
+						if (IgnoredFileCount > 0)
+							return TXT.Translate("Empty except {0} ignored file(s) (will be removed)", IgnoredFileCount);
 						return TXT.Translate("Empty - eligible for deletion");
 					case DirectorySearchStatusTypes.Ignore:
 						return TXT.Translate("Kept - matches an ignore filter rule");
