@@ -130,6 +130,7 @@ Options:
 | `-mft`, `-no-mft` | Enable or disable MFT turbo scan for this run; MFT still requires administrator rights. |
 | `-hidden`, `-ignore-hidden` | Include or ignore hidden directories for this run. |
 | `-system`, `-ignore-system` | Include or ignore system directories for this run. |
+| `-lockout`, `-no-lockout` | Force report-only mode (no deletions) or override a config-level lockout. |
 | `-export <file>` | Write results to `.txt` / `.csv` / `.json` / `.ps1` / `.html` (chosen by extension). |
 | `-json` | Emit NDJSON to stdout: one `meta` record (version, run totals, and elapsed time), then one `result` record per directory. |
 | `-quiet` | Suppress stdout/stderr; use only the process exit code and optional `-log`. |
