@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>redplusplus.portable</id>
-    <version>1.5.17</version>
+    <version>1.5.18</version>
     <title>RED++ (Portable)</title>
     <authors>SysAdminDoc</authors>
     <owners>SysAdminDoc</owners>
@@ -16,21 +16,20 @@
     <description>
 RED++ finds, displays, and deletes empty directories recursively. GUI + headless CLI with filter rules, MFT turbo scan, one-click undo, network/UNC support, and zero installation required.
 
+The release is a self-contained single-file build that bundles .NET 9 — no runtime to install.
+
 Features:
-- GUI and headless CLI modes
+- Modern WPF and legacy WinForms GUI modes
 - Multiple delete modes (Recycle Bin, Direct, Simulate, Move)
 - MFT turbo scan for whole-volume scans in seconds (admin required)
 - .gitignore support (global, repo, nested)
 - One-click undo with multi-run history
-- Export to TXT, CSV, JSON, NDJSON
-- UNC/network share support
-- Task Scheduler ready with exit codes
+- Export to TXT, CSV, JSON, NDJSON, PowerShell script, HTML report
+- UNC/network share support with bounded-parallel scan
+- Task Scheduler ready with exit codes and saved profiles
 - Portable (no install, no registry)
     </description>
     <releaseNotes>https://github.com/SysAdminDoc/REDplusplus/blob/main/CHANGELOG.md</releaseNotes>
-    <dependencies>
-      <dependency id="dotnetfx" version="4.8.1" />
-    </dependencies>
   </metadata>
   <files>
     <file src="tools\**" target="tools" />
