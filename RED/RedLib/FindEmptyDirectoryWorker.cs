@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using RED.Helper;
 using TXT = RED.RedGetText;
 
@@ -24,6 +26,14 @@ namespace RED
 		public DeletionErrorEventArgs ErrorInfo { get; set; }
 
 		public int PossibleEndlessLoop { get; set; }
+
+		/// <summary>
+		/// Maximum parallel subdirectory enumeration threads. 0 = serial (default).
+		/// Intended for UNC/SMB roots where network latency dominates.
+		/// </summary>
+		internal int ParallelDegree { get; set; }
+
+		private readonly object _syncRoot = new object();
 
 		public FindEmptyDirectoryWorker()
 		{
@@ -57,9 +67,12 @@ namespace RED
 				info.ScanResult.IgnoredFileCount = ignoredFileCount;
 			}
 
-			if (type == DirectorySearchStatusTypes.Empty)
+			lock (_syncRoot)
 			{
-				this.RunData.ScanResults.AddItem(info.ScanResult);
+				if (type == DirectorySearchStatusTypes.Empty)
+				{
+					this.RunData.ScanResults.AddItem(info.ScanResult);
+				}
 			}
 
 			this.ReportProgress(0, info);
@@ -257,12 +270,12 @@ namespace RED
 				if (gitIgnore != null)
 					gitIgnore = gitIgnore.ExtendForDirectory(startDir.FullName, this.RunData.StartFolder.FullName);
 
-				this.folderCount++;
+				int fc = Interlocked.Increment(ref this.folderCount);
 
 				// update status progress bar after 100 steps:
-				if (this.folderCount % 100 == 0)
+				if (fc % 100 == 0)
 				{
-					this.ReportProgress(folderCount, TXT.Translate("Checking directory: {0}", startDir.Name));
+					this.ReportProgress(fc, TXT.Translate("Checking directory: {0}", startDir.Name));
 				}
 
 				bool containsFiles = false;
@@ -417,92 +430,13 @@ namespace RED
 				// NotBob - sort subfolders to give a more 'natural' order to the displayed results
 				subFolderList.Sort((x, y) => x.Name.CompareTo(y.Name));
 
-				foreach (DirectoryInfo curDir in subFolderList)
+				if (this.ParallelDegree > 0 && subFolderList.Count > 1)
 				{
-					FileAttributes attribs = curDir.Attributes;
-
-					bool ignoreSystemDir = (this.RunData.IgnoreSystemFolders && ((attribs & FileAttributes.System) == FileAttributes.System));
-					bool ignoreHiddenDir = (this.RunData.IgnoreHiddenFolders && ((attribs & FileAttributes.Hidden) == FileAttributes.Hidden));
-
-					bool ignoreSubDirectory = (ignoreSystemDir || ignoreHiddenDir);
-
-					if (!ignoreSubDirectory && this.RunData.IgnoreDirectoryNameList.IsOnList(curDir))
-					{
-						this.RunData.AddLogMessage(TXT.Translate("Aborted scan of {0} because it is on the ignore list", RedAssist.DQuote(curDir.FullName)));
-						ignoreSubDirectory = true;
-						// NotBob - option to exclude ignored directories from the scan window
-						if (!this.RunData.HideIgnoredDirectories)
-						{
-							this.ReportDirectoryStatus(curDir, DirectorySearchStatusTypes.Ignore);
-						}
-					}
-
-					if (!ignoreSubDirectory && gitIgnore != null && gitIgnore.HasRules)
-					{
-						string relativePath = curDir.FullName.Substring(this.RunData.StartFolder.FullName.Length);
-						if (gitIgnore.IsIgnored(curDir.Name, relativePath))
-						{
-							this.RunData.AddLogMessage(TXT.Translate("Aborted scan of {0} because it is on the ignore list", RedAssist.DQuote(curDir.FullName)));
-							ignoreSubDirectory = true;
-							if (!this.RunData.HideIgnoredDirectories)
-							{
-								this.ReportDirectoryStatus(curDir, DirectorySearchStatusTypes.Ignore);
-							}
-						}
-					}
-
-					if (!ignoreSubDirectory && (attribs & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
-					{
-						if (SystemFunctions.IsCloudPlaceholderDirectory(curDir.FullName))
-						{
-							this.RunData.AddLogMessage(TXT.Translate("Skipped cloud placeholder directory: {0}", RedAssist.DQuote(curDir.FullName)));
-							this.ReportDirectoryStatus(curDir, DirectorySearchStatusTypes.NeverEmpty, TXT.Translate("cloud placeholder directory"));
-						}
-						else
-						{
-							this.RunData.AddLogMessage(TXT.Translate("Aborted scan of {0} because it is a symbolic link", RedAssist.DQuote(curDir.FullName)));
-							this.ReportDirectoryStatus(curDir, DirectorySearchStatusTypes.Error, TXT.Translate("Aborted because directory is a symbolic link"));
-						}
-						ignoreSubDirectory = true;
-					}
-
-					// TODO: Implement more checks
-					//else if ((attribs & FileAttributes.Device) == FileAttributes.Device) msg = "Device - Aborted - found";
-					//else if ((attribs & FileAttributes.Encrypted) == FileAttributes.Encrypted) msg = "Encrypted -  found";
-					// The file will not be indexed by the operating system's content indexing service.
-					// else if ((attribs & FileAttributes.NotContentIndexed) == FileAttributes.NotContentIndexed) msg = "NotContentIndexed - Device found";
-					//else if ((attribs & FileAttributes.Offline) == FileAttributes.Offline) msg = "Offline -  found";
-					//else if ((attribs & FileAttributes.ReadOnly) == FileAttributes.ReadOnly) msg = "ReadOnly -  found";
-					//else if ((attribs & FileAttributes.Temporary) == FileAttributes.Temporary) msg = "Temporary -  found";
-
-					// Scan sub folder:
-					DirectorySearchStatusTypes subFolderStatus = DirectorySearchStatusTypes.NotEmpty;
-					int subIgnoredFiles = 0;
-
-					if (!ignoreSubDirectory)
-					{
-						// JRS ADDED check for AGE of folder
-						if (curDir.CreationTime.AddHours(this.RunData.MinFolderAgeHours) < DateTime.Now)
-						{
-							subFolderStatus = this.CheckIfDirectoryEmpty(curDir, depth + 1, gitIgnore, out subIgnoredFiles);
-						}
-						else
-						{
-							this.RunData.AddLogMessage(TXT.Translate("Directory {0} skipped because creation time [{1}] is < {2} hours old", RedAssist.DQuote(curDir.FullName), curDir.CreationTime.ToString(), this.RunData.MinFolderAgeHours.ToString()));
-						}
-
-						// Report status to the GUI
-						if (subFolderStatus == DirectorySearchStatusTypes.Empty)
-						{
-							this.ReportDirectoryStatus(curDir, subFolderStatus, subIgnoredFiles);
-						}
-					}
-
-					// this folder is not empty:
-					if (subFolderStatus != DirectorySearchStatusTypes.Empty || ignoreSubDirectory)
-					{
-						allSubDirectoriesEmpty = false;
-					}
+					allSubDirectoriesEmpty = ScanSubdirectoriesParallel(subFolderList, depth, gitIgnore, containsFiles);
+				}
+				else
+				{
+					allSubDirectoriesEmpty = ScanSubdirectoriesSerial(subFolderList, depth, gitIgnore);
 				}
 
 				// All subdirectories are empty
@@ -526,6 +460,101 @@ namespace RED
 				this.ReportDirectoryStatus(startDir, DirectorySearchStatusTypes.Error, ex.Message);
 				return DirectorySearchStatusTypes.Error;
 			}
+		}
+
+		private bool ScanSubdirectoriesSerial(List<DirectoryInfo> subFolderList, int depth, GitIgnoreParser gitIgnore)
+		{
+			bool allEmpty = true;
+			foreach (DirectoryInfo curDir in subFolderList)
+			{
+				bool isEmpty = ProcessOneSubdirectory(curDir, depth, gitIgnore);
+				if (!isEmpty) allEmpty = false;
+			}
+			return allEmpty;
+		}
+
+		private bool ScanSubdirectoriesParallel(List<DirectoryInfo> subFolderList, int depth, GitIgnoreParser gitIgnore, bool parentContainsFiles)
+		{
+			int notEmptyCount = 0;
+			var options = new ParallelOptions { MaxDegreeOfParallelism = this.ParallelDegree };
+			Parallel.ForEach(subFolderList, options, curDir =>
+			{
+				if (CancellationPending) return;
+				bool isEmpty = ProcessOneSubdirectory(curDir, depth, gitIgnore);
+				if (!isEmpty) Interlocked.Increment(ref notEmptyCount);
+			});
+			return notEmptyCount == 0;
+		}
+
+		private bool ProcessOneSubdirectory(DirectoryInfo curDir, int depth, GitIgnoreParser gitIgnore)
+		{
+			FileAttributes attribs = curDir.Attributes;
+
+			bool ignoreSystemDir = (this.RunData.IgnoreSystemFolders && ((attribs & FileAttributes.System) == FileAttributes.System));
+			bool ignoreHiddenDir = (this.RunData.IgnoreHiddenFolders && ((attribs & FileAttributes.Hidden) == FileAttributes.Hidden));
+
+			bool ignoreSubDirectory = (ignoreSystemDir || ignoreHiddenDir);
+
+			if (!ignoreSubDirectory && this.RunData.IgnoreDirectoryNameList.IsOnList(curDir))
+			{
+				this.RunData.AddLogMessage(TXT.Translate("Aborted scan of {0} because it is on the ignore list", RedAssist.DQuote(curDir.FullName)));
+				ignoreSubDirectory = true;
+				if (!this.RunData.HideIgnoredDirectories)
+				{
+					this.ReportDirectoryStatus(curDir, DirectorySearchStatusTypes.Ignore);
+				}
+			}
+
+			if (!ignoreSubDirectory && gitIgnore != null && gitIgnore.HasRules)
+			{
+				string relativePath = curDir.FullName.Substring(this.RunData.StartFolder.FullName.Length);
+				if (gitIgnore.IsIgnored(curDir.Name, relativePath))
+				{
+					this.RunData.AddLogMessage(TXT.Translate("Aborted scan of {0} because it is on the ignore list", RedAssist.DQuote(curDir.FullName)));
+					ignoreSubDirectory = true;
+					if (!this.RunData.HideIgnoredDirectories)
+					{
+						this.ReportDirectoryStatus(curDir, DirectorySearchStatusTypes.Ignore);
+					}
+				}
+			}
+
+			if (!ignoreSubDirectory && (attribs & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
+			{
+				if (SystemFunctions.IsCloudPlaceholderDirectory(curDir.FullName))
+				{
+					this.RunData.AddLogMessage(TXT.Translate("Skipped cloud placeholder directory: {0}", RedAssist.DQuote(curDir.FullName)));
+					this.ReportDirectoryStatus(curDir, DirectorySearchStatusTypes.NeverEmpty, TXT.Translate("cloud placeholder directory"));
+				}
+				else
+				{
+					this.RunData.AddLogMessage(TXT.Translate("Aborted scan of {0} because it is a symbolic link", RedAssist.DQuote(curDir.FullName)));
+					this.ReportDirectoryStatus(curDir, DirectorySearchStatusTypes.Error, TXT.Translate("Aborted because directory is a symbolic link"));
+				}
+				ignoreSubDirectory = true;
+			}
+
+			DirectorySearchStatusTypes subFolderStatus = DirectorySearchStatusTypes.NotEmpty;
+			int subIgnoredFiles = 0;
+
+			if (!ignoreSubDirectory)
+			{
+				if (curDir.CreationTime.AddHours(this.RunData.MinFolderAgeHours) < DateTime.Now)
+				{
+					subFolderStatus = this.CheckIfDirectoryEmpty(curDir, depth + 1, gitIgnore, out subIgnoredFiles);
+				}
+				else
+				{
+					this.RunData.AddLogMessage(TXT.Translate("Directory {0} skipped because creation time [{1}] is < {2} hours old", RedAssist.DQuote(curDir.FullName), curDir.CreationTime.ToString(), this.RunData.MinFolderAgeHours.ToString()));
+				}
+
+				if (subFolderStatus == DirectorySearchStatusTypes.Empty)
+				{
+					this.ReportDirectoryStatus(curDir, subFolderStatus, subIgnoredFiles);
+				}
+			}
+
+			return subFolderStatus == DirectorySearchStatusTypes.Empty && !ignoreSubDirectory;
 		}
 
 		private bool TryMftScan(DirectoryInfo startFolder, DoWorkEventArgs e)

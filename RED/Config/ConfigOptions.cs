@@ -99,6 +99,14 @@ namespace RED.Config
         public bool CheckForUpdates { get { return _CheckForUpdates; } set { SetField(ref _CheckForUpdates, value); } }
         private bool _CheckForUpdates;
 
+        /// <summary>
+        /// Maximum parallel subdirectory enumeration threads. 0 = off (serial,
+        /// default). Values 2-16 enable bounded parallelism for UNC/SMB roots
+        /// where network latency dominates. Local NTFS is unaffected at 0.
+        /// </summary>
+        public int ParallelScanDegree { get { return _ParallelScanDegree; } set { SetField(ref _ParallelScanDegree, value); } }
+        private int _ParallelScanDegree;
+
         [XmlIgnore]
         public override bool DataIsDirty
         {
