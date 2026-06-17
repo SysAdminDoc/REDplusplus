@@ -106,5 +106,35 @@ namespace RED.Tests
             var list = BuildDirList();
             Assert.False(list.IsOnList(new DirectoryInfo(@"C:\anything")));
         }
+
+        [Fact]
+        public void StatusReason_TrulyEmpty_NoIgnoredFileCount()
+        {
+            var item = new RedScanResultItem(
+                new DirectoryInfo(@"C:\empty"), DirectorySearchStatusTypes.Empty);
+            Assert.Equal(0, item.IgnoredFileCount);
+            Assert.Contains("Empty", item.StatusReason);
+            Assert.DoesNotContain("ignored", item.StatusReason);
+        }
+
+        [Fact]
+        public void StatusReason_IgnoredFiles_DistinctFromTrulyEmpty()
+        {
+            var item = new RedScanResultItem(
+                new DirectoryInfo(@"C:\has-trash"), DirectorySearchStatusTypes.Empty);
+            item.IgnoredFileCount = 3;
+            Assert.Contains("3", item.StatusReason);
+            Assert.Contains("ignored", item.StatusReason);
+        }
+
+        [Fact]
+        public void KeptReasonDetail_TakesPrecedenceOverIgnoredFileCount()
+        {
+            var item = new RedScanResultItem(
+                new DirectoryInfo(@"C:\x"), DirectorySearchStatusTypes.Empty);
+            item.IgnoredFileCount = 2;
+            item.KeptReasonDetail = "custom reason";
+            Assert.Equal("custom reason", item.StatusReason);
+        }
     }
 }
