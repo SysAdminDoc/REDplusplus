@@ -829,7 +829,12 @@ namespace RED
 				};
 
 				core.OnFinishedScanForEmptyDirs += (s, e) => { emptyCount = e.EmptyFolderCount; scanDone.Set(); };
-				core.OnCancelled += (s, e) => { scanDone.Set(); deleteDone.Set(); };
+				core.OnCancelled += (s, e) =>
+				{
+					emptyCount = runData.ScanResults.Count;
+					logMsg(string.Format("Scan cancelled with {0} partial results", emptyCount));
+					scanDone.Set();
+				};
 				core.OnAborted += (s, e) => { runErrors = true; scanDone.Set(); deleteDone.Set(); };
 				core.OnError += (s, e) => { runErrors = true; logMsg("Error: " + e.Message); scanDone.Set(); deleteDone.Set(); };
 
