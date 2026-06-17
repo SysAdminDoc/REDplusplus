@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Security & data safety
+- Fix two thread-safety bugs in the parallel scan (`-parallel N`): the infinite-loop detector's `PossibleEndlessLoop` counter used a non-atomic increment that could race, and `EmptyFileResults.Add` wrote to a `List<FileInfo>` from parallel threads without synchronization. Both are now guarded (`Interlocked.Increment` for the counter, `lock` for the file list).
+
 ### Features
 - Distinguish "empty except ignored files" from truly-empty directories in the results grid, CLI NDJSON output, and all export formats (CSV, JSON, HTML, PS1). A folder containing only ignored junk (Thumbs.db, desktop.ini, etc.) now shows "Empty except N ignored file(s) (will be removed)" instead of the same "Empty - eligible for deletion" label as a truly-empty folder, so a reviewer can tell which directories will have trash files removed.
 - Deletion lockout mode for managed/report-only deployments: set `DeletionLockout=true` in the config or pass `-lockout` on the CLI to force every delete mode to Simulate. No path (GUI or CLI) can mutate the filesystem while the lockout is active. Override per-run with `-no-lockout`.
