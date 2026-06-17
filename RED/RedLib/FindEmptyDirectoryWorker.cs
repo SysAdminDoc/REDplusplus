@@ -38,7 +38,7 @@ namespace RED
 		/// </summary>
 		internal int ParallelDegree { get; set; }
 
-		private readonly object _syncRoot = new object();
+		private readonly Lock _syncRoot = new Lock();
 
 		public FindEmptyDirectoryWorker()
 		{
