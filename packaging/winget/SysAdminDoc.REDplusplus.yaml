@@ -17,5 +17,12 @@ Installers:
     NestedInstallerFiles:
       - RelativeFilePath: RED+.exe
         PortableCommandAlias: red++
+  - Architecture: arm64
+    InstallerUrl: https://github.com/SysAdminDoc/REDplusplus/releases/download/v1.5.18/RED++_v1.5.18_arm64.zip
+    InstallerSha256:
+    NestedInstallerType: portable
+    NestedInstallerFiles:
+      - RelativeFilePath: RED+.exe
+        PortableCommandAlias: red++
 ManifestType: singleton
 ManifestVersion: 1.6.0

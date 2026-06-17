@@ -72,9 +72,9 @@ RED+.exe -silent -path "D:\Shares" -log cleanup.log
 
 ## System Requirements
 
-- Windows 10 22H2, Windows 11, or Windows Server 2022/2025 (64-bit / x64)
+- Windows 10 22H2, Windows 11, or Windows Server 2022/2025 (x64 or ARM64)
 - No runtime to install — the release is a self-contained single-file build that bundles .NET 9. Just unzip and run.
-- No installer required.
+- No installer required. ARM64 builds (Surface Pro, Snapdragon X) are available alongside x64.
 
 ## Verify Your Download
 

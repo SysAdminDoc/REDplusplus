@@ -11,6 +11,9 @@
 - Opt-in update check: set `CheckForUpdates=true` in the config to make RED++ check the GitHub Releases API (at most once per day, ETag-cached) and report when a newer version is available. No telemetry, no auto-download, disabled by default. The CLI logs the newer version and release URL at the end of a headless run.
 - Bounded-parallel scan for UNC/SMB roots: set `ParallelScanDegree` in the config (2-16) or pass `-parallel <n>` on the CLI to enumerate subdirectories across multiple threads. Off by default (0 = serial). Intended for network shares where enumeration latency dominates; produces identical results to the serial walk with all safety guards (reparse-point, long-path, fail-closed) intact.
 
+### Distribution
+- Ship a `win-arm64` self-contained single-file release artifact alongside the existing x64 build. Windows ARM laptops (Surface Pro, Snapdragon X Elite) now get a native binary instead of running under x64 emulation. Scoop and winget manifests include architecture-specific entries.
+
 ### Build / CI
 - Enable reproducible builds: `<ContinuousIntegrationBuild>` is set in CI, `SOURCE_DATE_EPOCH` drives the build-time stamp from the git commit timestamp, and a `global.json` pins the SDK to 9.0.x (`latestFeature` roll-forward). Two CI builds of the same commit now produce byte-identical outputs.
 - Move the release build, safety smoke, packaging, attestation, and GitHub Release into a reusable workflow (`build-publish.yml`) called by `release.yml`, raising provenance from SLSA Build Level 2 to Build Level 3 (isolated, non-forgeable build in a trusted workflow).
