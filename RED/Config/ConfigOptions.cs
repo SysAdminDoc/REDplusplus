@@ -91,6 +91,14 @@ namespace RED.Config
         public bool DeletionLockout { get { return _DeletionLockout; } set { SetField(ref _DeletionLockout, value); } }
         private bool _DeletionLockout;
 
+        /// <summary>
+        /// Opt-in update check. When true, RED++ makes a single GET to the
+        /// GitHub Releases API (at most once per day) and reports when a newer
+        /// version is available. No telemetry, no auto-download.
+        /// </summary>
+        public bool CheckForUpdates { get { return _CheckForUpdates; } set { SetField(ref _CheckForUpdates, value); } }
+        private bool _CheckForUpdates;
+
         [XmlIgnore]
         public override bool DataIsDirty
         {

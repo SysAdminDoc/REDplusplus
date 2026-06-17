@@ -5,6 +5,7 @@
 ### Features
 - Distinguish "empty except ignored files" from truly-empty directories in the results grid, CLI NDJSON output, and all export formats (CSV, JSON, HTML, PS1). A folder containing only ignored junk (Thumbs.db, desktop.ini, etc.) now shows "Empty except N ignored file(s) (will be removed)" instead of the same "Empty - eligible for deletion" label as a truly-empty folder, so a reviewer can tell which directories will have trash files removed.
 - Deletion lockout mode for managed/report-only deployments: set `DeletionLockout=true` in the config or pass `-lockout` on the CLI to force every delete mode to Simulate. No path (GUI or CLI) can mutate the filesystem while the lockout is active. Override per-run with `-no-lockout`.
+- Opt-in update check: set `CheckForUpdates=true` in the config to make RED++ check the GitHub Releases API (at most once per day, ETag-cached) and report when a newer version is available. No telemetry, no auto-download, disabled by default. The CLI logs the newer version and release URL at the end of a headless run.
 
 ### Build / CI
 - Enable reproducible builds: `<ContinuousIntegrationBuild>` is set in CI, `SOURCE_DATE_EPOCH` drives the build-time stamp from the git commit timestamp, and a `global.json` pins the SDK to 9.0.x (`latestFeature` roll-forward). Two CI builds of the same commit now produce byte-identical outputs.

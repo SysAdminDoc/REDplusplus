@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -135,6 +136,22 @@ namespace RED.Tests
             item.IgnoredFileCount = 2;
             item.KeptReasonDetail = "custom reason";
             Assert.Equal("custom reason", item.StatusReason);
+        }
+    }
+
+    public class UpdateCheckTests
+    {
+        [Theory]
+        [InlineData("1.5.19", "1.5.18", 1)]
+        [InlineData("1.5.18", "1.5.18", 0)]
+        [InlineData("1.5.17", "1.5.18", -1)]
+        [InlineData("2.0.0", "1.99.99", 1)]
+        [InlineData("1.5.18.1", "1.5.18.0", 1)]
+        [InlineData("1.5.18", "1.5.18.0", 0)]
+        public void CompareVersions_OrdersCorrectly(string a, string b, int expected)
+        {
+            int result = UpdateCheck.CompareVersions(a, b);
+            Assert.Equal(expected, Math.Sign(result));
         }
     }
 }
