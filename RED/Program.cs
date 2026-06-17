@@ -135,6 +135,7 @@ namespace RED
 			bool? useMftScanOverride = null;
 			bool? ignoreHiddenOverride = null;
 			bool? ignoreSystemOverride = null;
+			bool? lockoutOverride = null;
 			var excludePatterns = new List<string>();
 			var protectPatterns = new List<string>();
 			string profileName = null;
@@ -273,6 +274,14 @@ namespace RED
 					case "-ignore-system":
 					case "--ignore-system":
 						ignoreSystemOverride = true;
+						break;
+					case "-lockout":
+					case "--lockout":
+						lockoutOverride = true;
+						break;
+					case "-no-lockout":
+					case "--no-lockout":
+						lockoutOverride = false;
 						break;
 					case "-exclude":
 					case "--exclude":
@@ -488,7 +497,7 @@ namespace RED
 				}
 				Environment.ExitCode = RunHeadless(paths, logFile, exportFile, modeOverride, moveTarget, isDryRun, isJson, emptyFiles, quiet, useEventLog,
 					minAgeOverride, maxDepthOverride, respectGitIgnoreOverride, useMftScanOverride, ignoreHiddenOverride, ignoreSystemOverride,
-					excludePatterns, protectPatterns);
+					excludePatterns, protectPatterns, lockoutOverride);
 				return;
 			}
 
@@ -647,7 +656,7 @@ namespace RED
 
 		private static int RunHeadless(List<string> paths, string logFile, string exportFile, string modeOverride, string moveTarget, bool dryRun, bool jsonOutput, bool emptyFiles, bool quiet, bool useEventLog,
 			uint? minAgeOverride, int? maxDepthOverride, bool? respectGitIgnoreOverride, bool? useMftScanOverride, bool? ignoreHiddenOverride, bool? ignoreSystemOverride,
-			List<string> excludePatterns, List<string> protectPatterns)
+			List<string> excludePatterns, List<string> protectPatterns, bool? lockoutOverride = null)
 		{
 			var log = new StringBuilder();
 			Action<string> logMsg = (msg) =>
@@ -672,9 +681,15 @@ namespace RED
 			RedConfiguration config = null;
 			ConfigAssist.ConfigLoad(ref config, "RemoveEmptyDirectories");
 
+			bool lockoutActive = lockoutOverride.HasValue ? lockoutOverride.Value : config.Options.DeletionLockout;
+
 			DeleteModes deleteMode = (DeleteModes)config.Options.DeleteMode;
-			if (dryRun)
+			if (lockoutActive || dryRun)
 			{
+				if (lockoutActive)
+				{
+					logMsg("Deletion lockout is active - all modes forced to Simulate (report-only)");
+				}
 				deleteMode = DeleteModes.Simulate;
 			}
 			else if (modeOverride != null)
@@ -1024,6 +1039,8 @@ Options:
   -ignore-hidden   Ignore hidden directories for this run.
   -system          Include system directories for this run.
   -ignore-system   Ignore system directories for this run.
+  -lockout         Force report-only mode (no deletions, regardless of -mode).
+  -no-lockout      Override a config-level deletion lockout for this run.
   -exclude <name>  Skip directories matching <name> (repeatable, composable).
   -protect <name>  Prevent deletion of dirs matching <name> (repeatable).
   -export <file>   Write results to .txt / .csv / .json / .ps1 / .html (by extension).
