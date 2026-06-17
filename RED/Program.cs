@@ -136,6 +136,7 @@ namespace RED
 			bool? ignoreHiddenOverride = null;
 			bool? ignoreSystemOverride = null;
 			bool? lockoutOverride = null;
+			int? parallelOverride = null;
 			var excludePatterns = new List<string>();
 			var protectPatterns = new List<string>();
 			string profileName = null;
@@ -282,6 +283,19 @@ namespace RED
 					case "-no-lockout":
 					case "--no-lockout":
 						lockoutOverride = false;
+						break;
+					case "-parallel":
+					case "--parallel":
+						if (i + 1 >= args.Length)
+							parseError = "Error: -parallel requires a thread count (2-16)";
+						else
+						{
+							int pval;
+							if (int.TryParse(args[++i], out pval) && pval >= 0 && pval <= 16)
+								parallelOverride = pval;
+							else
+								parseError = "Error: -parallel must be 0-16";
+						}
 						break;
 					case "-exclude":
 					case "--exclude":
@@ -497,7 +511,7 @@ namespace RED
 				}
 				Environment.ExitCode = RunHeadless(paths, logFile, exportFile, modeOverride, moveTarget, isDryRun, isJson, emptyFiles, quiet, useEventLog,
 					minAgeOverride, maxDepthOverride, respectGitIgnoreOverride, useMftScanOverride, ignoreHiddenOverride, ignoreSystemOverride,
-					excludePatterns, protectPatterns, lockoutOverride);
+					excludePatterns, protectPatterns, lockoutOverride, parallelOverride);
 				return;
 			}
 
@@ -656,7 +670,7 @@ namespace RED
 
 		private static int RunHeadless(List<string> paths, string logFile, string exportFile, string modeOverride, string moveTarget, bool dryRun, bool jsonOutput, bool emptyFiles, bool quiet, bool useEventLog,
 			uint? minAgeOverride, int? maxDepthOverride, bool? respectGitIgnoreOverride, bool? useMftScanOverride, bool? ignoreHiddenOverride, bool? ignoreSystemOverride,
-			List<string> excludePatterns, List<string> protectPatterns, bool? lockoutOverride = null)
+			List<string> excludePatterns, List<string> protectPatterns, bool? lockoutOverride = null, int? parallelOverride = null)
 		{
 			var log = new StringBuilder();
 			Action<string> logMsg = (msg) =>
@@ -766,6 +780,7 @@ namespace RED
 				runData.RespectGitIgnore = respectGitIgnoreOverride.HasValue ? respectGitIgnoreOverride.Value : config.Options.RespectGitIgnore;
 				runData.UseMftScan = useMftScanOverride.HasValue ? useMftScanOverride.Value : config.Options.UseMftScan;
 				runData.DeleteEmptyFiles = config.Options.DeleteEmptyFiles || emptyFiles;
+				runData.ParallelScanDegree = parallelOverride.HasValue ? parallelOverride.Value : config.Options.ParallelScanDegree;
 				runData.IgnoreFileNameList.Transform(config.Filters.FilesToIgnore);
 				runData.IgnoreDirectoryNameList.Transform(config.Filters.DirectoriesToIgnore);
 				runData.NeverEmptyDirectoryList.Transform(config.Filters.DirectoriesNeverEmpty);
@@ -1056,6 +1071,7 @@ Options:
   -ignore-system   Ignore system directories for this run.
   -lockout         Force report-only mode (no deletions, regardless of -mode).
   -no-lockout      Override a config-level deletion lockout for this run.
+  -parallel <n>    Parallel subdirectory scan threads (2-16, 0=serial). For UNC/SMB.
   -exclude <name>  Skip directories matching <name> (repeatable, composable).
   -protect <name>  Prevent deletion of dirs matching <name> (repeatable).
   -export <file>   Write results to .txt / .csv / .json / .ps1 / .html (by extension).

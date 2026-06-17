@@ -168,6 +168,7 @@ namespace RED
 		public bool RespectGitIgnore { get; set; }
 		public bool UseMftScan { get; set; }
 		public bool DeleteEmptyFiles { get; set; }
+		public int ParallelScanDegree { get; set; }
 
 		/// <summary>
 		/// Standalone zero-byte files found when DeleteEmptyFiles is on. Kept
@@ -184,11 +185,16 @@ namespace RED
 
 		public RedScanResultItemList ScanResults { get; private set; }
 
+		private readonly object _logLock = new object();
+
 		public void AddLogMessage(string msg)
 		{
 			string line = DateTime.Now.ToString("r") + "\t" + msg;
-			this.LogMessages.AppendLine(line);
-			try { _logWriter?.WriteLine(line); } catch { }
+			lock (_logLock)
+			{
+				this.LogMessages.AppendLine(line);
+				try { _logWriter?.WriteLine(line); } catch { }
+			}
 		}
 
 		internal void AddLogSpacer()

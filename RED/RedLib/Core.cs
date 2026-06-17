@@ -55,6 +55,7 @@ namespace RED
 			// Start async empty directory search worker
 			SearchEmptyFoldersWorker = new FindEmptyDirectoryWorker();
 			SearchEmptyFoldersWorker.RunData = RunData;
+			SearchEmptyFoldersWorker.ParallelDegree = RunData.ParallelScanDegree;
 			SearchEmptyFoldersWorker.ProgressChanged += new ProgressChangedEventHandler(SearchEmptyFoldersWorker_ProgressChanged);
 			SearchEmptyFoldersWorker.RunWorkerCompleted += new RunWorkerCompletedEventHandler(SearchEmptyFoldersWorker_RunWorkerCompleted);
 			SearchEmptyFoldersWorker.RunWorkerAsync(RunData.StartFolder);
