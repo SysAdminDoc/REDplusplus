@@ -120,6 +120,7 @@ Options:
 | Option | Description |
 |--------|-------------|
 | `-path <dir>` | Scan root (repeatable). A bare path argument also works. |
+| `-delete`, `-yes` | Scan and delete in one shot (alias for `-silent`; makes intent explicit in scripts). |
 | `-dryrun` | Scan and report only; never delete (forces simulate mode). |
 | `-emptyfiles` | Also delete standalone zero-byte files (opt-in sister mode). |
 | `-mode <mode>` | Override delete mode: `recycle` \| `direct` \| `move` \| `simulate`. |
