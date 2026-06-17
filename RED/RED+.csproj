@@ -16,6 +16,8 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <Deterministic>true</Deterministic>
+    <!-- Embed CI source paths (not local dev paths) in PDBs for reproducibility. -->
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true' or '$(TF_BUILD)' == 'true'">true</ContinuousIntegrationBuild>
 
     <!-- WFO0003: the WinForms analyzer wants high-DPI moved out of the manifest into
          ApplicationHighDpiMode/SetHighDpiMode. That only configures WinForms; this
@@ -51,9 +53,13 @@
 
   <!-- Stamp the build time into a linked resource the About box reads. Mirrors
        the legacy pre-build step; writes BuildTimeRelease.txt / BuildTimeDebug.txt
-       which Properties\Resources.resx embeds by reference. -->
+       which Properties\Resources.resx embeds by reference. In CI (SOURCE_DATE_EPOCH
+       set), use the commit timestamp for reproducible builds; locally use Now. -->
   <Target Name="StampBuildTime" BeforeTargets="PrepareForBuild">
-    <Exec Command="powershell -NoProfile -Command &quot;[DateTime]::Now.ToString('yyyy-MM-ddTHH:mm:ss') | Set-Content '$(ProjectDir)Resources\BuildTime$(Configuration).txt' -NoNewline&quot;" />
+    <Exec Condition="'$(SOURCE_DATE_EPOCH)' != ''"
+          Command="powershell -NoProfile -Command &quot;[DateTimeOffset]::FromUnixTimeSeconds($env:SOURCE_DATE_EPOCH).UtcDateTime.ToString('yyyy-MM-ddTHH:mm:ss') | Set-Content '$(ProjectDir)Resources\BuildTime$(Configuration).txt' -NoNewline&quot;" />
+    <Exec Condition="'$(SOURCE_DATE_EPOCH)' == ''"
+          Command="powershell -NoProfile -Command &quot;[DateTime]::Now.ToString('yyyy-MM-ddTHH:mm:ss') | Set-Content '$(ProjectDir)Resources\BuildTime$(Configuration).txt' -NoNewline&quot;" />
   </Target>
 
 </Project>
