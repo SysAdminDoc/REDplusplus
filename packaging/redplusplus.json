@@ -3,8 +3,16 @@
     "description": "Find, display, and delete empty directories with filters, CLI mode, and reparse-point safety",
     "homepage": "https://github.com/SysAdminDoc/REDplusplus",
     "license": "LGPL-3.0-or-later",
-    "url": "https://github.com/SysAdminDoc/REDplusplus/releases/download/v1.5.18/RED++_v1.5.18.zip",
-    "hash": "",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/SysAdminDoc/REDplusplus/releases/download/v1.5.18/RED++_v1.5.18.zip",
+            "hash": ""
+        },
+        "arm64": {
+            "url": "https://github.com/SysAdminDoc/REDplusplus/releases/download/v1.5.18/RED++_v1.5.18_arm64.zip",
+            "hash": ""
+        }
+    },
     "extract_dir": "",
     "bin": "RED+.exe",
     "shortcuts": [
@@ -16,9 +24,19 @@
     ],
     "checkver": "github",
     "autoupdate": {
-        "url": "https://github.com/SysAdminDoc/REDplusplus/releases/download/v$version/RED++_v$version.zip",
-        "hash": {
-            "url": "https://github.com/SysAdminDoc/REDplusplus/releases/download/v$version/SHA256SUMS"
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/SysAdminDoc/REDplusplus/releases/download/v$version/RED++_v$version.zip",
+                "hash": {
+                    "url": "https://github.com/SysAdminDoc/REDplusplus/releases/download/v$version/SHA256SUMS"
+                }
+            },
+            "arm64": {
+                "url": "https://github.com/SysAdminDoc/REDplusplus/releases/download/v$version/RED++_v$version_arm64.zip",
+                "hash": {
+                    "url": "https://github.com/SysAdminDoc/REDplusplus/releases/download/v$version/SHA256SUMS"
+                }
+            }
         }
     }
 }
