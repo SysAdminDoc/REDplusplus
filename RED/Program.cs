@@ -152,6 +152,12 @@ namespace RED
 					case "--silent":
 						isSilent = true;
 						break;
+					case "-delete":
+					case "--delete":
+					case "-yes":
+					case "--yes":
+						isSilent = true;
+						break;
 					case "-autosearch":
 					case "--autosearch":
 						isAutoSearch = true;
@@ -1055,6 +1061,7 @@ Usage:
 Options:
   -path <dir>      Scan root (repeatable). A bare path argument also works.
   -silent          Headless mode (no window). Implied when -path is given.
+  -delete, -yes    Alias for -silent; makes scan-and-delete intent explicit in scripts.
   -dryrun          Scan and report only; never delete (forces simulate mode).
   -emptyfiles      Also delete standalone zero-byte files (sister mode, opt-in).
   -mode <mode>     Override delete mode: recycle | direct | move | simulate.
