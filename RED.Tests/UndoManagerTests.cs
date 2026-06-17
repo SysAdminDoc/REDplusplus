@@ -20,6 +20,7 @@ namespace RED
 
         public void Dispose()
         {
+            RuntimeData.TrustedDataDirectoryOverride = null;
             try { Directory.Delete(_root, true); } catch { }
         }
 
@@ -202,6 +203,74 @@ namespace RED
             {
                 try { Directory.Delete(evilSource, true); } catch { }
             }
+        }
+
+        [Fact]
+        public void WriteManifest_UsesTrustedPerUserStore()
+        {
+            string trusted = Path.Combine(_root, "trusted-store");
+            RuntimeData.TrustedDataDirectoryOverride = trusted;
+
+            string restoredPath = Path.Combine(_root, "restored");
+            UndoManager.WriteManifest(
+                "Direct",
+                new[]
+                {
+                    new UndoManager.ManifestEntry { Path = restoredPath, Mode = "Direct" }
+                },
+                new[] { _root },
+                null);
+
+            Assert.StartsWith(trusted, UndoManager.ManifestPath, StringComparison.OrdinalIgnoreCase);
+            Assert.True(File.Exists(UndoManager.ManifestPath));
+            Assert.Single(UndoManager.ListManifests());
+        }
+
+        [Fact]
+        public void Restore_ExplicitLegacyManifestOutsideUserProfile_IsRefused()
+        {
+            string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string root = Path.GetPathRoot(profile);
+            string outside = Path.Combine(root, "redpp-outside-profile-" + Guid.NewGuid().ToString("N"), "x");
+            string json =
+                "{ \"timestamp\": \"x\", \"deleteMode\": \"Direct\", \"entries\": [" +
+                "{ \"path\": \"" + Esc(outside) + "\", \"mode\": \"Direct\" } ] }";
+            string path = WriteManifest(json);
+
+            var logs = new List<string>();
+            int restored, failed;
+            bool ok = UndoManager.Restore(path, out restored, out failed, m => logs.Add(m));
+
+            Assert.False(ok);
+            Assert.Equal(0, restored);
+            Assert.Equal(0, failed);
+            Assert.Contains(logs, l => l != null && l.Contains("safe profile boundary"));
+            Assert.False(Directory.Exists(outside));
+        }
+
+        [Fact]
+        public void Restore_ExplicitLegacyManifestTargetingStartup_IsRefused()
+        {
+            string startup = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+            if (string.IsNullOrWhiteSpace(startup))
+            {
+                return;
+            }
+
+            string target = Path.Combine(startup, "redpp-startup-" + Guid.NewGuid().ToString("N"));
+            string json =
+                "{ \"timestamp\": \"x\", \"deleteMode\": \"Direct\", \"entries\": [" +
+                "{ \"path\": \"" + Esc(target) + "\", \"mode\": \"Direct\" } ] }";
+            string path = WriteManifest(json);
+
+            var logs = new List<string>();
+            int restored, failed;
+            bool ok = UndoManager.Restore(path, out restored, out failed, m => logs.Add(m));
+
+            Assert.False(ok);
+            Assert.Equal(0, restored);
+            Assert.Contains(logs, l => l != null && l.Contains("safe profile boundary"));
+            Assert.False(Directory.Exists(target));
         }
 
         [Fact]

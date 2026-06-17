@@ -43,10 +43,10 @@ RED+.exe -silent -path "D:\Shares" -log cleanup.log
 - Can detect directories with empty files as empty
 - Detects OneDrive/cloud-only placeholder files as real content
 - Handle-based reparse-point safety (junctions, symlinks, mount points)
-- One-click restore of the last deletion (GUI button or `-undo`)
+- One-click restore from a protected per-user undo store (GUI button or `-undo`)
 - `.redkeep` marker file protects a folder (and its subtree) anywhere it travels
 - Opt-in MFT turbo scan for whole-volume scans in seconds — NTFS and ReFS/Dev Drive (admin required)
-- Fully portable (local config file, no %APPDATA% required)
+- Portable configuration with protected per-user recovery state
 - Extended directory and file name matching with sophisticated filter syntax
 - Dedicated grid for display and editing of filter rules
 - Translation-ready via .po files (template included, community translations welcome)
@@ -134,7 +134,7 @@ Options:
 | `-json` | Emit NDJSON to stdout: one `meta` record (version, run totals, and elapsed time), then one `result` record per directory. |
 | `-quiet` | Suppress stdout/stderr; use only the process exit code and optional `-log`. |
 | `-log <file>` | Write a timestamped run log. |
-| `-undo [manifest]` | Restore directories from the most recent (or specified) run. Up to 5 undo manifests are kept. |
+| `-undo [manifest]` | Restore directories from the most recent (or specified) run in the protected undo store. Up to 5 undo manifests are kept. |
 | `-profile <name>` | Run a saved profile. Any other command-line options still override the profile's values. |
 | `-saveprofile <name>` | Save the current options (paths, mode, toggles) as a named profile and exit without scanning. |
 | `-listprofiles` | List saved profiles and exit. |
@@ -164,15 +164,15 @@ RED+.exe -silent -path "\\server\share\folder" -log "cleanup.log"
 
 ### Undo
 
-Every deletion run writes a timestamped undo manifest. The last 5 manifests are kept so you can undo earlier runs, not just the most recent one. Restore via the GUI (Extras → Restore Deletion → pick a run) or headlessly:
+Every deletion run writes a timestamped undo manifest under the current Windows user's protected LocalAppData store (`%LOCALAPPDATA%\NotBob\RemoveEmptyDirectories`). The last 5 manifests are kept so you can undo earlier runs, not just the most recent one. Restore via the GUI (Extras → Restore Deletion → pick a run) or headlessly:
 
 ```
 RED+.exe -undo                              # restore the most recent run
 RED+.exe -undo 2026-06-13_14-30-00          # restore a specific run by timestamp
-RED+.exe -undo RED++.undo.2026-06-13_14-30-00.json  # or by filename
+RED+.exe -undo RED++.undo.2026-06-13_14-30-00.json  # filename from the protected store
 ```
 
-Deleted directories were empty, so recreating them is a complete restore; Move-to-folder deletions are moved back to their original location.
+Deleted directories were empty, so recreating them is a complete restore; Move-to-folder deletions are moved back to their original location. A raw manifest file path is accepted only as an explicit legacy restore and is constrained to the current user's safe profile boundary; automatic `-undo` never trusts a manifest planted beside a portable executable.
 
 ### Post-Migration Cleanup
 
