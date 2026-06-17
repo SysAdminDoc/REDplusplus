@@ -153,5 +153,69 @@ namespace RED.Tests
             int result = UpdateCheck.CompareVersions(a, b);
             Assert.Equal(expected, Math.Sign(result));
         }
+
+        [Theory]
+        [InlineData("1.5.19-beta", "1.5.18", 1)]
+        [InlineData("1.5.18-rc1", "1.5.18", 0)]
+        [InlineData("0.0.0", "0.0.0", 0)]
+        [InlineData("10.0.0", "9.99.99", 1)]
+        public void CompareVersions_EdgeCases(string a, string b, int expected)
+        {
+            int result = UpdateCheck.CompareVersions(a, b);
+            Assert.Equal(expected, Math.Sign(result));
+        }
+
+        [Fact]
+        public void Check_SkipsWhenIntervalNotElapsed()
+        {
+            string stateFile = Path.Combine(Path.GetTempPath(), "redpp_test_updatecheck_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                File.WriteAllLines(stateFile, new[] { DateTime.UtcNow.ToString("o"), "" });
+                var result = UpdateCheck.Check("1.5.18", stateFile);
+                Assert.Null(result);
+            }
+            finally
+            {
+                if (File.Exists(stateFile)) File.Delete(stateFile);
+            }
+        }
+    }
+
+    public class ParallelScanThreadSafetyTests
+    {
+        [Fact]
+        public void PossibleEndlessLoop_UsesVolatileSemantics()
+        {
+            var worker = new FindEmptyDirectoryWorker();
+            Assert.Equal(0, worker.PossibleEndlessLoop);
+            worker.PossibleEndlessLoop = 5;
+            Assert.Equal(5, worker.PossibleEndlessLoop);
+        }
+
+        [Fact]
+        public void ParallelDegree_DefaultsToSerial()
+        {
+            var worker = new FindEmptyDirectoryWorker();
+            Assert.Equal(0, worker.ParallelDegree);
+        }
+    }
+
+    public class LockoutTests
+    {
+        [Fact]
+        public void DeletionLockout_DefaultsFalse()
+        {
+            var opts = new RED.Config.ConfigOptions();
+            Assert.False(opts.DeletionLockout);
+        }
+
+        [Fact]
+        public void DeletionLockout_PersistsTrue()
+        {
+            var opts = new RED.Config.ConfigOptions();
+            opts.DeletionLockout = true;
+            Assert.True(opts.DeletionLockout);
+        }
     }
 }

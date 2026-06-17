@@ -133,6 +133,9 @@ namespace RED
 
         private static int ParseInt(string s)
         {
+            if (string.IsNullOrEmpty(s)) return 0;
+            int dash = s.IndexOf('-');
+            if (dash >= 0) s = s.Substring(0, dash);
             int v;
             return int.TryParse(s, out v) ? v : 0;
         }
