@@ -5,6 +5,9 @@
 ### Security & data safety
 - Fix two thread-safety bugs in the parallel scan (`-parallel N`): the infinite-loop detector's `PossibleEndlessLoop` counter used a non-atomic increment that could race, and `EmptyFileResults.Add` wrote to a `List<FileInfo>` from parallel threads without synchronization. Both are now guarded (`Interlocked.Increment` for the counter, `lock` for the file list).
 
+### Reliability
+- Use a static `HttpClient` with `SocketsHttpHandler` and `PooledConnectionLifetime` for the opt-in update check instead of creating and disposing a new `HttpClient` per call. Avoids potential socket exhaustion in long-running processes per Microsoft guidance. Per-call headers (ETag, User-Agent) moved to `HttpRequestMessage`.
+
 ### CLI
 - Add `-delete` / `-yes` as explicit-intent aliases for `-silent`, so CI pipelines can express scan-and-delete in one self-documenting command: `RED+.exe -path X --delete -mode recycle -log Y`.
 - Infinite-loop-detected directories no longer abort the entire scan; the affected subtrees are marked Error and skipped, while the remaining results are still eligible for deletion. Addresses upstream RED issues #17 and #8.
