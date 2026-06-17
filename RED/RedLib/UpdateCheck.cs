@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
@@ -11,6 +12,19 @@ namespace RED
         private const string ReleasesUrl = "https://api.github.com/repos/SysAdminDoc/REDplusplus/releases/latest";
         private static readonly TimeSpan CheckInterval = TimeSpan.FromHours(24);
         private static readonly Regex TagPattern = new Regex(@"v?(\d+\.\d+\.\d+)", RegexOptions.Compiled);
+
+        private static readonly HttpClient SharedClient = CreateClient();
+
+        private static HttpClient CreateClient()
+        {
+            var handler = new SocketsHttpHandler
+            {
+                PooledConnectionLifetime = TimeSpan.FromMinutes(10)
+            };
+            var client = new HttpClient(handler);
+            client.Timeout = TimeSpan.FromSeconds(10);
+            return client;
+        }
 
         internal class Result
         {
@@ -43,53 +57,50 @@ namespace RED
 
             try
             {
-                using (var client = new HttpClient())
+                var request = new HttpRequestMessage(HttpMethod.Get, ReleasesUrl);
+                request.Headers.UserAgent.Add(new ProductInfoHeaderValue("RED++", currentVersion));
+                request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+
+                if (!string.IsNullOrEmpty(lastETag))
+                    request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(lastETag));
+
+                var task = SharedClient.SendAsync(request);
+                task.Wait();
+                var response = task.Result;
+
+                if (response.StatusCode == HttpStatusCode.NotModified)
                 {
-                    client.Timeout = TimeSpan.FromSeconds(10);
-                    client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("RED++", currentVersion));
-                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-
-                    if (!string.IsNullOrEmpty(lastETag))
-                        client.DefaultRequestHeaders.IfNoneMatch.Add(new EntityTagHeaderValue(lastETag));
-
-                    var task = client.GetAsync(ReleasesUrl);
-                    task.Wait();
-                    var response = task.Result;
-
-                    if (response.StatusCode == System.Net.HttpStatusCode.NotModified)
-                    {
-                        SaveState(stateFilePath, DateTime.UtcNow, lastETag);
-                        return null;
-                    }
-
-                    response.EnsureSuccessStatusCode();
-                    string newETag = response.Headers.ETag?.Tag;
-
-                    var readTask = response.Content.ReadAsStringAsync();
-                    readTask.Wait();
-                    string responseBody = readTask.Result;
-
-                    SaveState(stateFilePath, DateTime.UtcNow, newETag);
-
-                    string tagName = ExtractJsonValue(responseBody, "tag_name");
-                    string htmlUrl = ExtractJsonValue(responseBody, "html_url");
-                    if (string.IsNullOrEmpty(tagName))
-                        return null;
-
-                    var tagMatch = TagPattern.Match(tagName);
-                    if (!tagMatch.Success)
-                        return null;
-
-                    string latestVersion = tagMatch.Groups[1].Value;
-                    bool newer = CompareVersions(latestVersion, currentVersion) > 0;
-
-                    return new Result
-                    {
-                        NewerAvailable = newer,
-                        LatestVersion = latestVersion,
-                        ReleaseUrl = htmlUrl ?? ("https://github.com/SysAdminDoc/REDplusplus/releases/tag/" + tagName)
-                    };
+                    SaveState(stateFilePath, DateTime.UtcNow, lastETag);
+                    return null;
                 }
+
+                response.EnsureSuccessStatusCode();
+                string newETag = response.Headers.ETag?.Tag;
+
+                var readTask = response.Content.ReadAsStringAsync();
+                readTask.Wait();
+                string responseBody = readTask.Result;
+
+                SaveState(stateFilePath, DateTime.UtcNow, newETag);
+
+                string tagName = ExtractJsonValue(responseBody, "tag_name");
+                string htmlUrl = ExtractJsonValue(responseBody, "html_url");
+                if (string.IsNullOrEmpty(tagName))
+                    return null;
+
+                var tagMatch = TagPattern.Match(tagName);
+                if (!tagMatch.Success)
+                    return null;
+
+                string latestVersion = tagMatch.Groups[1].Value;
+                bool newer = CompareVersions(latestVersion, currentVersion) > 0;
+
+                return new Result
+                {
+                    NewerAvailable = newer,
+                    LatestVersion = latestVersion,
+                    ReleaseUrl = htmlUrl ?? ("https://github.com/SysAdminDoc/REDplusplus/releases/tag/" + tagName)
+                };
             }
             catch
             {
