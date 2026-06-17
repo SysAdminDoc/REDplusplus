@@ -14,162 +14,17 @@ permissions:
   attestations: write
 
 jobs:
-  build:
-    runs-on: windows-latest
-    env:
-      VT_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.x'
-
-      # Self-contained single-file: no .NET runtime install required on the target
-      # machine, preserving RED++'s "unzip and run" portability. Larger artifact
-      # (~65 MB) than a framework-dependent build, but no external dependency. WPF +
-      # reflection-based resource loading are not trim-safe, so trimming is left off.
-      - name: Publish self-contained single-file
-        run: dotnet publish "RED/RED+.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish
-
-      # Gate the release on the actual shipping artifact passing the safety
-      # invariants (empty-dir/file deletion; reparse-point, deny-ACL, and
-      # AutoProtectRoot protection). Never ship a file-deleting tool that fails this.
-      - name: Safety smoke on published artifact
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $exe = Join-Path $PWD 'publish\RED+.exe'
-          if (!(Test-Path $exe)) { throw "Missing published RED+.exe at $exe" }
-
-          $root = Join-Path $env:RUNNER_TEMP ("redpp-rel-" + [guid]::NewGuid().ToString("N"))
-          $junctionTarget = $root + '-junction-target'
-          New-Item -ItemType Directory -Path $root | Out-Null
-          try {
-            $emptyDir = Join-Path $root 'empty-child'
-            $nonEmpty = Join-Path $root 'non-empty'
-            $junction = Join-Path $root 'junction'
-            $deny = Join-Path $root 'deny-access'
-            New-Item -ItemType Directory -Path $emptyDir, $nonEmpty, $junctionTarget, $deny | Out-Null
-            Set-Content -Path (Join-Path $nonEmpty 'keep.txt') -Value 'content' -NoNewline
-            New-Item -ItemType File -Path (Join-Path $root 'empty-file.txt') | Out-Null
-            New-Item -ItemType Junction -Path $junction -Target $junctionTarget | Out-Null
-
-            $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-            icacls "$deny" /deny ($currentUser + ':(OI)(CI)(R)') | Out-Null
-            try {
-              & $exe -silent -path $root -emptyfiles -mode direct | Tee-Object -Variable output
-              if ($LASTEXITCODE -ne 0) { throw "RED++ exited with $LASTEXITCODE`n$output" }
-            } finally {
-              icacls "$deny" /remove:d "$currentUser" | Out-Null
-            }
-
-            if (($output -join "`n") -notmatch 'Found 1 empty directories') { throw "Unexpected found-directory count" }
-            if (!(Test-Path $root)) { throw 'Root deleted despite AutoProtectRoot' }
-            if (Test-Path $emptyDir) { throw 'Empty child not deleted' }
-            if (!(Test-Path (Join-Path $nonEmpty 'keep.txt'))) { throw 'Non-empty payload deleted' }
-            if (!(Test-Path $junction)) { throw 'Junction deleted' }
-            if (!(Test-Path $junctionTarget)) { throw 'Junction target deleted' }
-            if (!(Test-Path $deny)) { throw 'Deny-ACL dir deleted' }
-            if (Test-Path (Join-Path $root 'empty-file.txt')) { throw 'Empty file not deleted' }
-
-            & $exe -version | Tee-Object -Variable ver
-            if (($ver -join "`n") -notmatch 'RED\+\+\s+\d+\.\d+\.\d+') { throw "Unexpected -version output: $ver" }
-          }
-          finally {
-            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
-            Remove-Item -LiteralPath $junctionTarget -Recurse -Force -ErrorAction SilentlyContinue
-          }
-
-      - name: Create release archive
-        run: |
-          mkdir release
-          copy publish\RED+.exe release\
-          copy LICENSE release\
-          xcopy help release\help\ /E /I
-          xcopy language release\language\ /E /I
-          Compress-Archive -Path release\* -DestinationPath "RED++_${{ inputs.version }}.zip"
-
-      # Software bill of materials: a CycloneDX inventory of every direct and
-      # transitive NuGet dependency baked into the shipped binary. For an unsigned
-      # build this is the strongest "what's inside" trust signal alongside the
-      # checksums and build-provenance attestation.
-      - name: Generate SBOM (CycloneDX)
-        shell: pwsh
-        run: |
-          dotnet tool install --global CycloneDX
-          $env:PATH += ";$env:USERPROFILE\.dotnet\tools"
-          dotnet-CycloneDX "RED/RED+.csproj" -o sbom -F Json -fn bom.json
-          Copy-Item sbom\bom.json bom.json -Force
-
-      - name: Generate checksums
-        shell: pwsh
-        run: |
-          $zip = "RED++_${{ inputs.version }}.zip"
-          $zipHash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
-          $lines = @(
-            "{0}  {1}" -f $zipHash, $zip
-            "{0}  {1}" -f (Get-FileHash "release\RED+.exe" -Algorithm SHA256).Hash.ToLower(), "RED+.exe"
-            "{0}  {1}" -f (Get-FileHash "bom.json" -Algorithm SHA256).Hash.ToLower(), "bom.json"
-          )
-          Set-Content -Path SHA256SUMS -Value $lines -Encoding ascii
-
-      - name: Generate winget manifest
-        shell: pwsh
-        run: |
-          $version = "${{ inputs.version }}".TrimStart("v")
-          $tag = "${{ inputs.version }}"
-          $zip = "RED++_${{ inputs.version }}.zip"
-          $zipHash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToUpperInvariant()
-          $manifest = "packaging\winget\SysAdminDoc.REDplusplus.yaml"
-          $content = Get-Content -Path $manifest -Raw
-          $content = $content -replace '(?m)^PackageVersion:.*$', "PackageVersion: $version"
-          $content = $content -replace '(?m)^    InstallerUrl:.*$', "    InstallerUrl: https://github.com/SysAdminDoc/REDplusplus/releases/download/$tag/$zip"
-          $content = $content -replace '(?m)^    InstallerSha256:.*$', "    InstallerSha256: $zipHash"
-          Set-Content -Path $manifest -Value $content -Encoding utf8
-          if (Get-Command winget -ErrorAction SilentlyContinue) {
-            winget validate $manifest
-          }
-
-      - name: Attest build provenance
-        uses: actions/attest-build-provenance@v4
-        with:
-          subject-path: |
-            RED++_${{ inputs.version }}.zip
-            release/RED+.exe
-            bom.json
-
-      - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create "${{ inputs.version }}" "RED++_${{ inputs.version }}.zip" "release\RED+.exe" SHA256SUMS bom.json "packaging\winget\SysAdminDoc.REDplusplus.yaml" --title "RED++ ${{ inputs.version }}" --generate-notes
-
-      - name: VirusTotal scan
-        id: virustotal
-        if: env.VT_KEY != ''
-        uses: crazy-max/ghaction-virustotal@v5
-        with:
-          vt_api_key: ${{ secrets.VIRUSTOTAL_API_KEY }}
-          files: |
-            RED++_${{ inputs.version }}.zip
-
-      - name: Append VirusTotal link to release notes
-        if: env.VT_KEY != '' && steps.virustotal.outputs.analysis != ''
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ANALYSIS: ${{ steps.virustotal.outputs.analysis }}
-        shell: pwsh
-        run: |
-          $url = ($env:ANALYSIS -split ',' | Select-Object -First 1) -replace '^[^=]+=', ''
-          gh release edit "${{ inputs.version }}" --notes-append "`n**VirusTotal:** $url"
+  release:
+    uses: ./.github/workflows/build-publish.yml
+    with:
+      version: ${{ inputs.version }}
+    secrets: inherit
 
   # First submission to microsoft/winget-pkgs must be manual; this job automates
   # subsequent version bumps once the package exists upstream and WINGET_TOKEN
   # (classic PAT, public_repo scope) is configured. Skips silently otherwise.
   winget:
-    needs: build
+    needs: release
     runs-on: ubuntu-latest
     env:
       WINGET_PAT: ${{ secrets.WINGET_TOKEN }}
