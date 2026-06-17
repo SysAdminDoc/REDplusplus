@@ -6,6 +6,7 @@
 - Fix two thread-safety bugs in the parallel scan (`-parallel N`): the infinite-loop detector's `PossibleEndlessLoop` counter used a non-atomic increment that could race, and `EmptyFileResults.Add` wrote to a `List<FileInfo>` from parallel threads without synchronization. Both are now guarded (`Interlocked.Increment` for the counter, `lock` for the file list).
 
 ### CLI
+- Add `-delete` / `-yes` as explicit-intent aliases for `-silent`, so CI pipelines can express scan-and-delete in one self-documenting command: `RED+.exe -path X --delete -mode recycle -log Y`.
 - Expose `ignoredFileCount` as a structured field in NDJSON result records and JSON file exports (schema bumped from v3 to v4). JSON consumers can now programmatically distinguish "empty with ignored files" from "truly empty" without parsing the reason text.
 
 ### Features
