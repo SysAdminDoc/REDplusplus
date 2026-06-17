@@ -33,14 +33,29 @@ namespace RED
 
 		internal void ReportDirectoryStatus(DirectoryInfo directory, DirectorySearchStatusTypes type)
 		{
-			ReportDirectoryStatus(directory, type, null);
+			ReportDirectoryStatus(directory, type, null, 0);
 		}
 
 		internal void ReportDirectoryStatus(DirectoryInfo directory, DirectorySearchStatusTypes type, string errorMessage)
 		{
+			ReportDirectoryStatus(directory, type, errorMessage, 0);
+		}
+
+		internal void ReportDirectoryStatus(DirectoryInfo directory, DirectorySearchStatusTypes type, int ignoredFileCount)
+		{
+			ReportDirectoryStatus(directory, type, null, ignoredFileCount);
+		}
+
+		internal void ReportDirectoryStatus(DirectoryInfo directory, DirectorySearchStatusTypes type, string errorMessage, int ignoredFileCount)
+		{
 			var info = string.IsNullOrEmpty(errorMessage)
 				? new FoundEmptyDirInfoEventArgs(directory, type)
 				: new FoundEmptyDirInfoEventArgs(directory, type, errorMessage);
+
+			if (ignoredFileCount > 0)
+			{
+				info.ScanResult.IgnoredFileCount = ignoredFileCount;
+			}
 
 			if (type == DirectorySearchStatusTypes.Empty)
 			{
@@ -137,9 +152,10 @@ namespace RED
 					return;
 				}
 
-				DirectorySearchStatusTypes rootStatusType = this.CheckIfDirectoryEmpty(startFolder, 1, gitIgnoreParser);
+				int rootIgnoredFiles;
+				DirectorySearchStatusTypes rootStatusType = this.CheckIfDirectoryEmpty(startFolder, 1, gitIgnoreParser, out rootIgnoredFiles);
 
-				this.ReportDirectoryStatus(startFolder, rootStatusType);
+				this.ReportDirectoryStatus(startFolder, rootStatusType, rootIgnoredFiles);
 
 				if (this.PossibleEndlessLoop > this.RunData.InfiniteLoopDetectionCount)
 				{
@@ -205,8 +221,10 @@ namespace RED
 			}
 		}
 
-		private DirectorySearchStatusTypes CheckIfDirectoryEmpty(DirectoryInfo startDir, int depth, GitIgnoreParser gitIgnore)
+		private DirectorySearchStatusTypes CheckIfDirectoryEmpty(DirectoryInfo startDir, int depth, GitIgnoreParser gitIgnore, out int ignoredFileCount)
 		{
+			ignoredFileCount = 0;
+
 			if (this.PossibleEndlessLoop > this.RunData.InfiniteLoopDetectionCount)
 			{
 				this.ReportDirectoryStatus(startDir, DirectorySearchStatusTypes.Error, TXT.Translate("Aborted - possible infinite-loop detected"));
@@ -248,6 +266,7 @@ namespace RED
 				}
 
 				bool containsFiles = false;
+				int localIgnoredFiles = 0;
 
 				// A .redkeep marker file protects its directory (and everything below
 				// it) from deletion — it travels with the folder across copies and
@@ -310,6 +329,7 @@ namespace RED
 					else
 					{
 						string delPattern = string.Empty;
+						int ignoredCount = 0;
 
 						// loop trough files and cancel if containsFiles == true
 						for (int f = 0; (f < fileList.Length && !containsFiles); f++)
@@ -344,6 +364,15 @@ namespace RED
 							{
 								containsFiles = true;
 							}
+							else
+							{
+								ignoredCount++;
+							}
+						}
+
+						if (!containsFiles)
+						{
+							localIgnoredFiles = ignoredCount;
 						}
 
 						// Empty-files sister mode: collect standalone zero-byte files
@@ -379,6 +408,7 @@ namespace RED
 				// The folder is empty, break here:
 				if (!containsFiles && subFolderList.Count == 0)
 				{
+					ignoredFileCount = localIgnoredFiles;
 					return DirectorySearchStatusTypes.Empty;
 				}
 
@@ -447,13 +477,14 @@ namespace RED
 
 					// Scan sub folder:
 					DirectorySearchStatusTypes subFolderStatus = DirectorySearchStatusTypes.NotEmpty;
+					int subIgnoredFiles = 0;
 
 					if (!ignoreSubDirectory)
 					{
 						// JRS ADDED check for AGE of folder
 						if (curDir.CreationTime.AddHours(this.RunData.MinFolderAgeHours) < DateTime.Now)
 						{
-							subFolderStatus = this.CheckIfDirectoryEmpty(curDir, depth + 1, gitIgnore);
+							subFolderStatus = this.CheckIfDirectoryEmpty(curDir, depth + 1, gitIgnore, out subIgnoredFiles);
 						}
 						else
 						{
@@ -463,7 +494,7 @@ namespace RED
 						// Report status to the GUI
 						if (subFolderStatus == DirectorySearchStatusTypes.Empty)
 						{
-							this.ReportDirectoryStatus(curDir, subFolderStatus);
+							this.ReportDirectoryStatus(curDir, subFolderStatus, subIgnoredFiles);
 						}
 					}
 
@@ -475,7 +506,12 @@ namespace RED
 				}
 
 				// All subdirectories are empty
-				return (allSubDirectoriesEmpty && !containsFiles) ? DirectorySearchStatusTypes.Empty : DirectorySearchStatusTypes.NotEmpty;
+				if (allSubDirectoriesEmpty && !containsFiles)
+				{
+					ignoredFileCount = localIgnoredFiles;
+					return DirectorySearchStatusTypes.Empty;
+				}
+				return DirectorySearchStatusTypes.NotEmpty;
 			}
 			catch (Exception ex)
 			{
