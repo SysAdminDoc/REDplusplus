@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
 using RED.Match;
 
@@ -11,6 +13,7 @@ namespace RED
 		private const long MaxLogBytes = 5L * 1024L * 1024L;
 		private StreamWriter _logWriter;
 		private bool _disposed;
+		internal static string TrustedDataDirectoryOverride { get; set; }
 
 		public RuntimeData()
 		{
@@ -58,6 +61,57 @@ namespace RED
 					"NotBob", "RemoveEmptyDirectories");
 				Directory.CreateDirectory(appData);
 				return Path.Combine(appData, fileName);
+			}
+		}
+
+		/// <summary>
+		/// Security-sensitive recovery state goes in a per-user, ACL-restricted
+		/// directory instead of beside the portable exe. A shared/writable install
+		/// directory must not let one Windows account plant an undo manifest that a
+		/// later elevated run by another account will trust.
+		/// </summary>
+		public static string GetTrustedDataDirectory()
+		{
+			if (!string.IsNullOrWhiteSpace(TrustedDataDirectoryOverride))
+			{
+				Directory.CreateDirectory(TrustedDataDirectoryOverride);
+				return TrustedDataDirectoryOverride;
+			}
+
+			string dir = Path.Combine(
+				Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+				"NotBob", "RemoveEmptyDirectories");
+			Directory.CreateDirectory(dir);
+			ApplyRestrictedDirectoryAcl(dir);
+			return dir;
+		}
+
+		public static string GetTrustedDataFilePath(string fileName)
+		{
+			return Path.Combine(GetTrustedDataDirectory(), fileName);
+		}
+
+		private static void ApplyRestrictedDirectoryAcl(string dir)
+		{
+			try
+			{
+				var identity = WindowsIdentity.GetCurrent();
+				if (identity == null || identity.User == null) return;
+
+				var security = new DirectorySecurity();
+				var inheritance = InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit;
+				var propagation = PropagationFlags.None;
+				security.SetOwner(identity.User);
+				security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+				security.AddAccessRule(new FileSystemAccessRule(identity.User, FileSystemRights.FullControl, inheritance, propagation, AccessControlType.Allow));
+				security.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null), FileSystemRights.FullControl, inheritance, propagation, AccessControlType.Allow));
+				security.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null), FileSystemRights.FullControl, inheritance, propagation, AccessControlType.Allow));
+				new DirectoryInfo(dir).SetAccessControl(security);
+			}
+			catch
+			{
+				// The location is still per-user LocalAppData if ACL rewriting is
+				// blocked by policy/filesystem. Never fall back to a shared exe folder.
 			}
 		}
 

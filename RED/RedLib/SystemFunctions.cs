@@ -292,7 +292,7 @@ namespace RED
                     Mode = DeleteModes.RecycleBinWithQuestion.ToString()
                 });
             }
-            UndoManager.WriteManifest(DeleteModes.RecycleBinWithQuestion.ToString(), entries, null);
+            UndoManager.WriteManifest(DeleteModes.RecycleBinWithQuestion.ToString(), entries, new[] { path }, null);
         }
 
         /// <summary>
