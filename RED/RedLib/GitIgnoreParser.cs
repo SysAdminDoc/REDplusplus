@@ -236,16 +236,44 @@ namespace RED
 
         private static Regex GlobToRegex(string glob, bool isPathPattern)
         {
-            string pattern = glob.Replace("\\", "/");
-            if (isPathPattern) pattern = pattern.TrimStart('/');
-            pattern = Regex.Escape(pattern);
-            pattern = pattern.Replace("\\*\\*", "<<GLOBSTAR>>");
-            pattern = pattern.Replace("\\*", "[^/]*");
-            pattern = pattern.Replace("\\?", "[^/]");
-            pattern = pattern.Replace("<<GLOBSTAR>>/", "(?:.*/)?");
-            pattern = pattern.Replace("/<<GLOBSTAR>>", "(?:/.*)?");
-            pattern = pattern.Replace("<<GLOBSTAR>>", ".*");
+            string raw = glob.Replace("\\", "/");
+            if (isPathPattern) raw = raw.TrimStart('/');
 
+            var sb = new System.Text.StringBuilder(raw.Length * 2);
+            bool inCharClass = false;
+            for (int i = 0; i < raw.Length; i++)
+            {
+                char c = raw[i];
+                if (inCharClass)
+                {
+                    if (c == ']') { sb.Append(']'); inCharClass = false; }
+                    else if (c == '\\' && i + 1 < raw.Length) { sb.Append(Regex.Escape(raw[++i].ToString())); }
+                    else sb.Append(c == '!' && sb.Length > 0 && sb[sb.Length - 1] == '[' ? '^' : c);
+                    continue;
+                }
+                if (c == '[' && i + 1 < raw.Length && raw[i + 1] != ']')
+                {
+                    sb.Append('[');
+                    inCharClass = true;
+                    continue;
+                }
+                if (c == '*')
+                {
+                    if (i + 1 < raw.Length && raw[i + 1] == '*')
+                    {
+                        i++;
+                        if (i + 1 < raw.Length && raw[i + 1] == '/') { i++; sb.Append("(?:.*/)?"); }
+                        else if (i > 1 && raw[i - 2] == '/') { sb.Append("(?:/.*)?"); }
+                        else sb.Append(".*");
+                    }
+                    else { sb.Append("[^/]*"); }
+                    continue;
+                }
+                if (c == '?') { sb.Append("[^/]"); continue; }
+                sb.Append(Regex.Escape(c.ToString()));
+            }
+
+            string pattern = sb.ToString();
             if (isPathPattern)
                 pattern = "^" + pattern + "(?:$|/)";
             else

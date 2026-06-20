@@ -385,8 +385,8 @@ namespace RED
                     frn = new Frn(BitConverter.ToUInt64(buffer, offset + 8), BitConverter.ToUInt64(buffer, offset + 16));
                     parentFrn = new Frn(BitConverter.ToUInt64(buffer, offset + 24), BitConverter.ToUInt64(buffer, offset + 32));
                     fileAttribs = BitConverter.ToUInt32(buffer, offset + 68);
-                    nameLength = BitConverter.ToInt16(buffer, offset + 72);
-                    nameOffset = BitConverter.ToInt16(buffer, offset + 74);
+                    nameLength = BitConverter.ToUInt16(buffer, offset + 72);
+                    nameOffset = BitConverter.ToUInt16(buffer, offset + 74);
                 }
                 else
                 {
@@ -394,8 +394,8 @@ namespace RED
                     frn = Frn.From64(BitConverter.ToUInt64(buffer, offset + 8));
                     parentFrn = Frn.From64(BitConverter.ToUInt64(buffer, offset + 16));
                     fileAttribs = BitConverter.ToUInt32(buffer, offset + 52);
-                    nameLength = BitConverter.ToInt16(buffer, offset + 56);
-                    nameOffset = BitConverter.ToInt16(buffer, offset + 58);
+                    nameLength = BitConverter.ToUInt16(buffer, offset + 56);
+                    nameOffset = BitConverter.ToUInt16(buffer, offset + 58);
                 }
 
                 // The name must lie within this record (not merely within the
