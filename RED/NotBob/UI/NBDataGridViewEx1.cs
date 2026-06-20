@@ -46,91 +46,95 @@ namespace NotBob.UI
 		{
 			base.OnPaint(e);
 
-			// Create an image for a 'blank' row
-
 			int rowHeight = RowTemplate.Height;
 			int imgWidth = Width - 2;
+			if (imgWidth <= 0 || rowHeight <= 0) return;
 			Rectangle rFrame = new Rectangle(0, 0, imgWidth, rowHeight);
 			Rectangle rFill = new Rectangle(1, 1, imgWidth - 2, rowHeight);
 			Rectangle rRowHeader = new Rectangle(2, 2, RowHeadersWidth - 3, rowHeight);
-			Pen pen = new Pen(GridColor, 1);
-			Bitmap rowImg0 = new Bitmap(imgWidth, rowHeight);
-			Graphics g0 = Graphics.FromImage(rowImg0);
-			g0.DrawRectangle(pen, rFrame);
-			// Placeholders for 'alt' row if needed
-			Graphics g1 = null;
-			Bitmap rowImg1 = null;
-			// Fill in the blank row image with the required background details
-			if (ExHatchStyle != null)
-			{
-				g0.FillRectangle(new HatchBrush(ExHatchStyle.Value, DefaultCellStyle.ForeColor, DefaultCellStyle.BackColor), rFill);
-				if (RowHeadersVisible)
-				{
-					g0.FillRectangle(new HatchBrush(ExHatchStyle.Value, DefaultCellStyle.ForeColor, RowHeadersDefaultCellStyle.BackColor), rRowHeader);
-				}
-			}
-			else
-			{
-				// Create 'alt' row image
-				rowImg1 = new Bitmap(imgWidth, rowHeight);
-				g1 = Graphics.FromImage(rowImg1);
-				g1.DrawRectangle(pen, rFrame);
-				// create default and alt row images
-				g0.FillRectangle(new SolidBrush(DefaultCellStyle.BackColor), rFill);
-				g1.FillRectangle(new SolidBrush(AlternatingRowsDefaultCellStyle.BackColor), rFill);
-				if (RowHeadersVisible)
-				{
-					g0.FillRectangle(new SolidBrush(RowHeadersDefaultCellStyle.BackColor), rRowHeader);
-					g1.FillRectangle(new SolidBrush(RowHeadersDefaultCellStyle.BackColor), rRowHeader);
-				}
-			}
-			// Draw the column divider lines onto the blank row
-			int w = RowHeadersVisible ? RowHeadersWidth - 1 : 0;
-			for (int i = 0; i < ColumnCount; i++)
-			{
-				g0.DrawLine(pen, new Point(w, 0), new Point(w, rowHeight));
-				if (g1 != null)
-				{
-					g1.DrawLine(pen, new Point(w, 0), new Point(w, rowHeight));
-				}
-				w += Columns[i].Width;
-			}
 
-			// Get the height of the 'real' rows that have already been drawn
-			int h = 0;
-			foreach (DataGridViewRow row in Rows)
+			using (var pen = new Pen(GridColor, 1))
+			using (var rowImg0 = new Bitmap(imgWidth, rowHeight))
 			{
-				h += row.Height;
-			}
-			if (ColumnHeadersVisible)
-			{
-				h += ColumnHeadersHeight;
-			}
-			// for each 'missing' row copy the blank row image
-			// into place on the remainder of the grid (the non-data area)
-			int loop = (Height - h) / rowHeight;
-			if (ExHatchStyle != null)
-			{
-				for (int i = 0; i < loop + 1; i++)
+				Bitmap rowImg1 = null;
+				try
 				{
-					e.Graphics.DrawImage(rowImg0, 1, (i * rowHeight) + h);
-				}
-			}
-			else
-			{
-				// Alternate between 'default' and 'alt' blank empty row images
-				bool alt = !(RowCount % 2 == 0);
-				for (int i = 0; i < loop + 1; i++)
-				{
-					if (alt)
+					using (var g0 = Graphics.FromImage(rowImg0))
 					{
-						e.Graphics.DrawImage(rowImg1, 1, (i * rowHeight) + h);
+						g0.DrawRectangle(pen, rFrame);
+						if (ExHatchStyle != null)
+						{
+							using (var hb = new HatchBrush(ExHatchStyle.Value, DefaultCellStyle.ForeColor, DefaultCellStyle.BackColor))
+								g0.FillRectangle(hb, rFill);
+							if (RowHeadersVisible)
+							{
+								using (var hb = new HatchBrush(ExHatchStyle.Value, DefaultCellStyle.ForeColor, RowHeadersDefaultCellStyle.BackColor))
+									g0.FillRectangle(hb, rRowHeader);
+							}
+						}
+						else
+						{
+							using (var sb = new SolidBrush(DefaultCellStyle.BackColor))
+								g0.FillRectangle(sb, rFill);
+							if (RowHeadersVisible)
+							{
+								using (var sb = new SolidBrush(RowHeadersDefaultCellStyle.BackColor))
+									g0.FillRectangle(sb, rRowHeader);
+							}
+						}
+						int w = RowHeadersVisible ? RowHeadersWidth - 1 : 0;
+						for (int i = 0; i < ColumnCount; i++)
+						{
+							g0.DrawLine(pen, new Point(w, 0), new Point(w, rowHeight));
+							w += Columns[i].Width;
+						}
+					}
+
+					if (ExHatchStyle == null)
+					{
+						rowImg1 = new Bitmap(imgWidth, rowHeight);
+						using (var g1 = Graphics.FromImage(rowImg1))
+						{
+							g1.DrawRectangle(pen, rFrame);
+							using (var sb = new SolidBrush(AlternatingRowsDefaultCellStyle.BackColor))
+								g1.FillRectangle(sb, rFill);
+							if (RowHeadersVisible)
+							{
+								using (var sb = new SolidBrush(RowHeadersDefaultCellStyle.BackColor))
+									g1.FillRectangle(sb, rRowHeader);
+							}
+							int w = RowHeadersVisible ? RowHeadersWidth - 1 : 0;
+							for (int i = 0; i < ColumnCount; i++)
+							{
+								g1.DrawLine(pen, new Point(w, 0), new Point(w, rowHeight));
+								w += Columns[i].Width;
+							}
+						}
+					}
+
+					int h = 0;
+					foreach (DataGridViewRow row in Rows) { h += row.Height; }
+					if (ColumnHeadersVisible) { h += ColumnHeadersHeight; }
+
+					int loop = (Height - h) / rowHeight;
+					if (ExHatchStyle != null)
+					{
+						for (int i = 0; i < loop + 1; i++)
+							e.Graphics.DrawImage(rowImg0, 1, (i * rowHeight) + h);
 					}
 					else
 					{
-						e.Graphics.DrawImage(rowImg0, 1, (i * rowHeight) + h);
+						bool alt = !(RowCount % 2 == 0);
+						for (int i = 0; i < loop + 1; i++)
+						{
+							e.Graphics.DrawImage(alt ? rowImg1 : rowImg0, 1, (i * rowHeight) + h);
+							alt = !alt;
+						}
 					}
-					alt = !alt;
+				}
+				finally
+				{
+					rowImg1?.Dispose();
 				}
 			}
 		}

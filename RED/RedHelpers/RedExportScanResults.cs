@@ -187,6 +187,8 @@ namespace RED.Helper
                 {
                     case '\\': sb.Append(@"\\"); break;
                     case '"': sb.Append("\\\""); break;
+                    case '\b': sb.Append(@"\b"); break;
+                    case '\f': sb.Append(@"\f"); break;
                     case '\r': sb.Append(@"\r"); break;
                     case '\n': sb.Append(@"\n"); break;
                     case '\t': sb.Append(@"\t"); break;
