@@ -86,6 +86,12 @@ jobs:
             if (!(Test-Path $junctionTarget)) { throw 'Junction target outside the scan root was deleted' }
             if (!(Test-Path $deny)) { throw 'Deny-ACL directory was deleted' }
             if (Test-Path (Join-Path $root 'empty-file.txt')) { throw 'Empty file was not deleted' }
+
+            # Undo: restore the deleted empty directory and empty file
+            & $exe -undo | Tee-Object -Variable undoOutput
+            if ($LASTEXITCODE -ne 0) { throw "RED++ -undo exited with $LASTEXITCODE`n$undoOutput" }
+            if (!(Test-Path $emptyDir)) { throw 'Undo did not recreate the deleted empty directory' }
+            if (!(Test-Path (Join-Path $root 'empty-file.txt'))) { throw 'Undo did not recreate the deleted empty file' }
           }
           finally {
             Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
