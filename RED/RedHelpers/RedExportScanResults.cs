@@ -20,7 +20,7 @@ namespace RED.Helper
             Export(v, toClipboard: false);
         }
 
-        public void ExportToCliboard(RedScanResultItemList v)
+        public void ExportToClipboard(RedScanResultItemList v)
         {
             Export(v, toClipboard: true);
         }
