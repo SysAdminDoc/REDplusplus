@@ -43,12 +43,26 @@
 <br>This is typically <span class="nbn">C:\Users\<i>&lt;your-username&gt;</i>\AppData\Roaming\NotBob\RemoveEmptyDirectories</span>
 <p>The persistent log (<span class="nbn">RED++.log</span>) uses the same writable location. If the executable folder cannot be written to, it is written under <span class="nbn">%APPDATA%</span> instead. The log keeps one rotated copy as <span class="nbn">RED++.log.1</span>.</p>
 <p>Undo manifests (<span class="nbn">RED++.undo.*.json</span>) are stored under the current user's protected LocalAppData folder (<span class="nbn">%LOCALAPPDATA%\NotBob\RemoveEmptyDirectories</span>) rather than beside a portable executable. This prevents another local account from planting a manifest in a shared install folder for a later restore.</p>
+<p>Saved profiles (<span class="nbn">RED+.profiles.json</span>) are stored next to the config file. Use <span class="nbn">-saveprofile</span> / <span class="nbn">-profile</span> / <span class="nbn">-listprofiles</span> on the command line.</p>
+</div>
+
+<h4>Config Keys (XML)</h4>
+<div>
+<p>These keys can be edited manually in <span class="nbn">RED+.cfg</span>. The config file includes a <span class="nbn">schemaVersion</span>; older files are upgraded automatically on load.</p>
+<table>
+<tr><td class="nbn">DeletionLockout</td><td>When <span class="nbn">true</span>, every delete mode behaves as Simulate. No path (GUI or CLI) can mutate the filesystem. Override per-run with <span class="nbn">-no-lockout</span>. Default: <span class="nbn">false</span>.</td></tr>
+<tr><td class="nbn">CheckForUpdates</td><td>When <span class="nbn">true</span>, checks the GitHub Releases API (once per day, ETag-cached) and reports when a newer version is available. No telemetry, no auto-download. Default: <span class="nbn">false</span>.</td></tr>
+<tr><td class="nbn">ParallelScanDegree</td><td>Maximum parallel subdirectory scan threads (2-16, 0=serial). Intended for UNC/SMB roots where enumeration latency dominates. Default: <span class="nbn">0</span> (serial).</td></tr>
+<tr><td class="nbn">RespectGitIgnore</td><td>When <span class="nbn">true</span>, directories matching <span class="nbn">.gitignore</span> rules are skipped. Default: <span class="nbn">false</span>.</td></tr>
+<tr><td class="nbn">UseMftScan</td><td>When <span class="nbn">true</span>, uses the MFT turbo scan (admin required). Default: <span class="nbn">false</span>.</td></tr>
+<tr><td class="nbn">DeleteEmptyFiles</td><td>When <span class="nbn">true</span>, also deletes standalone zero-byte files. Default: <span class="nbn">false</span>.</td></tr>
+</table>
 </div>
 </div>
 <!-- ======= ======= ======= ======= ======= ======= ======= -->
 <hr><p>&nbsp;</p>
 <div class="footer">
-<span class="fal">&nbsp;&nbsp;<small><span class="red">RED++</span> by Jonas John &amp; Robert 'NotBob' Bookerby</small></span><span class="far">&nbsp;&nbsp;<span class="moddate">mod: 2025-12</span>&nbsp;</span>
+<span class="fal">&nbsp;&nbsp;<small><span class="red">RED++</span> by Jonas John &amp; Robert 'NotBob' Bookerby</small></span><span class="far">&nbsp;&nbsp;<span class="moddate">mod: 2026-06</span>&nbsp;</span>
 </div>
 </div></body>
 </html>
