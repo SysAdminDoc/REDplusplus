@@ -408,6 +408,11 @@ namespace RED
 					this.Data.AddLogMessage(TXT.Translate("Skipped file because it is no longer empty: {0}", RedAssist.DQuote(file.FullName)));
 					continue;
 				}
+				if (file.DirectoryName != null && IsProtectedOrAncestorOfProtected(file.DirectoryName, this.Data.ProtectedFolderList.Keys))
+				{
+					this.Data.AddLogMessage(TXT.Translate("Skipped empty file in protected directory: {0}", RedAssist.DQuote(file.FullName)));
+					continue;
+				}
 				verified.Add(file);
 			}
 
@@ -506,23 +511,18 @@ namespace RED
 		{
 			if (undoEntries.Count == 0) return;
 
-			// Record the scan root so a later restore can refuse any entry that points
-			// outside the originally-cleaned tree (tamper/corruption defense).
 			var roots = new List<string>();
 			if (this.Data?.StartFolder != null && !string.IsNullOrWhiteSpace(this.Data.StartFolder.FullName))
 			{
 				roots.Add(this.Data.StartFolder.FullName);
 			}
-			// In Move mode the payload was relocated to the move-to folder, so record it
-			// too. Restore validates the move-BACK source (MovedTo) against the roots, so
-			// a tampered manifest cannot name an arbitrary system file as the source and
-			// have Directory.Move/File.Move relocate (and thereby destroy) it.
 			if (!string.IsNullOrWhiteSpace(SystemFunctions.MoveToFolderTarget))
 			{
 				roots.Add(SystemFunctions.MoveToFolderTarget);
 			}
 
 			UndoManager.WriteManifest(this.Data.DeleteMode.ToString(), undoEntries, roots, msg => this.Data.AddLogMessage(msg));
+			undoEntries.Clear();
 		}
 
 		/// <returns>The actual MoveToFolder destination, null for other modes.</returns>

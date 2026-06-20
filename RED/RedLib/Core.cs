@@ -234,7 +234,7 @@ namespace RED
 
 		public string GetLogMessages()
 		{
-			return RunData.LogMessages.ToString();
+			return RunData.GetLogSnapshot();
 		}
 
 		private void ShowErrorMsg(string errorMessage)

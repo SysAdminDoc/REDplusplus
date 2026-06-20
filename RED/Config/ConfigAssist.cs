@@ -50,7 +50,6 @@ namespace NotBob.Config
                             if (RedirectCount >= RedirectMax)
                             {
                                 string redirectMsg = string.Format(TXT.Translate("Redirect maximum [{0}] reached in configuration file"), RedirectMax);
-                                // Never show a modal in headless mode — it would hang a scheduled task.
                                 if (SilentMode)
                                     Console.Error.WriteLine(redirectMsg);
                                 else
@@ -58,10 +57,20 @@ namespace NotBob.Config
                                 config.RedirectTo = string.Empty;
                                 break;
                             }
-                            else
+
+                            string redirectTarget = config.RedirectTo;
+                            if (!Path.IsPathFullyQualified(redirectTarget) ||
+                                redirectTarget.Contains("..") ||
+                                !Path.GetExtension(redirectTarget).Equals(".cfg", StringComparison.OrdinalIgnoreCase))
                             {
-                                filename = config.RedirectTo;
+                                string msg = "Config redirect to unsafe or non-.cfg path ignored: " + redirectTarget;
+                                LogConfigNote(msg);
+                                if (SilentMode) Console.Error.WriteLine(msg);
+                                config.RedirectTo = string.Empty;
+                                break;
                             }
+
+                            filename = redirectTarget;
                         }
                         else
                         {

@@ -185,6 +185,13 @@ namespace RED
 
 				try
 				{
+					if (HasReparsePointAncestor(entry.Path))
+					{
+						failed++;
+						log?.Invoke(TXT.Translate("Refused to restore through a reparse point (junction/symlink) ancestor: {0}", RedAssist.DQuote(entry.Path)));
+						continue;
+					}
+
 					if (entry.IsFile)
 					{
 						string parent = Path.GetDirectoryName(entry.Path);
@@ -581,6 +588,23 @@ namespace RED
 			{
 				if (seg == "..") return true;
 			}
+			return false;
+		}
+
+		private static bool HasReparsePointAncestor(string fullPath)
+		{
+			try
+			{
+				string current = Path.GetDirectoryName(fullPath);
+				while (!string.IsNullOrEmpty(current))
+				{
+					var di = new DirectoryInfo(current);
+					if (di.Exists && (di.Attributes & FileAttributes.ReparsePoint) != 0)
+						return true;
+					current = Path.GetDirectoryName(current);
+				}
+			}
+			catch { }
 			return false;
 		}
 

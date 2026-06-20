@@ -770,7 +770,7 @@ namespace RED
 					logMsg("Note: \"" + targetPath + "\" has no Recycle Bin (network/removable) - deletion there is permanent; undo can still recreate the empty directories.");
 				}
 
-				var runData = new RuntimeData();
+				using var runData = new RuntimeData();
 				runData.StartFolder = startDir;
 				runData.HideScanErrors = config.Options.HideScanErrors;
 				runData.HideDeletionErrors = true;
@@ -903,7 +903,6 @@ namespace RED
 				}
 
 				hadErrors |= runErrors;
-				runData.Dispose();
 			}
 
 			runStopwatch.Stop();

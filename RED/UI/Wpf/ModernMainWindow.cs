@@ -624,6 +624,11 @@ namespace RED.UI.Wpf
                 HorizontalAlignment = HorizontalAlignment.Stretch
             };
             pathBox.FocusVisualStyle = FocusVisual;
+            pathBox.KeyDown += (s, e) =>
+            {
+                if (e.Key == System.Windows.Input.Key.Enter && scanButton != null && scanButton.IsEnabled)
+                    StartScan();
+            };
             SetAutomation(pathBox, "Folder to scan", "Enter or paste the root folder RED++ should scan.");
             pathRow.Children.Add(pathBox);
 

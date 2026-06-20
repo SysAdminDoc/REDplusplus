@@ -73,6 +73,32 @@ namespace RED.Tests
         }
 
         [Fact]
+        public void CharacterClass_MatchesSingleChar()
+        {
+            var p = ParserWithRootGitignore("[Bb]uild\n");
+            Assert.True(p.IsIgnored("Build", "Build"));
+            Assert.True(p.IsIgnored("build", "build"));
+            Assert.False(p.IsIgnored("xbuild", "xbuild"));
+        }
+
+        [Fact]
+        public void NegatedCharacterClass_ExcludesChars()
+        {
+            var p = ParserWithRootGitignore("[!0-9]start\n");
+            Assert.True(p.IsIgnored("astart", "astart"));
+            Assert.False(p.IsIgnored("1start", "1start"));
+        }
+
+        [Fact]
+        public void CharacterClass_InPathPattern()
+        {
+            var p = ParserWithRootGitignore("src/[Tt]est\n");
+            Assert.True(p.IsIgnored("Test", "src/Test"));
+            Assert.True(p.IsIgnored("test", "src/test"));
+            Assert.False(p.IsIgnored("Test", "lib/Test"));
+        }
+
+        [Fact]
         public void NamePattern_InSubdirGitignore_IsScopedToThatSubtree()
         {
             // A bare-name rule in a per-directory .gitignore must only affect that

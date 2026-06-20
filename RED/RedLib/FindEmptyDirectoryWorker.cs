@@ -18,7 +18,7 @@ namespace RED
 
 		public int FolderCount
 		{
-			get { return folderCount; }
+			get { return Volatile.Read(ref folderCount); }
 		}
 
 		public RuntimeData RunData { get; set; }
