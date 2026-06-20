@@ -3,7 +3,55 @@
 ## Unreleased
 
 ### Security & data safety
+- Add a non-overridable OS-critical empty-folder protection list: `C:\inetpub` (CVE-2025-21204 security mitigation), `C:\PerfLogs`, `C:\Config.Msi`, and `C:\Recovery` are never eligible for deletion regardless of user filter configuration. The check is path-rooted to the system drive — `D:\Projects\inetpub` is not blocked. Runs before `.redkeep` and NeverEmpty in both standard and MFT scan paths.
+- Fix incomplete JSON escape in CLI NDJSON and file-export JSON: `\b` (backspace) and `\f` (form-feed) were not escaped per RFC 8259 — a path or reason containing those control characters would produce malformed JSON output.
+
+### Reliability
+- Fix `Process.Start` URL crash in WPF and WinForms shells: on .NET 5+, `UseShellExecute` defaults to `false`, causing a `Win32Exception` when clicking the project page, releases, or issues links. All call sites now use `ProcessStartInfo` with `UseShellExecute = true`.
+- Fix GDI handle leak in the WinForms empty-row grid painter (`NBDataGridViewEx1`): every paint cycle created `Bitmap`, `Graphics`, `Pen`, and `Brush` objects without disposing them, accumulating GDI handles until the system-wide limit was hit.
+- Fix thread-safety bug: `AddLogSpacer` accessed `LogMessages` and `_logWriter` without holding `_logLock`, racing with `AddLogMessage` in parallel-scan mode.
+- Fix `ManualResetEvent` resource leak in the headless runner: `scanDone` and `deleteDone` wait handles were never disposed.
+- Freeze WPF static brushes in the modern shell for cross-thread safety and GC optimization.
+
+### Performance
+- Use a single-pass directory enumeration in the scan path: replace separate `GetFiles()` + `GetDirectories()` calls with one `GetFilesAndDirectories()` call per directory, halving `FindFirstFileExW` kernel transitions. Measurable on UNC/SMB where each call is a network round-trip.
+
+### Build / Runtime
+- Retarget from .NET 9 (STS, out of support since May 2026) to .NET 10 (LTS, supported through Nov 2028). Zero breaking changes; self-contained single-file bundles now ship a supported runtime.
+- Replace the hand-rolled regex JSON parser in the update check with `System.Text.Json.JsonDocument`. Handles escaped quotes, Unicode escapes, and other edge cases the regex missed.
+
+### Documentation
+- Sync bundled help pages with all shipped CLI flags and config keys. `rphCmdline.htm` now documents all 30+ CLI flags (was missing 12+: `-delete`/`-yes`, `-lockout`/`-no-lockout`, `-parallel`, `-profile`/`-saveprofile`/`-listprofiles`, `-exclude`, `-protect`, `-eventlog`, `-classic`). `rphConfig.htm` now documents the `DeletionLockout`, `CheckForUpdates`, `ParallelScanDegree`, `RespectGitIgnore`, `UseMftScan`, and `DeleteEmptyFiles` config keys.
+
+### Code quality
+- Fix `ExportToCliboard` method name typo (missing 'p') in the WinForms export path.
+- Remove dead `Thread.Sleep(500)` debug stub from the scan engine.
+
+### Developer / CI
+- Add scan-delete-undo round-trip integration tests: Direct mode (delete + restore) and Move mode (move + restore) exercise the full lifecycle through `SystemFunctions.SecureDeleteDirectory` and `UndoManager.WriteManifest`/`Restore`.
+- Add lockout enforcement and parallel-scan correctness integration tests: parallel scan produces identical results to serial; lockout forces Simulate mode; parallel scan with empty-files collects the same file set as serial.
+- Add 11 tests for the OS-critical path protection list (path-rooted matching, case insensitivity, cross-drive non-blocking, trailing separator handling).
+
+### Security & data safety
+- Add a non-overridable OS-critical empty-folder protection list: `C:\inetpub` (CVE-2025-21204 security mitigation), `C:\PerfLogs`, `C:\Config.Msi`, and `C:\Recovery` are never eligible for deletion regardless of user filter configuration. The check is path-rooted to the system drive — `D:\Projects\inetpub` is not blocked. Runs before `.redkeep` and NeverEmpty in both standard and MFT scan paths.
 - Fix two thread-safety bugs in the parallel scan (`-parallel N`): the infinite-loop detector's `PossibleEndlessLoop` counter used a non-atomic increment that could race, and `EmptyFileResults.Add` wrote to a `List<FileInfo>` from parallel threads without synchronization. Both are now guarded (`Interlocked.Increment` for the counter, `lock` for the file list).
+
+### Performance
+- Use a single-pass directory enumeration in the scan path: replace separate `GetFiles()` + `GetDirectories()` calls with one `GetFilesAndDirectories()` call per directory, halving `FindFirstFileExW` kernel transitions. Measurable on UNC/SMB where each call is a network round-trip.
+
+### Build / Runtime
+- Retarget from .NET 9 (STS, out of support since May 2026) to .NET 10 (LTS, supported through Nov 2028). Zero breaking changes; self-contained single-file bundles now ship a supported runtime.
+- Replace the hand-rolled regex JSON parser in the update check with `System.Text.Json.JsonDocument`. Handles escaped quotes, Unicode escapes, and other edge cases the regex missed.
+
+### Documentation
+- Sync bundled help pages with all shipped CLI flags and config keys. `rphCmdline.htm` now documents all 30+ CLI flags (was missing 12+: `-delete`/`-yes`, `-lockout`/`-no-lockout`, `-parallel`, `-profile`/`-saveprofile`/`-listprofiles`, `-exclude`, `-protect`, `-eventlog`, `-classic`). `rphConfig.htm` now documents the `DeletionLockout`, `CheckForUpdates`, `ParallelScanDegree`, `RespectGitIgnore`, `UseMftScan`, and `DeleteEmptyFiles` config keys.
+
+### Code quality
+- Fix `ExportToCliboard` method name typo (missing 'p') in the WinForms export path.
+
+### Developer / CI
+- Add scan-delete-undo round-trip integration tests: Direct mode (delete + restore) and Move mode (move + restore) exercise the full lifecycle through `SystemFunctions.SecureDeleteDirectory` and `UndoManager.WriteManifest`/`Restore`.
+- Add lockout enforcement and parallel-scan correctness integration tests: parallel scan produces identical results to serial; lockout forces Simulate mode; parallel scan with empty-files collects the same file set as serial.
 
 ### Reliability
 - Use a static `HttpClient` with `SocketsHttpHandler` and `PooledConnectionLifetime` for the opt-in update check instead of creating and disposing a new `HttpClient` per call. Avoids potential socket exhaustion in long-running processes per Microsoft guidance. Per-call headers (ETag, User-Agent) moved to `HttpRequestMessage`.
