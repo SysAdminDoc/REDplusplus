@@ -8,6 +8,7 @@ namespace RED
     // Undo restore round-trips and corrupt-manifest rejection. Restore recreates
     // empty directories (lossless) and moves Move-mode entries back; a corrupt
     // manifest must return null with no throw.
+    [Collection("UndoTests")]
     public sealed class UndoManagerTests : IDisposable
     {
         private readonly string _root;
