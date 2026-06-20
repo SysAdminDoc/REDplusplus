@@ -141,6 +141,7 @@ namespace RED
 			var protectPatterns = new List<string>();
 			string profileName = null;
 			string saveProfileName = null;
+			string deleteProfileName = null;
 			bool listProfiles = false;
 
 			for (int i = 1; i < args.Length; i++)
@@ -376,6 +377,15 @@ namespace RED
 					case "--list-profiles":
 						listProfiles = true;
 						break;
+					case "-deleteprofile":
+					case "--deleteprofile":
+					case "-delete-profile":
+					case "--delete-profile":
+						if (i + 1 >= args.Length)
+							parseError = "Error: -deleteprofile requires a profile name";
+						else
+							deleteProfileName = args[++i];
+						break;
 					case "-help":
 					case "--help":
 					case "-h":
@@ -413,6 +423,21 @@ namespace RED
 				return;
 			}
 
+			if (deleteProfileName != null)
+			{
+				if (ProfileStore.Delete(deleteProfileName))
+				{
+					if (!quiet) Console.WriteLine("Deleted profile: " + deleteProfileName);
+					Environment.ExitCode = 0;
+				}
+				else
+				{
+					if (!quiet) Console.Error.WriteLine("Error: profile not found: " + deleteProfileName);
+					Environment.ExitCode = 1;
+				}
+				return;
+			}
+
 			if (listProfiles)
 			{
 				List<RedProfile> all = ProfileStore.LoadAll();
@@ -446,6 +471,10 @@ namespace RED
 				if (!useMftScanOverride.HasValue && prof.Mft.HasValue) useMftScanOverride = prof.Mft.Value;
 				if (!ignoreHiddenOverride.HasValue && prof.IgnoreHidden.HasValue) ignoreHiddenOverride = prof.IgnoreHidden.Value;
 				if (!ignoreSystemOverride.HasValue && prof.IgnoreSystem.HasValue) ignoreSystemOverride = prof.IgnoreSystem.Value;
+				if (!lockoutOverride.HasValue && prof.Lockout.HasValue) lockoutOverride = prof.Lockout.Value;
+				if (!parallelOverride.HasValue && prof.Parallel.HasValue) parallelOverride = prof.Parallel.Value;
+				if (excludePatterns.Count == 0 && prof.Exclude != null) excludePatterns.AddRange(prof.Exclude);
+				if (protectPatterns.Count == 0 && prof.Protect != null) protectPatterns.AddRange(prof.Protect);
 			}
 
 			if (saveProfileName != null)
@@ -481,7 +510,11 @@ namespace RED
 					GitIgnore = respectGitIgnoreOverride,
 					Mft = useMftScanOverride,
 					IgnoreHidden = ignoreHiddenOverride,
-					IgnoreSystem = ignoreSystemOverride
+					IgnoreSystem = ignoreSystemOverride,
+					Lockout = lockoutOverride,
+					Parallel = parallelOverride,
+					Exclude = excludePatterns.Count > 0 ? new List<string>(excludePatterns) : null,
+					Protect = protectPatterns.Count > 0 ? new List<string>(protectPatterns) : null
 				};
 				string saveErr;
 				if (ProfileStore.Save(prof, out saveErr))
@@ -1095,6 +1128,7 @@ Options:
   -profile <name>  Run a saved profile (command-line args still override it).
   -saveprofile <name>  Save the current options as a named profile and exit.
   -listprofiles    List saved profiles and exit.
+  -deleteprofile <name>  Delete a saved profile and exit.
   -eventlog        Write a summary event to the Windows Application Event Log.
   -classic         Open the legacy Windows Forms interface.
   -help, -version  Show this help / the version and exit.

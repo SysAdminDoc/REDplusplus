@@ -141,6 +141,7 @@ Options:
 | `-profile <name>` | Run a saved profile. Any other command-line options still override the profile's values. |
 | `-saveprofile <name>` | Save the current options (paths, mode, toggles) as a named profile and exit without scanning. |
 | `-listprofiles` | List saved profiles and exit. |
+| `-deleteprofile <name>` | Delete a saved profile and exit. |
 | `-eventlog` | Write a summary event to the Windows Application Event Log (source "RED++"). |
 | `-classic` | Open the legacy Windows Forms GUI instead of the modern WPF shell. |
 | `-help`, `-version` | Show usage / version and exit. |

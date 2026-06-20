@@ -28,6 +28,10 @@ namespace RED
 		[DataMember(Name = "mft", EmitDefaultValue = false)] public bool? Mft { get; set; }
 		[DataMember(Name = "ignoreHidden", EmitDefaultValue = false)] public bool? IgnoreHidden { get; set; }
 		[DataMember(Name = "ignoreSystem", EmitDefaultValue = false)] public bool? IgnoreSystem { get; set; }
+		[DataMember(Name = "lockout", EmitDefaultValue = false)] public bool? Lockout { get; set; }
+		[DataMember(Name = "parallel", EmitDefaultValue = false)] public int? Parallel { get; set; }
+		[DataMember(Name = "exclude", EmitDefaultValue = false)] public List<string> Exclude { get; set; }
+		[DataMember(Name = "protect", EmitDefaultValue = false)] public List<string> Protect { get; set; }
 	}
 
 	[DataContract]
