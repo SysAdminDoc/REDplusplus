@@ -1748,7 +1748,7 @@ namespace RED.UI
         {
             using (RedExportScanResults export = new RedExportScanResults())
             {
-                export.ExportToCliboard(RunData.ScanResults);
+                export.ExportToClipboard(RunData.ScanResults);
             }
         }
 
