@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.6.0 (2026-06-20)
 
 ### Security & data safety
 - Add a non-overridable OS-critical empty-folder protection list: `C:\inetpub` (CVE-2025-21204 security mitigation), `C:\PerfLogs`, `C:\Config.Msi`, and `C:\Recovery` are never eligible for deletion regardless of user filter configuration. The check is path-rooted to the system drive — `D:\Projects\inetpub` is not blocked. Runs before `.redkeep` and NeverEmpty in both standard and MFT scan paths.

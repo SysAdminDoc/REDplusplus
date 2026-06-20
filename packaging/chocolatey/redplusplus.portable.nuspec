@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>redplusplus.portable</id>
-    <version>1.5.18</version>
+    <version>1.6.0</version>
     <title>RED++ (Portable)</title>
     <authors>SysAdminDoc</authors>
     <owners>SysAdminDoc</owners>
@@ -16,7 +16,7 @@
     <description>
 RED++ finds, displays, and deletes empty directories recursively. GUI + headless CLI with filter rules, MFT turbo scan, one-click undo, network/UNC support, and zero installation required.
 
-The release is a self-contained single-file build that bundles .NET 9 — no runtime to install.
+The release is a self-contained single-file build that bundles the .NET runtime — no runtime to install.
 
 Features:
 - Modern WPF and legacy WinForms GUI modes
