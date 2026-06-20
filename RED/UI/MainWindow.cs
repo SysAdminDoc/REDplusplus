@@ -2178,22 +2178,22 @@ namespace RED.UI
 
         private void linkLabelProjectHomepage_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Process.Start("https://github.com/SysAdminDoc/REDplusplus/");
+            Process.Start(new ProcessStartInfo("https://github.com/SysAdminDoc/REDplusplus/") { UseShellExecute = true });
         }
 
         private void linkLabelJonasJohnRed_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Process.Start("https://github.com/hxseven/Remove-Empty-Directories/");
+            Process.Start(new ProcessStartInfo("https://github.com/hxseven/Remove-Empty-Directories/") { UseShellExecute = true });
         }
 
         private void linkLabelCheckForUpdates_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Process.Start("https://github.com/SysAdminDoc/REDplusplus/releases/");
+            Process.Start(new ProcessStartInfo("https://github.com/SysAdminDoc/REDplusplus/releases/") { UseShellExecute = true });
         }
 
         private void linkLabelFeedback_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Process.Start("https://github.com/SysAdminDoc/REDplusplus/issues/");
+            Process.Start(new ProcessStartInfo("https://github.com/SysAdminDoc/REDplusplus/issues/") { UseShellExecute = true });
         }
 
         private void btnHelp_Click(object sender, EventArgs e)

@@ -983,7 +983,7 @@ namespace RED.UI.Wpf
             stack.Children.Add(Label("RED++", 28, Text, FontWeights.SemiBold, new Thickness(0, 0, 0, 8)));
             stack.Children.Add(Label("Remove Empty Directories+ v" + vi.FileVersion, 18, Muted, FontWeights.Normal, new Thickness(0, 0, 0, 18)));
             stack.Children.Add(Label("Modern WPF shell using the existing RED++ scanner and deletion engine.", 16, Muted, FontWeights.Normal, new Thickness(0, 0, 0, 18)));
-            stack.Children.Add(OutlineButton("Open project page", 180, 42, (s, e) => Process.Start("https://github.com/SysAdminDoc/REDplusplus/")));
+            stack.Children.Add(OutlineButton("Open project page", 180, 42, (s, e) => Process.Start(new ProcessStartInfo("https://github.com/SysAdminDoc/REDplusplus/") { UseShellExecute = true })));
             return group;
         }
 
@@ -1903,7 +1903,9 @@ namespace RED.UI.Wpf
 
         private static Brush BrushFrom(string hex)
         {
-            return new SolidColorBrush(ColorFrom(hex));
+            var brush = new SolidColorBrush(ColorFrom(hex));
+            brush.Freeze();
+            return brush;
         }
 
         private static Geometry Glyph(string data)
