@@ -288,6 +288,18 @@ namespace RED
 				bool containsFiles = false;
 				int localIgnoredFiles = 0;
 
+				if (OsCriticalPaths.IsProtected(startDir))
+				{
+					containsFiles = true;
+					string msg = TXT.Translate("Directory is a protected OS-critical path: {0}", RedAssist.DQuote(startDir.FullName));
+					this.RunData.AddLogMessage(msg);
+					if (!this.RunData.HideIgnoredDirectories)
+					{
+						this.ReportDirectoryStatus(startDir, DirectorySearchStatusTypes.NeverEmpty, msg);
+					}
+					return DirectorySearchStatusTypes.NotEmpty;
+				}
+
 				// A .redkeep marker file protects its directory (and everything below
 				// it) from deletion — it travels with the folder across copies and
 				// shares, unlike the per-config filter lists.
