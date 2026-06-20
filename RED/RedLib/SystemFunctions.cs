@@ -663,28 +663,25 @@ namespace RED
 
         public static string ChooseDirectoryDialog(string path)
         {
-            FolderBrowserDialog folderDialog = new FolderBrowserDialog();
-
-            folderDialog.Description = TXT.Translate("Please select the directory that you want to be cleaned");
-            folderDialog.ShowNewFolderButton = false;
-
-            if (!string.IsNullOrWhiteSpace(path))
+            using (var folderDialog = new FolderBrowserDialog())
             {
-                DirectoryInfo dir = new DirectoryInfo(path);
+                folderDialog.Description = TXT.Translate("Please select the directory that you want to be cleaned");
+                folderDialog.ShowNewFolderButton = false;
 
-                if (dir.Exists)
+                if (!string.IsNullOrWhiteSpace(path))
                 {
-                    folderDialog.SelectedPath = path;
+                    DirectoryInfo dir = new DirectoryInfo(path);
+                    if (dir.Exists)
+                    {
+                        folderDialog.SelectedPath = path;
+                    }
+                }
+
+                if (folderDialog.ShowDialog() == DialogResult.OK)
+                {
+                    path = folderDialog.SelectedPath;
                 }
             }
-
-            if (folderDialog.ShowDialog() == DialogResult.OK)
-            {
-                path = folderDialog.SelectedPath;
-            }
-
-            folderDialog.Dispose();
-
             return path;
         }
 
