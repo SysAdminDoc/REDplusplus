@@ -54,6 +54,43 @@ namespace RED
         }
 
         [Fact]
+        public void SaveGetDelete_RoundTripsExtendedFields()
+        {
+            string name = "redpp-ext-" + System.Guid.NewGuid().ToString("N");
+            var profile = new RedProfile
+            {
+                Name = name,
+                Paths = new List<string> { @"\\server\share" },
+                Mode = "direct",
+                EmptyFiles = false,
+                Lockout = true,
+                Parallel = 8,
+                Exclude = new List<string> { "temp", "cache" },
+                Protect = new List<string> { ".git", ".svn" }
+            };
+
+            try
+            {
+                string error;
+                Assert.True(ProfileStore.Save(profile, out error), error);
+
+                RedProfile loaded = ProfileStore.Get(name);
+                Assert.NotNull(loaded);
+                Assert.Equal("direct", loaded.Mode);
+                Assert.True(loaded.Lockout);
+                Assert.Equal(8, loaded.Parallel);
+                Assert.Equal(new[] { "temp", "cache" }, loaded.Exclude.ToArray());
+                Assert.Equal(new[] { ".git", ".svn" }, loaded.Protect.ToArray());
+            }
+            finally
+            {
+                ProfileStore.Delete(name);
+            }
+
+            Assert.Null(ProfileStore.Get(name));
+        }
+
+        [Fact]
         public void Get_UnknownName_ReturnsNull()
         {
             Assert.Null(ProfileStore.Get("redpp-nonexistent-" + System.Guid.NewGuid().ToString("N")));
