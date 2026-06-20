@@ -5,6 +5,10 @@
 ### Security & data safety
 - Add a non-overridable OS-critical empty-folder protection list: `C:\inetpub` (CVE-2025-21204 security mitigation), `C:\PerfLogs`, `C:\Config.Msi`, and `C:\Recovery` are never eligible for deletion regardless of user filter configuration. The check is path-rooted to the system drive — `D:\Projects\inetpub` is not blocked. Runs before `.redkeep` and NeverEmpty in both standard and MFT scan paths.
 - Fix incomplete JSON escape in CLI NDJSON and file-export JSON: `\b` (backspace) and `\f` (form-feed) were not escaped per RFC 8259 — a path or reason containing those control characters would produce malformed JSON output.
+- Validate config `RedirectTo` path: a tampered portable config could previously redirect the config loader to any readable file. The redirect is now rejected unless it is an absolute path with no `..` traversal and a `.cfg` extension.
+- Block undo restore through reparse-point (junction/symlink) ancestors: a planted junction along the restore path could previously redirect a recreated directory to an arbitrary location. The restore now checks all ancestor directories for reparse points before operating.
+- Empty-files pre-pass now honors the protected-folder list: zero-byte files inside a user-protected directory were previously deleted despite the protection.
+- Fix undo manifest duplication on error-continue: when a deletion error triggered `ContinueDeleteProcess`, `undoEntries` from the stopped run were written again on continuation, producing duplicate entries. Entries are now cleared after writing.
 
 ### Reliability
 - Fix `Process.Start` URL crash in WPF and WinForms shells: on .NET 5+, `UseShellExecute` defaults to `false`, causing a `Win32Exception` when clicking the project page, releases, or issues links. All call sites now use `ProcessStartInfo` with `UseShellExecute = true`.
@@ -12,6 +16,21 @@
 - Fix thread-safety bug: `AddLogSpacer` accessed `LogMessages` and `_logWriter` without holding `_logLock`, racing with `AddLogMessage` in parallel-scan mode.
 - Fix `ManualResetEvent` resource leak in the headless runner: `scanDone` and `deleteDone` wait handles were never disposed.
 - Freeze WPF static brushes in the modern shell for cross-thread safety and GC optimization.
+- Replace `Dispatcher.Invoke` with `Dispatcher.BeginInvoke` in WPF scan/delete event handlers to prevent deadlock on window close.
+- Wrap `FolderBrowserDialog` in a `using` block to prevent GDI handle leak if `ShowDialog` throws.
+- Guard WinForms clipboard access against `ExternalException` (another process holding the clipboard).
+- Fix tree context menu eligibility check: replace fragile `ForeColor` comparison (which changes with theme) with the stable `IsEligibleImageKey` check.
+- `LogMessages.ToString()` now acquires `_logLock` to prevent torn reads during parallel scan.
+- `FolderCount` getter now uses `Volatile.Read` for thread visibility on the UI thread.
+- MFT parser uses `ToUInt16` for unsigned USN record name/offset fields (previously `ToInt16`).
+- `RuntimeData` in headless multi-path loop uses exception-safe `using var` disposal.
+- Cache `GetWritableDataFilePath` probe result instead of creating/deleting a temp file per call.
+
+### Gitignore
+- Support `[abc]` and `[!abc]` character classes in `.gitignore` glob patterns. Previously, character classes were destroyed by `Regex.Escape` before parsing, causing rules like `[Bb]uild` to never match — directories that should be ignored could be incorrectly flagged as empty and eligible for deletion.
+
+### UX
+- Press Enter in the WPF path box to start a scan (matches the WinForms shell behavior).
 
 ### Performance
 - Use a single-pass directory enumeration in the scan path: replace separate `GetFiles()` + `GetDirectories()` calls with one `GetFilesAndDirectories()` call per directory, halving `FindFirstFileExW` kernel transitions. Measurable on UNC/SMB where each call is a network round-trip.
