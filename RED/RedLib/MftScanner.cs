@@ -548,6 +548,15 @@ namespace RED
             if (fullPath != null)
             {
                 var dirInfo = new DirectoryInfo(fullPath);
+                if (OsCriticalPaths.IsProtected(dirInfo))
+                {
+                    if (!runData.HideIgnoredDirectories && worker != null)
+                    {
+                        worker.ReportProgress(0, new FoundEmptyDirInfoEventArgs(dirInfo, DirectorySearchStatusTypes.NeverEmpty,
+                            TXT.Translate("Directory is a protected OS-critical path: {0}", RedAssist.DQuote(fullPath))));
+                    }
+                    return false;
+                }
                 if (RedKeepMarker.HasMarker(dirInfo))
                 {
                     if (!runData.HideIgnoredDirectories && worker != null)
