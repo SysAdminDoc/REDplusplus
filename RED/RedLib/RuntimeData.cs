@@ -200,12 +200,15 @@ namespace RED
 
 		internal void AddLogSpacer()
 		{
-			if (this.LogMessages.Length > 0)
-            {
-                this.LogMessages.Append(Environment.NewLine);
-            }
-			try { _logWriter?.WriteLine(); } catch { }
-        }
+			lock (_logLock)
+			{
+				if (this.LogMessages.Length > 0)
+				{
+					this.LogMessages.Append(Environment.NewLine);
+				}
+				try { _logWriter?.WriteLine(); } catch { }
+			}
+		}
 
 		public void Dispose()
 		{

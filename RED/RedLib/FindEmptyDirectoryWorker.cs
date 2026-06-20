@@ -261,8 +261,6 @@ namespace RED
 
 			try
 			{
-				// Thread.Sleep(500); -> ?
-
 				if (this.RunData.MaxDepth != -1 && depth > this.RunData.MaxDepth)
 				{
 					return DirectorySearchStatusTypes.NotEmpty;

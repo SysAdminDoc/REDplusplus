@@ -803,8 +803,8 @@ namespace RED
 				logMsg(string.Format("RED++ scan ({0}{1}): {2}", deleteMode, dryRun ? ", dry-run" : "", targetPath));
 
 				var core = new REDCore(runData);
-				var scanDone = new ManualResetEvent(false);
-				var deleteDone = new ManualResetEvent(false);
+				using var scanDone = new ManualResetEvent(false);
+				using var deleteDone = new ManualResetEvent(false);
 				int emptyCount = 0;
 				int failed = 0;
 				bool runErrors = false;
@@ -995,6 +995,8 @@ namespace RED
 				{
 					case '\\': sb.Append(@"\\"); break;
 					case '"': sb.Append("\\\""); break;
+					case '\b': sb.Append(@"\b"); break;
+					case '\f': sb.Append(@"\f"); break;
 					case '\r': sb.Append(@"\r"); break;
 					case '\n': sb.Append(@"\n"); break;
 					case '\t': sb.Append(@"\t"); break;
