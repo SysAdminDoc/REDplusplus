@@ -1293,9 +1293,9 @@ namespace RED.UI.Wpf
 
         private void AttachCoreEvents(REDCore activeCore)
         {
-            activeCore.OnProgressChanged += (s, e) => Dispatcher.Invoke(() => detailStatusText.Text = Convert.ToString(e.UserState));
-            activeCore.OnFoundEmptyDirectory += (s, e) => Dispatcher.Invoke(() => AddOrUpdateResult(e.ScanResult));
-            activeCore.OnFinishedScanForEmptyDirs += (s, e) => Dispatcher.Invoke(() =>
+            activeCore.OnProgressChanged += (s, e) => Dispatcher.BeginInvoke(() => detailStatusText.Text = Convert.ToString(e.UserState));
+            activeCore.OnFoundEmptyDirectory += (s, e) => Dispatcher.BeginInvoke(() => AddOrUpdateResult(e.ScanResult));
+            activeCore.OnFinishedScanForEmptyDirs += (s, e) => Dispatcher.BeginInvoke(() =>
             {
                 runtimeWatch.Stop();
                 if (config.Options.AutoProtectRoot && runData.StartFolder != null)
@@ -1316,22 +1316,22 @@ namespace RED.UI.Wpf
                 progressText.Text = "0%";
                 RefreshResultsVisibility();
             });
-            activeCore.OnError += (s, e) => Dispatcher.Invoke(() =>
+            activeCore.OnError += (s, e) => Dispatcher.BeginInvoke(() =>
             {
                 UpdateUiState(false);
                 WpfMessageBox.Show(this, e.Message, "RED++ Error", MessageBoxButton.OK, MessageBoxImage.Error);
             });
-            activeCore.OnCancelled += (s, e) => Dispatcher.Invoke(() =>
+            activeCore.OnCancelled += (s, e) => Dispatcher.BeginInvoke(() =>
             {
                 UpdateUiState(false);
                 detailStatusText.Text = "Canceled.";
             });
-            activeCore.OnAborted += (s, e) => Dispatcher.Invoke(() =>
+            activeCore.OnAborted += (s, e) => Dispatcher.BeginInvoke(() =>
             {
                 UpdateUiState(false);
                 detailStatusText.Text = "Stopped after an error.";
             });
-            activeCore.OnDeleteProcessChanged += (s, e) => Dispatcher.Invoke(() =>
+            activeCore.OnDeleteProcessChanged += (s, e) => Dispatcher.BeginInvoke(() =>
             {
                 if (e == null) return;
                 AddOrUpdateResult(e.ScanResult);
@@ -1346,7 +1346,7 @@ namespace RED.UI.Wpf
                 progressBar.Value = Math.Min(progressBar.Maximum, e.ProgressStatus + 1);
                 progressText.Text = Math.Round(progressBar.Value * 100d / progressBar.Maximum).ToString("0") + "%";
             });
-            activeCore.OnDeleteError += (s, e) => Dispatcher.Invoke(() =>
+            activeCore.OnDeleteError += (s, e) => Dispatcher.BeginInvoke(() =>
             {
                 var response = WpfMessageBox.Show(this,
                     "RED++ could not change this item. The item was left unchanged.\n\n" + e.Path + "\n\n" + e.ErrorMessage + "\n\nContinue with the next item?",
@@ -1362,7 +1362,7 @@ namespace RED.UI.Wpf
                     activeCore.AbortDeletion();
                 }
             });
-            activeCore.OnDeleteProcessFinished += (s, e) => Dispatcher.Invoke(() =>
+            activeCore.OnDeleteProcessFinished += (s, e) => Dispatcher.BeginInvoke(() =>
             {
                 UpdateUiState(false);
                 deleteButton.IsEnabled = false;

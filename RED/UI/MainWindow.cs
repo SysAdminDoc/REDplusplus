@@ -1916,7 +1916,8 @@ namespace RED.UI
         {
             if (!UiIsBusy())
             {
-                // Detect paths in the clipboard
+                try
+                {
                 if (cbClipboardDetection.Checked && Clipboard.ContainsText(TextDataFormat.Text))
                 {
                     string clipValue = Clipboard.GetText(TextDataFormat.Text);
@@ -1943,6 +1944,8 @@ namespace RED.UI
                         }
                     }
                 }
+                }
+                catch (System.Runtime.InteropServices.ExternalException) { }
             }
         }
 
@@ -2226,7 +2229,7 @@ namespace RED.UI
         private void cmTreeview_Opening(object sender, CancelEventArgs e)
         {
             bool hasSelection = tvSearchResults.SelectedNode != null;
-            bool isDeletionCandidate = hasSelection && tvSearchResults.SelectedNode.ForeColor == TreeManager.ColortoBeDeleted;
+            bool isDeletionCandidate = hasSelection && TreeManager.IsEligibleImageKey(tvSearchResults.SelectedNode.ImageKey);
             bool hasResults = tvSearchResults.Nodes.Count > 0;
             tsmiOpenFolder.Enabled = hasSelection;
             tsmiSearchOnlyThisDirectory.Enabled = hasSelection && !UiIsBusy();
