@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <!-- The engine assembly references WPF + WinForms; the test host must load the
          Windows Desktop runtime to resolve those types when exercising internals. -->
     <UseWPF>true</UseWPF>
