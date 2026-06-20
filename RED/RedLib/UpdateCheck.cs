@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace RED
@@ -123,9 +124,16 @@ namespace RED
 
         private static string ExtractJsonValue(string json, string key)
         {
-            string pattern = "\"" + Regex.Escape(key) + "\"\\s*:\\s*\"([^\"]+)\"";
-            var m = Regex.Match(json, pattern);
-            return m.Success ? m.Groups[1].Value : null;
+            try
+            {
+                using (var doc = JsonDocument.Parse(json))
+                {
+                    if (doc.RootElement.TryGetProperty(key, out JsonElement value) && value.ValueKind == JsonValueKind.String)
+                        return value.GetString();
+                }
+            }
+            catch { }
+            return null;
         }
 
         internal static int CompareVersions(string a, string b)
