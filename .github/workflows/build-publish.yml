@@ -78,6 +78,12 @@ jobs:
             if (!(Test-Path $deny)) { throw 'Deny-ACL dir deleted' }
             if (Test-Path (Join-Path $root 'empty-file.txt')) { throw 'Empty file not deleted' }
 
+            # Undo: restore the deleted empty directory and empty file
+            & $exe -undo | Tee-Object -Variable undoOutput
+            if ($LASTEXITCODE -ne 0) { throw "RED++ -undo exited with $LASTEXITCODE`n$undoOutput" }
+            if (!(Test-Path $emptyDir)) { throw 'Undo did not recreate deleted empty directory' }
+            if (!(Test-Path (Join-Path $root 'empty-file.txt'))) { throw 'Undo did not recreate deleted empty file' }
+
             & $exe -version | Tee-Object -Variable ver
             if (($ver -join "`n") -notmatch 'RED\+\+\s+\d+\.\d+\.\d+') { throw "Unexpected -version output: $ver" }
           }
