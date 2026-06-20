@@ -953,7 +953,7 @@ namespace RED
 
 			if (jsonOutput && !quiet)
 			{
-				EmitJson(allResults, totalEmpty, totalEmptyFiles, totalDeleted, totalFailed, runStopwatch.Elapsed.TotalMilliseconds);
+				EmitJson(paths, allResults, totalEmpty, totalEmptyFiles, totalDeleted, totalFailed, runStopwatch.Elapsed.TotalMilliseconds);
 			}
 
 			if (!string.IsNullOrWhiteSpace(exportFile))
@@ -1002,14 +1002,22 @@ namespace RED
 			return exitCode;
 		}
 
-		/// <summary>One NDJSON object per scanned result to stdout, for piping.</summary>
-		private static void EmitJson(System.Collections.Generic.List<RedScanResultItem> results,
+		private static void EmitJson(List<string> scanPaths, System.Collections.Generic.List<RedScanResultItem> results,
 			int emptyDirs, int emptyFiles, int deleted, int failed, double elapsedMs)
 		{
+			var pathsJson = new StringBuilder();
+			pathsJson.Append("[");
+			for (int p = 0; p < scanPaths.Count; p++)
+			{
+				if (p > 0) pathsJson.Append(",");
+				pathsJson.Append("\"").Append(EscapeJson(scanPaths[p])).Append("\"");
+			}
+			pathsJson.Append("]");
 			Console.WriteLine(string.Format(
-				"{{\"type\":\"meta\",\"schema\":4,\"version\":\"{0}\",\"emptyDirectories\":{1},\"emptyFiles\":{2},\"deleted\":{3},\"failed\":{4},\"elapsedMs\":{5}}}",
+				"{{\"type\":\"meta\",\"schema\":5,\"version\":\"{0}\",\"emptyDirectories\":{1},\"emptyFiles\":{2},\"deleted\":{3},\"failed\":{4},\"elapsedMs\":{5},\"paths\":{6}}}",
 				EscapeJson(GetFileVersion()), emptyDirs, emptyFiles, deleted, failed,
-				((long)elapsedMs).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+				((long)elapsedMs).ToString(System.Globalization.CultureInfo.InvariantCulture),
+				pathsJson.ToString()));
 			foreach (RedScanResultItem item in results)
 			{
 				string kind = item.Kind == ResultKind.File ? "file" : "directory";
