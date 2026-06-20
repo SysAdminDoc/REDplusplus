@@ -326,35 +326,31 @@ namespace RED
 					}
 				}
 
+				// Single-pass enumeration: one FindFirstFileExW call returns both
+				// files and subdirectories, halving kernel transitions per directory.
+				// Measurable on UNC/SMB where each call is a network round-trip.
+				FastDirectoryEnumerator.EnumerationResult listing;
+
+				try
+				{
+					listing = FastDirectoryEnumerator.GetFilesAndDirectories(startDir);
+				}
+				catch (Exception ex)
+				{
+					listing = default;
+					containsFiles = true;
+					string cause = DescribeAccessError(ex);
+					string reason = string.IsNullOrEmpty(cause)
+						? TXT.Translate("Could not read directory contents")
+						: TXT.Translate("Could not read directory contents ({0})", cause);
+					this.RunData.AddLogMessage(TXT.Translate("Could not read {0} ({1})", RedAssist.DQuote(startDir.FullName), cause ?? ex.Message));
+					this.ReportDirectoryStatus(startDir, DirectorySearchStatusTypes.Error, reason);
+					return DirectorySearchStatusTypes.Error;
+				}
+
 				if (!containsFiles)
 				{
-					// Get file list
-					FileInfo[] fileList = null;
-
-					// some directories could trigger an exception:
-					Exception fileAccessError = null;
-					try
-					{
-						fileList = FastDirectoryEnumerator.GetFiles(startDir);
-					}
-					catch (Exception ex)
-					{
-						fileList = null;
-						fileAccessError = ex;
-					}
-
-					if (fileList == null)
-					{
-						// if containsFiles is true then the folder does not get deleted:
-						containsFiles = true; // secure way
-						string cause = DescribeAccessError(fileAccessError);
-						string reason = string.IsNullOrEmpty(cause)
-							? TXT.Translate("Could not read directory contents")
-							: TXT.Translate("Could not read directory contents ({0})", cause);
-						this.RunData.AddLogMessage(TXT.Translate("Could not read {0} ({1})", RedAssist.DQuote(startDir.FullName), cause ?? (fileAccessError != null ? fileAccessError.Message : TXT.Translate("unknown error"))));
-						this.ReportDirectoryStatus(startDir, DirectorySearchStatusTypes.Error, reason);
-					}
-					else if (fileList.Length == 0)
+					if (listing.Files.Length == 0)
 					{
 						containsFiles = false;
 					}
@@ -363,25 +359,22 @@ namespace RED
 						string delPattern = string.Empty;
 						int ignoredCount = 0;
 
-						// loop trough files and cancel if containsFiles == true
-						for (int f = 0; (f < fileList.Length && !containsFiles); f++)
+						for (int f = 0; (f < listing.Files.Length && !containsFiles); f++)
 						{
 							FileInfo file = null;
 							long filesize = 0;
 
 							try
 							{
-								file = fileList[f];
+								file = listing.Files[f];
 								filesize = file.Length;
 							}
 							catch
 							{
-								// keep folder if there is a strange file that triggers an exception:
 								containsFiles = true;
 								break;
 							}
 
-							// Cloud-only placeholder files (OneDrive, iCloud) are real content
 							const int FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS = 0x00400000;
 							const int FILE_ATTRIBUTE_RECALL_ON_OPEN = 0x00040000;
 							int rawAttribs = (int)file.Attributes;
@@ -391,7 +384,6 @@ namespace RED
 								break;
 							}
 
-							// It only takes one file to be found to stop the scan
 							if (!this.RunData.IgnoreFileNameList.IsOnList(file, filesize, RunData.IgnoreEmptyFiles, out delPattern))
 							{
 								containsFiles = true;
@@ -407,35 +399,14 @@ namespace RED
 							localIgnoredFiles = ignoredCount;
 						}
 
-						// Empty-files sister mode: collect standalone zero-byte files
-						// (not on the ignore list) for deletion. Separate non-short-
-						// circuiting pass so it finds every empty file, not just up to
-						// the first real file that stops the directory check above.
 						if (this.RunData.DeleteEmptyFiles)
 						{
-							CollectEmptyFiles(fileList);
+							CollectEmptyFiles(listing.Files);
 						}
 					}
 				}
 
-				// (CollectEmptyFiles is defined below; invoked above when DeleteEmptyFiles is on)
-
-				List<DirectoryInfo> subFolderList = new List<DirectoryInfo>();
-				try
-				{
-					subFolderList.AddRange(FastDirectoryEnumerator.GetDirectories(startDir));
-				}
-				catch (Exception ex)
-				{
-					// If we can not read the folder -> don't delete it:
-					string cause = DescribeAccessError(ex);
-					string reason = string.IsNullOrEmpty(cause)
-						? TXT.Translate("Could not read subdirectories")
-						: TXT.Translate("Could not read subdirectories ({0})", cause);
-					this.RunData.AddLogMessage(TXT.Translate("Could not read subdirectories of {0} ({1})", RedAssist.DQuote(startDir.FullName), cause ?? ex.Message));
-					this.ReportDirectoryStatus(startDir, DirectorySearchStatusTypes.Error, reason);
-					return DirectorySearchStatusTypes.Error;
-				}
+				List<DirectoryInfo> subFolderList = new List<DirectoryInfo>(listing.Directories);
 
 				// The folder is empty, break here:
 				if (!containsFiles && subFolderList.Count == 0)
