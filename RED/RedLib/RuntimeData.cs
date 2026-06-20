@@ -45,14 +45,20 @@ namespace RED
 		/// Falls back to the %APPDATA% config folder when the install directory is not
 		/// writable (e.g. Program Files), so logs and undo manifests are never lost silently.
 		/// </summary>
+		private static string _cachedWritableDir;
+
 		public static string GetWritableDataFilePath(string fileName)
 		{
+			if (_cachedWritableDir != null)
+				return Path.Combine(_cachedWritableDir, fileName);
+
 			string exeDir = Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath);
 			try
 			{
 				string probe = Path.Combine(exeDir, fileName + ".writetest");
 				File.WriteAllText(probe, string.Empty);
 				File.Delete(probe);
+				_cachedWritableDir = exeDir;
 				return Path.Combine(exeDir, fileName);
 			}
 			catch
@@ -61,6 +67,7 @@ namespace RED
 					Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
 					"NotBob", "RemoveEmptyDirectories");
 				Directory.CreateDirectory(appData);
+				_cachedWritableDir = appData;
 				return Path.Combine(appData, fileName);
 			}
 		}
@@ -187,6 +194,14 @@ namespace RED
 		public RedScanResultItemList ScanResults { get; private set; }
 
 		private readonly Lock _logLock = new Lock();
+
+		public string GetLogSnapshot()
+		{
+			lock (_logLock)
+			{
+				return this.LogMessages.ToString();
+			}
+		}
 
 		public void AddLogMessage(string msg)
 		{
