@@ -33,35 +33,53 @@
   RED+.exe [-silent] -path &quot;C:\target&quot; [-path &quot;D:\other&quot; ...] [options]
 
   Options:
-    -path &lt;dir&gt;      Scan root. Repeat for multiple roots. A bare path also works.
-    -dryrun          Scan and report only; never delete.
-    -emptyfiles      Also delete standalone zero-byte files.
-    -mode &lt;mode&gt;     recycle | direct | move | simulate.
-    -moveto &lt;dir&gt;    Required with -mode move.
-    -minage &lt;hours&gt;  Override minimum directory age for this run.
-    -maxdepth &lt;n&gt;    Override maximum scan depth for this run (-1 = infinite).
-    -gitignore       Respect .gitignore rules for this run.
-    -no-gitignore    Ignore .gitignore rules for this run.
-    -mft             Try the MFT turbo scan for this run (administrator required).
-    -no-mft          Disable the MFT turbo scan for this run.
-    -hidden          Include hidden directories for this run.
-    -ignore-hidden   Ignore hidden directories for this run.
-    -system          Include system directories for this run.
-    -ignore-system   Ignore system directories for this run.
-    -export &lt;file&gt;   Write .txt, .csv, or .json results by file extension.
-    -json            Emit NDJSON: one meta record, then result records.
-    -quiet           Suppress stdout/stderr; use the exit code and optional log.
-    -log &lt;file&gt;      Write a timestamped run log.
-    -undo [manifest] Restore the last deletion run from the protected undo store.
-    -help, -version  Show help or version.
+    -path &lt;dir&gt;        Scan root. Repeat for multiple roots. A bare path also works.
+    -delete, -yes      Scan and delete in one shot (alias for -silent).
+    -dryrun            Scan and report only; never delete.
+    -emptyfiles        Also delete standalone zero-byte files.
+    -mode &lt;mode&gt;       recycle | direct | move | simulate.
+    -moveto &lt;dir&gt;      Required with -mode move; must be an absolute path.
+    -minage &lt;hours&gt;    Override minimum directory age for this run.
+    -maxdepth &lt;n&gt;      Override maximum scan depth for this run (-1 = infinite).
+    -gitignore         Respect .gitignore rules for this run.
+    -no-gitignore      Ignore .gitignore rules for this run.
+    -mft               Try the MFT turbo scan for this run (administrator required).
+    -no-mft            Disable the MFT turbo scan for this run.
+    -hidden            Include hidden directories for this run.
+    -ignore-hidden     Ignore hidden directories for this run.
+    -system            Include system directories for this run.
+    -ignore-system     Ignore system directories for this run.
+    -lockout           Force report-only mode (no deletions) for this run.
+    -no-lockout        Override a config-level lockout for this run.
+    -parallel &lt;n&gt;      Parallel subdirectory scan threads (2-16, 0=serial).
+    -exclude &lt;name&gt;    Per-run directory ignore filter (repeatable).
+    -protect &lt;name&gt;    Per-run directory protect filter (repeatable).
+    -export &lt;file&gt;     Write results to .txt, .csv, .json, .ps1, or .html.
+    -json              Emit NDJSON: one meta record, then result records.
+    -quiet             Suppress stdout/stderr; use the exit code and optional log.
+    -log &lt;file&gt;        Write a timestamped run log.
+    -undo [manifest]   Restore from the protected undo store.
+    -profile &lt;name&gt;    Run a saved profile (other options still override).
+    -saveprofile &lt;name&gt; Save the current options as a named profile and exit.
+    -listprofiles      List saved profiles and exit.
+    -eventlog          Write a summary event to the Windows Application Event Log.
+    -classic           Open the legacy Windows Forms GUI instead of the WPF shell.
+    -help, -version    Show help or version.
 </pre>
 <p>Preview a cleanup without touching anything:</p>
 <pre>RED+.exe -path &quot;D:\Shares&quot; -dryrun -json</pre>
 <p>Run from Task Scheduler and write a log:</p>
 <pre>RED+.exe -silent -path &quot;\\server\share\folder&quot; -log &quot;cleanup.log&quot;</pre>
+<p>Scan and delete with explicit intent:</p>
+<pre>RED+.exe -delete -path &quot;D:\Shares\Home&quot; -mode recycle -log &quot;cleanup.log&quot;</pre>
+<p>Save and reuse a profile for scheduled tasks:</p>
+<pre>RED+.exe -saveprofile nightly -path &quot;D:\Shares&quot; -mode recycle -emptyfiles
+RED+.exe -silent -profile nightly -log &quot;cleanup.log&quot;</pre>
+<p>Speed up a network share scan with parallel enumeration:</p>
+<pre>RED+.exe -silent -path &quot;\\server\share&quot; -parallel 8 -log &quot;cleanup.log&quot;</pre>
 <p>Restore the previous deletion run:</p>
 <pre>RED+.exe -undo -log &quot;restore.log&quot;</pre>
-<p>Undo manifests are stored under the current user's protected LocalAppData folder. A raw manifest file path is treated as an explicit legacy restore and is constrained to the current user's safe profile boundary.</p>
+<p>Undo manifests are stored under the current user's protected LocalAppData folder. The last 5 manifests are kept. A raw manifest file path is treated as an explicit legacy restore and is constrained to the current user's safe profile boundary.</p>
 <h4>Exit Codes</h4>
 <ul>
 <li><span class="sx">0</span> Success, or simulate/dry-run found nothing.</li>
@@ -73,7 +91,7 @@
 <!-- ======= ======= ======= ======= ======= ======= ======= -->
 <hr><p>&nbsp;</p>
 <div class="footer">
-<span class="fal">&nbsp;&nbsp;<small><span class="red">RED++</span> by Jonas John &amp; Robert 'NotBob' Bookerby</small></span><span class="far">&nbsp;&nbsp;<span class="moddate">mod: 2025-12</span>&nbsp;</span>
+<span class="fal">&nbsp;&nbsp;<small><span class="red">RED++</span> by Jonas John &amp; Robert 'NotBob' Bookerby</small></span><span class="far">&nbsp;&nbsp;<span class="moddate">mod: 2026-06</span>&nbsp;</span>
 </div>
 </div></body>
 </html>
