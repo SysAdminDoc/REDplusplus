@@ -94,6 +94,16 @@
 - Enable reproducible builds: `<ContinuousIntegrationBuild>` is set in CI, `SOURCE_DATE_EPOCH` drives the build-time stamp from the git commit timestamp, and a `global.json` pins the SDK to 9.0.x (`latestFeature` roll-forward). Two CI builds of the same commit now produce byte-identical outputs.
 - Move the release build, safety smoke, packaging, attestation, and GitHub Release into a reusable workflow (`build-publish.yml`) called by `release.yml`, raising provenance from SLSA Build Level 2 to Build Level 3 (isolated, non-forgeable build in a trusted workflow).
 
+### Features
+- Distinguish "empty except ignored files" from truly-empty directories in the results grid, CLI NDJSON output, and all export formats (CSV, JSON, HTML, PS1). A folder containing only ignored junk (Thumbs.db, desktop.ini, etc.) now shows "Empty except N ignored file(s) (will be removed)" instead of the same "Empty - eligible for deletion" label as a truly-empty folder, so a reviewer can tell which directories will have trash files removed.
+- Deletion lockout mode for managed/report-only deployments: set `DeletionLockout=true` in the config or pass `-lockout` on the CLI to force every delete mode to Simulate. No path (GUI or CLI) can mutate the filesystem while the lockout is active. Override per-run with `-no-lockout`.
+- Opt-in update check: set `CheckForUpdates=true` in the config to make RED++ check the GitHub Releases API (at most once per day, ETag-cached) and report when a newer version is available. No telemetry, no auto-download, disabled by default. The CLI logs the newer version and release URL at the end of a headless run.
+- Bounded-parallel scan for UNC/SMB roots: set `ParallelScanDegree` in the config (2-16) or pass `-parallel <n>` on the CLI to enumerate subdirectories across multiple threads. Off by default (0 = serial). Intended for network shares where enumeration latency dominates; produces identical results to the serial walk with all safety guards (reparse-point, long-path, fail-closed) intact.
+
+### Build / CI
+- Enable reproducible builds: `<ContinuousIntegrationBuild>` is set in CI, `SOURCE_DATE_EPOCH` drives the build-time stamp from the git commit timestamp, and a `global.json` pins the SDK to 9.0.x (`latestFeature` roll-forward). Two CI builds of the same commit now produce byte-identical outputs.
+- Move the release build, safety smoke, packaging, attestation, and GitHub Release into a reusable workflow (`build-publish.yml`) called by `release.yml`, raising provenance from SLSA Build Level 2 to Build Level 3 (isolated, non-forgeable build in a trusted workflow).
+
 ### Build / Runtime
 - Migrate from .NET Framework 4.8.1 (old-style csproj + `packages.config`) to an SDK-style project targeting `net9.0-windows` (WPF + WinForms). The verified scan/delete engine and every P/Invoke struct are unchanged; the 50-test xUnit suite and the headless safety smoke (empty-dir/file deletion, reparse-point/junction protection, deny-ACL fail-closed, AutoProtectRoot, recycle→undo round-trip) pass identically on the new runtime.
 - Replace the removed `Directory.GetAccessControl(path)` static with the `DirectoryInfo.GetAccessControl()` extension (same default ACL sections) in the deletion lock check.
