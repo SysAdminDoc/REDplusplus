@@ -511,11 +511,17 @@ namespace RED
 		{
 			if (undoEntries.Count == 0) return;
 
+			// Record the scan root so a later restore can refuse any entry that points
+			// outside the originally-cleaned tree (tamper/corruption defense).
 			var roots = new List<string>();
 			if (this.Data?.StartFolder != null && !string.IsNullOrWhiteSpace(this.Data.StartFolder.FullName))
 			{
 				roots.Add(this.Data.StartFolder.FullName);
 			}
+			// In Move mode the payload was relocated to the move-to folder, so record it
+			// too. Restore validates the move-BACK source (MovedTo) against the roots, so
+			// a tampered manifest cannot name an arbitrary system file as the source and
+			// have Directory.Move/File.Move relocate (and thereby destroy) it.
 			if (!string.IsNullOrWhiteSpace(SystemFunctions.MoveToFolderTarget))
 			{
 				roots.Add(SystemFunctions.MoveToFolderTarget);
