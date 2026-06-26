@@ -2,6 +2,20 @@
 
 ## 1.6.0 (2026-06-25)
 
+### Safety & correctness (audit pass 4-5)
+- Fix parallel scan cancellation safety: if cancellation fires mid-parallel-scan, the parent directory could be falsely classified as empty because all `Parallel.ForEach` tasks returned early without checking emptiness. Now returns not-empty on cancellation.
+- Surface undo manifest write failures via the log callback instead of silently swallowing. Previously, if `%LOCALAPPDATA%` was inaccessible, directories were deleted with no recovery manifest and no warning.
+- Catch `AbandonedMutexException` (prior process crashed) and `UnauthorizedAccessException` (Terminal Server cross-session) from the single-instance mutex, falling back to running without enforcement rather than crashing.
+- Cancel active scan/delete in the WPF `Closed` handler before disposing `RunData`, preventing `NullReferenceException` on the background worker thread when the window closes mid-operation.
+- Wrap `DirectoryInfo.Attributes` read in the scan engine's `ProcessOneSubdirectory` with a catch for vanished directories. A single vanished subdirectory in parallel scan mode no longer aborts all sibling tasks.
+- Convert `OverflowException` from crafted `.mo` file string table offsets to `IOException` for clean error handling.
+- Null-coalesce `FullPath` in text export to prevent `ArgumentNullException` on malformed scan results.
+- Complete `ConfigOptions.SetToDefaults()` to reset all 24 properties (was missing 8 newer properties).
+- Reset `ConfigAssist.RedirectCount` at the start of each `ConfigLoad` call so a second load in the same process doesn't hit the redirect limit prematurely.
+
+### Build / CI (audit pass 4)
+- Add test step to the release workflow (`build-publish.yml`) before publish, so a broken commit cannot ship as a release via `workflow_dispatch`.
+
 ### Security & data safety
 - Enable RedirectionGuard process mitigation (`SetProcessMitigationPolicy`) at startup to block junction-based redirection attacks at the OS kernel level on Windows 11 24H2+. Defense-in-depth on top of the existing handle-based reparse verification. Falls back silently on older Windows.
 - Include the user's SID in the single-instance forward-signal file path to prevent a cross-user symlink attack on multi-user systems (Terminal Server, shared workstations).
