@@ -476,7 +476,16 @@ namespace RED
 
 		private bool ProcessOneSubdirectory(DirectoryInfo curDir, int depth, GitIgnoreParser gitIgnore)
 		{
-			FileAttributes attribs = curDir.Attributes;
+			FileAttributes attribs;
+			try
+			{
+				attribs = curDir.Attributes;
+			}
+			catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException || ex is UnauthorizedAccessException || ex is IOException)
+			{
+				this.ReportDirectoryStatus(curDir, DirectorySearchStatusTypes.Error, ex.Message);
+				return false;
+			}
 
 			bool ignoreSystemDir = (this.RunData.IgnoreSystemFolders && ((attribs & FileAttributes.System) == FileAttributes.System));
 			bool ignoreHiddenDir = (this.RunData.IgnoreHiddenFolders && ((attribs & FileAttributes.Hidden) == FileAttributes.Hidden));

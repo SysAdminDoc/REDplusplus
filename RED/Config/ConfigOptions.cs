@@ -116,6 +116,7 @@ namespace RED.Config
 
         public void SetToDefaults()
         {
+            Language = string.Empty;
             AutoProtectRoot = true;
             ClipboardPathDetection = false;
             IgnoreHiddenDirectories = false;
@@ -130,9 +131,16 @@ namespace RED.Config
             MinDirectoryAgeHours = 0;
             PauseBetweenDeletions = 0;
             DeleteModeInt = (int)DeleteModes.RecycleBin;
+            SavePrompt = false;
             RememberWindowDetails = false;
             RememberLastUsedDirectory = false;
             RememberDeletionStats = false;
+            DeleteEmptyFiles = false;
+            RespectGitIgnore = false;
+            UseMftScan = false;
+            DeletionLockout = false;
+            CheckForUpdates = false;
+            ParallelScanDegree = 0;
         }
     }
 }

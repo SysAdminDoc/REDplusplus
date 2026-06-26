@@ -27,6 +27,7 @@ namespace NotBob.Config
 
         internal static void ConfigLoad(ref RedConfiguration config, string appName)
         {
+            RedirectCount = 0;
             bool createConfig = false;
             string filename = "?";
             try

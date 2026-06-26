@@ -591,7 +591,15 @@ namespace RED
 			}
 
 			bool createdNew;
-			singleInstanceMutex = new Mutex(true, "Global\\REDplusplus_SingleInstance", out createdNew);
+			try
+			{
+				singleInstanceMutex = new Mutex(true, "Global\\REDplusplus_SingleInstance", out createdNew);
+			}
+			catch (UnauthorizedAccessException)
+			{
+				createdNew = true;
+				singleInstanceMutex = null;
+			}
 
 			if (!createdNew)
 			{
@@ -644,8 +652,11 @@ namespace RED
 			}
 			finally
 			{
-				singleInstanceMutex.ReleaseMutex();
-				singleInstanceMutex.Dispose();
+				if (singleInstanceMutex != null)
+				{
+					singleInstanceMutex.ReleaseMutex();
+					singleInstanceMutex.Dispose();
+				}
 			}
 		}
 

@@ -253,7 +253,9 @@ namespace SecondLanguage
 
 		private string ExtractString(uint offsetOfTable, uint i)
 		{
-			int offsetOfEntry = checked((int)(offsetOfTable + i * 8));
+			int offsetOfEntry;
+			try { offsetOfEntry = checked((int)(offsetOfTable + i * 8)); }
+			catch (OverflowException) { throw new IOException("Corrupt .mo file: string table offset overflow."); }
 			long offsetOfString = ParseUInt32(offsetOfEntry + 4);
 			long lengthOfString = ParseUInt32(offsetOfEntry + 0);
 

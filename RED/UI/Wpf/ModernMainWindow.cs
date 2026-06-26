@@ -171,6 +171,11 @@ namespace RED.UI.Wpf
                 {
                     // Shutdown should not be blocked by settings persistence.
                 }
+                if (core != null)
+                {
+                    try { core.CancelCurrentProcess(); } catch { }
+                    core = null;
+                }
                 if (runData != null)
                 {
                     runData.Dispose();
