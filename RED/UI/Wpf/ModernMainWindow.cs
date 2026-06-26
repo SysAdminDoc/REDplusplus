@@ -2314,7 +2314,7 @@ namespace RED.UI.Wpf
             string fileName;
             using (var dlg = new Forms.OpenFileDialog())
             {
-                dlg.Title = "Import Saved Dry-Run Results";
+                dlg.Title = "Import dry-run results";
                 dlg.Filter = "Dry-run results (*.json;*.ndjson;*.csv;*.txt)|*.json;*.ndjson;*.csv;*.txt|All files (*.*)|*.*";
                 if (dlg.ShowDialog() != Forms.DialogResult.OK) { return; }
                 fileName = dlg.FileName;
@@ -2371,7 +2371,7 @@ namespace RED.UI.Wpf
                 deleteButton.IsEnabled = false;
             }
             detailStatusText.Text = string.Format(
-                "Imported {0} from {1}. {2} eligible. Re-scan the folder to enable deletion.",
+                "Imported {0} from {1}. {2} marked empty. Imported results are review-only; re-scan the folder to delete.",
                 CountLabel(imported.ReviewCount, "record"),
                 Path.GetFileName(fileName),
                 eligible);

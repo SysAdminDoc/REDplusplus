@@ -20,7 +20,7 @@
  <a href="rphCmdline.htm"  >Command Line</a>
  <a href="rphCredits.htm"  >Credits, License</a>
  <a href="rphChangelog.htm">Change Log</a>
- <p class="nih">Hover Over Images to ENLARGE Them</p>
+ <p class="nih">Screenshots scale to fit this help window.</p>
  </div>
 </div>
 <!-- ======= ======= ======= ======= ======= ======= ======= -->
@@ -33,22 +33,22 @@
 <div>
 <p>To begin a search for empty directories you must first select a starting or 'root' directory. <span class="red">RED++</span> will search for empty directories in the specified root and all the sub-directories within it. Your settings and filters will control how directories and files are processed.</p>
 <figure><img class="imgx" src="img/screen-M01-search1.png"><figcaption>Searching</figcaption></figure>
-<p>Click on the SEARCH button <img src="img/btn-search-dirs.png" alt="search button"> to begin searching.</p>
+<p>Choose <b>Scan Folder</b> <img src="img/btn-search-dirs.png" alt="scan folder button"> to begin scanning.</p>
 </div>
 
 <div class="btd">
-The results of a search are shown in the treeview on the search tab.
-<div class="note"><b>NOTE:</b> If you have <b>Fast Mode</b> enabled in settings the results will not be shown until the search has completed. Otherwise results are shown as the search progresses.</div>
+The results of a search are shown in the review list on the Search screen.
+<div class="note"><b>NOTE:</b> If <b>Fast result rendering</b> is enabled, results are shown after the scan completes. Otherwise results appear as the scan progresses.</div>
 <div class="note"><b>Safety:</b> Reparse points such as junctions, symlinks, mount points, and cloud-placeholder directories are kept and shown with a reason instead of being treated as empty directories. A <span class="nbn">.redkeep</span> file inside any directory protects that directory and all of its children.</div>
 <figure><img class="imgx" src="img/screen-M01-search2.png"><figcaption>Search: Delete Matches</figcaption></figure>
-<p>Click on the DELETE button <img src="img/btn-search-del.png" alt="delete button"> to remove empty directories.</p>
-<p>If <em>Delete empty files too</em> is enabled from the Extras menu, standalone zero-byte files are deleted through the same delete mode as directories. They are counted separately in the final status.</p>
-<p>Use <em>Extras &gt; Import Saved Dry-Run Results</em> to open JSON or NDJSON produced by a previous dry-run. Imported results are shown for review without rescanning; only records marked as empty are eligible for deletion.</p>
-<p>After a deletion run, use <em>Extras &gt; Restore Last Deletion</em> to recreate deleted directories or move files/directories back from a Move-to-folder run. Restore entries come from the current user's protected undo store.</p>
+<p>Choose <b>Review &amp; Delete</b> <img src="img/btn-search-del.png" alt="review and delete button"> to remove eligible empty directories using the selected deletion mode.</p>
+<p>If <em>Include standalone zero-byte files</em> is enabled in Settings, standalone zero-byte files are deleted through the same delete mode as directories. They are counted separately in the final status.</p>
+<p>Use <em>More &gt; Import dry-run results</em> to open JSON or NDJSON produced by a previous dry-run. Imported results are shown for review and export without rescanning; re-scan the folder before deleting so RED++ can perform current safety checks.</p>
+<p>After a deletion run, use <em>More &gt; Restore deleted items</em> to recreate deleted directories or move files/directories back from a Move-to-folder run. Restore entries come from the current user's protected undo store.</p>
 </div>
 
 <div class="btd">
-You can right-click on a directory in the results treeview to display a context menu with additional options:</p>
+You can right-click on a result row to display a context menu with additional options:</p>
 <img src="img/screen-M03-context.png" alt="context-menu">
 
 <ul>
@@ -56,13 +56,13 @@ You can right-click on a directory in the results treeview to display a context 
 <div>Opens the selected directory in an Explorer window.</div>
 </li>
 <li><span class="sx">Search only this directory</span>
-<div>Sets the directory to be search to the selected directory and begins a new search.</div>
+<div>Sets the scan target to the selected directory and begins a new scan.</div>
 </li>
 <li><span class="sx">Expand all</span>
-<div>Expands ALL nodes in the treeviw.</div>
+<div>Expands all result groups.</div>
 </li>
 <li><span class="sx">Collapse all</span>
-<div>Collapses ALL nodes in treeview.</div>
+<div>Collapses all result groups.</div>
 </li>
 <li><span class="sx">Protect from deletion (once)</span>
 <div>Protects the selected directory from being deleted by <span class="red">RED++</span>.
@@ -83,7 +83,7 @@ You can right-click on a directory in the results treeview to display a context 
 
 <div class="btd">
 <div class="note">
-<b>NOTE:</b> If a search is taking too long you can cancel it by clicking on the CANCEL button <img src="img/btn-search-cancel.png" alt="cancel button">.
+<b>NOTE:</b> If a search is taking too long you can cancel it by choosing <b>Cancel</b> <img src="img/btn-search-cancel.png" alt="cancel button">.
 <br>You will <b>not</b> be able to delete any of the results shown because the search is incomplete and not all sub-directory contents will have been processed.
 </div>
 </div>
@@ -92,7 +92,7 @@ You can right-click on a directory in the results treeview to display a context 
 <!-- ======= ======= ======= ======= ======= ======= ======= -->
 <hr><p>&nbsp;</p>
 <div class="footer">
-<span class="fal">&nbsp;&nbsp;<small><span class="red">RED++</span> by Jonas John &amp; Robert 'NotBob' Bookerby</small></span><span class="far">&nbsp;&nbsp;<span class="moddate">mod: 2025-12</span>&nbsp;</span>
+<span class="fal">&nbsp;&nbsp;<small><span class="red">RED++</span> by Jonas John &amp; Robert 'NotBob' Bookerby</small></span><span class="far">&nbsp;&nbsp;<span class="moddate">mod: 2026-06</span>&nbsp;</span>
 </div>
 </div></body>
 </html>

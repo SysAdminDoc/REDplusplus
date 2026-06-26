@@ -20,7 +20,7 @@
  <a href="rphCmdline.htm"  >Command Line</a>
  <a href="rphCredits.htm"  >Credits, License</a>
  <a href="rphChangelog.htm">Change Log</a>
- <p class="nih">Hover Over Images to ENLARGE Them</p>
+ <p class="nih">Screenshots scale to fit this help window.</p>
  </div>
 </div>
 <!-- ======= ======= ======= ======= ======= ======= ======= -->
@@ -42,11 +42,11 @@ Remove Empty Directories ++ (aka <span class="red">RED++</span>) finds, displays
  <li>User configurable filters to control directory processing</li>
  <li>Filter rules can be enabled / disabled as required</li>
  <li>Can treat directories with empty files as empty and can optionally remove standalone zero-byte files</li>
- <li>One-click restore of the last deletion run from the Extras menu</li>
+ <li>One-click restore of previous deletion runs from the More menu</li>
  <li><span class="nbn">.redkeep</span> marker files protect a directory and its subtree wherever it is copied</li>
  <li>Optional MFT turbo scan for NTFS/ReFS volumes when running as administrator</li>
  <li>Headless command-line mode for scheduled or scripted scans</li>
- <li>Portable</li>
+ <li>Portable, self-contained release with no runtime installer</li>
 </ul>
 <p>
 <span class="red">RED++</span> is an enhanced version of <a href="https://www.jonasjohn.de/" target="_blank">Jonas John</a>'s Remove Empty Directories (aka <a href="https://github.com/hxseven/Remove-Empty-Directories/" target="_blank">RED</a>). I <span class="sm">[NotBob]</span> found RED very useful over the years, but I wanted a little bit more. Jonas hadn't updated RED in over 4 years and was unresponsive to email contact. And so <span class="red">RED++</span> was created.
@@ -64,8 +64,8 @@ Remove Empty Directories ++ (aka <span class="red">RED++</span>) finds, displays
 <h4>System Requirements</h4>
 <ul>
 <li>Windows 10 22H2, Windows 11, or Windows Server 2022/2025</li>
-<li>Microsoft .NET Framework 4.8.1</li>
-<li>There is no installer. Just unzip into a folder of your choice and run it.</li>
+<li>No separate runtime install is required. The release bundles .NET 10.</li>
+<li>There is no installer. Unzip into a folder of your choice and run <span class="nbn">RED+.exe</span>.</li>
 </ul>
 
 <div class="note">
@@ -74,16 +74,15 @@ I've been using versions of the original RED for many years, and this enhanced R
 </div>
 
 <div class="btd">
-The <b>Search</b> tab on main screen is where you specify the directory where a search for empty directories is to begin, perform the search, and show the results.
-It is also where you can delete the empty directories it has found.
-The results of a search are shown in a treeview. The icons next to each directory are explained in the legend to the right of the treeview.
+The <b>Search</b> screen is where you choose the scan target, review results, and decide what should be removed.
+Results appear in a review list with status and reason details, so protected, ignored, failed, deleted, and deletion-ready entries can be checked before any destructive action.
 <figure><img class="imgx" src="img/screen-M02.png"><figcaption>The Main Search Screen Showing the Results of a Search</figcaption></figure>
 </div>
 </div>
 <!-- ======= ======= ======= ======= ======= ======= ======= -->
 <hr><p>&nbsp;</p>
 <div class="footer">
-<span class="fal">&nbsp;&nbsp;<small><span class="red">RED++</span> by Jonas John &amp; Robert 'NotBob' Bookerby</small></span><span class="far">&nbsp;&nbsp;<span class="moddate">mod: 2025-12</span>&nbsp;</span>
+<span class="fal">&nbsp;&nbsp;<small><span class="red">RED++</span> by Jonas John &amp; Robert 'NotBob' Bookerby</small></span><span class="far">&nbsp;&nbsp;<span class="moddate">mod: 2026-06</span>&nbsp;</span>
 </div>
 </div>
 </body>
