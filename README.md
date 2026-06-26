@@ -133,6 +133,8 @@ Options:
 | `-system`, `-ignore-system` | Include or ignore system directories for this run. |
 | `-lockout`, `-no-lockout` | Force report-only mode (no deletions) or override a config-level lockout. |
 | `-parallel <n>` | Parallel subdirectory scan threads (2-16, 0=serial). Speeds up UNC/SMB roots. |
+| `-exclude <name>` | Skip directories matching `<name>` for this run (repeatable, composable with config filters). |
+| `-protect <name>` | Prevent deletion of directories matching `<name>` for this run (repeatable). |
 | `-export <file>` | Write results to `.txt` / `.csv` / `.json` / `.ps1` / `.html` (chosen by extension). |
 | `-json` | Emit NDJSON to stdout: one `meta` record (version, run totals, and elapsed time), then one `result` record per directory. |
 | `-quiet` | Suppress stdout/stderr; use only the process exit code and optional `-log`. |
