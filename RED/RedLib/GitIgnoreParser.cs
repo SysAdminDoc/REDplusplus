@@ -185,10 +185,14 @@ namespace RED
                     text = name;
                 }
 
-                if (rule.Pattern.IsMatch(text))
+                try
                 {
-                    ignored = !rule.Negated;
+                    if (rule.Pattern.IsMatch(text))
+                    {
+                        ignored = !rule.Negated;
+                    }
                 }
+                catch (RegexMatchTimeoutException) { }
             }
 
             return ignored;
@@ -279,7 +283,7 @@ namespace RED
             else
                 pattern = "(?:^|/)" + pattern + "(?:$|/)";
 
-            return new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            return new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
         }
 
         private class GitIgnoreRule

@@ -17,6 +17,8 @@ namespace RED
         static OsCriticalPaths()
         {
             string winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+            if (string.IsNullOrEmpty(winDir))
+                winDir = @"C:\Windows";
             string root = Path.GetPathRoot(winDir);
             if (string.IsNullOrEmpty(root))
                 root = @"C:\";

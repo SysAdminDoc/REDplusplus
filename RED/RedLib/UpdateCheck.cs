@@ -47,7 +47,7 @@ namespace RED
                 try
                 {
                     string[] lines = File.ReadAllLines(stateFilePath);
-                    if (lines.Length >= 1) DateTime.TryParse(lines[0], out lastCheck);
+                    if (lines.Length >= 1) DateTime.TryParse(lines[0], System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out lastCheck);
                     if (lines.Length >= 2) lastETag = lines[1];
                 }
                 catch { }
@@ -63,7 +63,11 @@ namespace RED
                 request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
 
                 if (!string.IsNullOrEmpty(lastETag))
-                    request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(lastETag));
+                {
+                    EntityTagHeaderValue parsedETag;
+                    if (EntityTagHeaderValue.TryParse(lastETag, out parsedETag))
+                        request.Headers.IfNoneMatch.Add(parsedETag);
+                }
 
                 var task = SharedClient.SendAsync(request);
                 task.Wait();

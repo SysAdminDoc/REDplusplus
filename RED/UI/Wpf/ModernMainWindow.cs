@@ -1735,11 +1735,11 @@ namespace RED.UI.Wpf
                 try
                 {
                     UndoManager.Restore(manifestPath, out restored, out failed,
-                        msg => Dispatcher.Invoke(() => detailStatusText.Text = msg));
+                        msg => Dispatcher.BeginInvoke(() => detailStatusText.Text = msg));
                 }
                 catch (Exception ex) { error = ex; }
 
-                Dispatcher.Invoke(() =>
+                Dispatcher.BeginInvoke(() =>
                 {
                     UpdateUiState(false);
                     progressBar.IsIndeterminate = false;

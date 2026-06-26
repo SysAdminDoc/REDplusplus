@@ -395,7 +395,7 @@ namespace RED
 				string dir = Path.GetDirectoryName(ManifestPath);
 				var files = Directory.GetFiles(dir, ManifestPrefix + "*" + ManifestSuffix)
 					.Where(f => !Path.GetFileName(f).Equals(LatestManifestName, StringComparison.OrdinalIgnoreCase))
-					.OrderByDescending(f => f)
+					.OrderByDescending(f => Path.GetFileName(f))
 					.ToList();
 
 				for (int i = maxCount; i < files.Count; i++)
