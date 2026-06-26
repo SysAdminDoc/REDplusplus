@@ -313,7 +313,7 @@ namespace RED.Helper
             List<string> respx = new List<string>();
             for (int i = 0; i < v.Count; i++)
             {
-                respx.Add(v[i].FullPath);
+                respx.Add(v[i].FullPath ?? string.Empty);
             }
             return respx;
         }

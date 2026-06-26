@@ -347,7 +347,10 @@ namespace RED
 
 				RotateManifests(DefaultMaxManifests, log);
 			}
-			catch { }
+			catch (Exception ex)
+			{
+				log?.Invoke(TXT.Translate("WARNING: Failed to write undo manifest — deletions cannot be restored: {0}", ex.Message));
+			}
 		}
 
 		private static string BuildManifestJson(string deleteMode, IList<ManifestEntry> entries, IList<string> roots)

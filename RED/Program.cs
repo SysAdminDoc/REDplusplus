@@ -595,7 +595,7 @@ namespace RED
 			{
 				singleInstanceMutex = new Mutex(true, "Global\\REDplusplus_SingleInstance", out createdNew);
 			}
-			catch (UnauthorizedAccessException)
+			catch (Exception ex) when (ex is UnauthorizedAccessException || ex is System.Threading.AbandonedMutexException || ex is System.IO.IOException)
 			{
 				createdNew = true;
 				singleInstanceMutex = null;
@@ -1114,7 +1114,7 @@ namespace RED
 
 		private static System.Collections.Generic.IEnumerable<string> GetPathLines(System.Collections.Generic.List<RedScanResultItem> results)
 		{
-			foreach (RedScanResultItem item in results) yield return item.FullPath;
+			foreach (RedScanResultItem item in results) yield return item.FullPath ?? string.Empty;
 		}
 
 		private static void PrintVersion()
