@@ -527,7 +527,7 @@ namespace RED
 
 			if (!ignoreSubDirectory)
 			{
-				if (curDir.CreationTime.AddHours(this.RunData.MinFolderAgeHours) < DateTime.Now)
+				if (curDir.CreationTimeUtc.AddHours(this.RunData.MinFolderAgeHours) < DateTime.UtcNow)
 				{
 					subFolderStatus = this.CheckIfDirectoryEmpty(curDir, depth + 1, gitIgnore, out subIgnoredFiles);
 				}

@@ -345,7 +345,16 @@ namespace RED
 				}
 				else
 				{
-					string detail = (result != null) ? new System.ComponentModel.Win32Exception(result.HResult & 0xFFFF).Message : TXT.Translate("Operation did not complete");
+					string detail;
+					if (result != null)
+					{
+						var hrEx = System.Runtime.InteropServices.Marshal.GetExceptionForHR(result.HResult);
+						detail = hrEx != null ? hrEx.Message : string.Format("HRESULT 0x{0:X8}", result.HResult);
+					}
+					else
+					{
+						detail = TXT.Translate("Operation did not complete");
+					}
 					this.Data.AddLogMessage(TXT.Translate("Failed to delete directory: {0} - {1}", RedAssist.DQuote(path), RedGetText.Words.ErrorMessage1(detail)));
 					this.FailedCount++;
 					this.ReportProgress(1, new DeleteProcessUpdateEventArgs(pos, scanResult, DirectoryDeletionStatusTypes.Warning, total));

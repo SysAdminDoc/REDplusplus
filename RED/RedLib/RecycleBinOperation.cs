@@ -210,7 +210,16 @@ namespace RED
 					int queued = 0;
 					foreach (string path in paths)
 					{
-						IShellItem item = SHCreateItemFromParsingName(path, IntPtr.Zero, ref IID_IShellItem);
+						IShellItem item;
+						try
+						{
+							item = SHCreateItemFromParsingName(path, IntPtr.Zero, ref IID_IShellItem);
+						}
+						catch (System.Runtime.InteropServices.COMException)
+						{
+							sink.Results.Add(new ItemResult { Path = path, HResult = unchecked((int)0x80070002) });
+							continue;
+						}
 						try
 						{
 							fileOp.DeleteItem(item, null);
@@ -218,9 +227,6 @@ namespace RED
 						}
 						finally
 						{
-							// DeleteItem AddRefs the item internally, so releasing our
-							// reference now keeps the batch from accumulating live shell
-							// RCWs across hundreds/thousands of queued directories.
 							Marshal.ReleaseComObject(item);
 						}
 					}
