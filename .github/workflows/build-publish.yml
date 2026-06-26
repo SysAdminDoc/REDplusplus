@@ -34,6 +34,9 @@ jobs:
           $epoch = git log -1 --format=%ct
           echo "SOURCE_DATE_EPOCH=$epoch" >> $env:GITHUB_ENV
 
+      - name: Build and run tests
+        run: dotnet test "RED.Tests/RED.Tests.csproj" -c Release --logger "console;verbosity=normal"
+
       - name: Publish self-contained single-file (x64)
         run: dotnet publish "RED/RED+.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish-x64
 
