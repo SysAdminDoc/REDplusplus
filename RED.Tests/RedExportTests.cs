@@ -116,6 +116,21 @@ namespace RED.Tests
         }
 
         [Fact]
+        public void EscapeJson_NullReturnsEmpty()
+        {
+            Assert.Equal(string.Empty, RedExportScanResults.EscapeJson(null));
+        }
+
+        [Theory]
+        [InlineData("\n", "\\n")]
+        [InlineData("\r", "\\r")]
+        [InlineData("\x01", "\\u0001")]
+        public void EscapeJson_ControlCharacters(string input, string expected)
+        {
+            Assert.Equal(expected, RedExportScanResults.EscapeJson(input));
+        }
+
+        [Fact]
         public void WriteHtmlReport_ContainsAllResults()
         {
             var results = BuildSampleResults();

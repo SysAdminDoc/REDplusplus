@@ -42,7 +42,8 @@ namespace RED
 		[System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
 		private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
 
-		internal static readonly string ForwardSignalPath = Path.Combine(Path.GetTempPath(), "REDplusplus_forward.path");
+		internal static readonly string ForwardSignalPath = Path.Combine(Path.GetTempPath(),
+			"REDplusplus_" + System.Security.Principal.WindowsIdentity.GetCurrent().User?.Value + "_forward.path");
 
 		private const uint LOAD_LIBRARY_SEARCH_SYSTEM32 = 0x00000800;
 
@@ -75,7 +76,7 @@ namespace RED
 		{
 			try
 			{
-				var policy = new PROCESS_MITIGATION_REDIRECTION_TRUST_POLICY { Flags = 0x1 };
+				var policy = new PROCESS_MITIGATION_REDIRECTION_TRUST_POLICY { Flags = 0x3 };
 				SetProcessMitigationPolicy(ProcessRedirectionTrustPolicy, ref policy,
 					(uint)System.Runtime.InteropServices.Marshal.SizeOf(policy));
 			}

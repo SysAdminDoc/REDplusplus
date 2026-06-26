@@ -148,7 +148,10 @@ namespace RED.Helper
                 bool invisible =
                     (c >= '\u202A' && c <= '\u202E') ||                // LRE/RLE/PDF/LRO/RLO
                     (c >= '\u2066' && c <= '\u2069') ||                // LRI/RLI/FSI/PDI
-                    c == '\u200B' || c == '\u200E' || c == '\u200F' || // ZWSP/LRM/RLM
+                    (c >= '\u2060' && c <= '\u2064') ||                // Word Joiner, invisible operators
+                    c == '\u200B' || c == '\u200C' || c == '\u200D' || // ZWSP/ZWNJ/ZWJ
+                    c == '\u200E' || c == '\u200F' ||                  // LRM/RLM
+                    c == '\uFEFF' ||                                   // BOM / ZWNBSP
                     (char.IsControl(c) && c != '\t');
 
                 if (invisible)

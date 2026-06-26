@@ -169,7 +169,7 @@ namespace RED.Helper
                 string kind = v[i].Kind == Match.ResultKind.File ? "file" : "directory";
                 string escapedPath = EscapeJson(v[i].FullPath);
                 string escapedReason = EscapeJson(v[i].StatusReason);
-                sb.AppendFormat("  {{ \"kind\": \"{0}\", \"path\": \"{1}\", \"status\": \"{2}\", \"reason\": \"{3}\", \"ignoredFileCount\": {4} }}", kind, escapedPath, v[i].SearchStatus, escapedReason, v[i].IgnoredFileCount);
+                sb.AppendFormat("  {{ \"kind\": \"{0}\", \"path\": \"{1}\", \"status\": \"{2}\", \"reason\": \"{3}\", \"ignoredFileCount\": {4} }}", kind, escapedPath, EscapeJson(v[i].SearchStatus.ToString()), escapedReason, v[i].IgnoredFileCount);
                 if (i < v.Count - 1) sb.Append(",");
                 sb.AppendLine();
             }
@@ -232,7 +232,8 @@ namespace RED.Helper
             sb.AppendLine("$targets = @(");
             for (int i = 0; i < dirs.Count; i++)
             {
-                sb.AppendLine("  '" + dirs[i].Replace("'", "''") + "'" + (i < dirs.Count - 1 ? "," : ""));
+                string safePath = dirs[i].Replace("'", "''").Replace("\r", "").Replace("\n", "");
+                sb.AppendLine("  '" + safePath + "'" + (i < dirs.Count - 1 ? "," : ""));
             }
             sb.AppendLine(")");
             sb.AppendLine();

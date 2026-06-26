@@ -43,6 +43,8 @@ namespace NotBob.Config
                         // restore any missing sub-object before anything dereferences it.
                         config?.EnsureSubObjects();
 
+                        if (config == null) break;
+
                         // Does the config file redirect to another location?
                         if (!string.IsNullOrWhiteSpace(config.RedirectTo))
                         {
