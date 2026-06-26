@@ -48,6 +48,7 @@
     <!-- Self-contained single-file publish settings (release.yml drives publish
          with -p:PublishSingleFile=true; the RID is supplied on the command line). -->
     <SelfContained Condition="'$(PublishSingleFile)' == 'true'">true</SelfContained>
+    <PublishReadyToRun Condition="'$(PublishSingleFile)' == 'true'">true</PublishReadyToRun>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
