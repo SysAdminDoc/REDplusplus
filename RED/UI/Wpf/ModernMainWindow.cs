@@ -84,24 +84,27 @@ namespace RED.UI.Wpf
         private const double PreferredMinWidth = 1020d;
         private const double PreferredMinHeight = 660d;
 
-        private static readonly Brush Bg = BrushFrom("#0b1420");
-        private static readonly Brush Bg2 = BrushFrom("#101b2a");
-        private static readonly Brush Panel = BrushFrom("#152235");
-        private static readonly Brush Panel2 = BrushFrom("#1b2940");
-        private static readonly Brush Border = BrushFrom("#3b4a61");
-        private static readonly Brush BorderStrong = BrushFrom("#53647d");
-        private static readonly Brush Text = BrushFrom("#e8eefb");
-        private static readonly Brush Muted = BrushFrom("#a7b3c9");
-        private static readonly Brush Muted2 = BrushFrom("#74829b");
-        private static readonly Brush Blue = BrushFrom("#2f6df2");
-        private static readonly Brush BlueLight = BrushFrom("#7aa8ff");
-        private static readonly Brush Red = BrushFrom("#dc3548");
+        private static readonly FontFamily UiFont = new FontFamily("Segoe UI Variable Text, Segoe UI");
+        private static readonly Brush Bg = BrushFrom("#0f141b");
+        private static readonly Brush Bg2 = BrushFrom("#121922");
+        private static readonly Brush Panel = BrushFrom("#172130");
+        private static readonly Brush Panel2 = BrushFrom("#1e2a3a");
+        private static readonly Brush Surface = BrushFrom("#0d1219");
+        private static readonly Brush SurfaceRaised = BrushFrom("#111b28");
+        private static readonly Brush Border = BrushFrom("#2d3a4d");
+        private static readonly Brush BorderStrong = BrushFrom("#4d5f78");
+        private static readonly Brush Text = BrushFrom("#edf2fb");
+        private static readonly Brush Muted = BrushFrom("#a9b6ca");
+        private static readonly Brush Muted2 = BrushFrom("#77859a");
+        private static readonly Brush Blue = BrushFrom("#3f7cf5");
+        private static readonly Brush BlueLight = BrushFrom("#91b7ff");
+        private static readonly Brush Red = BrushFrom("#ef4554");
         // A brighter red than the legend swatch, for status text that must stay legible
         // on the dark result surface (the #dc3548 swatch dips below AA at body size).
-        private static readonly Brush RedText = BrushFrom("#ff7a86");
-        private static readonly Brush Green = BrushFrom("#67d16f");
-        private static readonly Brush Amber = BrushFrom("#ffca55");
-        private static readonly Brush Pink = BrushFrom("#f17aa5");
+        private static readonly Brush RedText = BrushFrom("#ff8792");
+        private static readonly Brush Green = BrushFrom("#6ed17b");
+        private static readonly Brush Amber = BrushFrom("#f6c75a");
+        private static readonly Brush Pink = BrushFrom("#f08ab1");
 
         // Keyboard-focus ring for the non-button controls (text box, combo, lists),
         // which otherwise show only WPF's near-invisible dotted default on this dark
@@ -135,6 +138,11 @@ namespace RED.UI.Wpf
             WindowStyle = WindowStyle.None;
             ResizeMode = ResizeMode.CanResizeWithGrip;
             Background = Bg;
+            FontFamily = UiFont;
+            UseLayoutRounding = true;
+            SnapsToDevicePixels = true;
+            TextOptions.SetTextFormattingMode(this, TextFormattingMode.Display);
+            TextOptions.SetTextRenderingMode(this, TextRenderingMode.ClearType);
             Icon = ToImageSource(Properties.Resources.iconProject);
 
             LoadConfig();
@@ -191,10 +199,12 @@ namespace RED.UI.Wpf
 
         private void BuildUi()
         {
-            rootGrid = new Grid { Background = Bg };
+            rootGrid = new Grid { Background = Bg, SnapsToDevicePixels = true, UseLayoutRounding = true };
             rootGrid.Resources.Add(typeof(WpfButton), CreateButtonStyle());
+            rootGrid.Resources.Add(typeof(WpfCheckBox), CreateCheckBoxStyle());
+            rootGrid.Resources.Add(typeof(WpfComboBox), CreateComboBoxStyle());
             rootGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(52) });
-            rootGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(58) });
+            rootGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(54) });
             rootGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             rootGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(76) });
             rootGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(34) });
@@ -238,7 +248,7 @@ namespace RED.UI.Wpf
             var border = new FrameworkElementFactory(typeof(System.Windows.Controls.Border));
             border.Name = "ButtonChrome";
             border.SetValue(System.Windows.Controls.Border.SnapsToDevicePixelsProperty, true);
-            border.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(4));
+            border.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(6));
             border.SetBinding(System.Windows.Controls.Border.BackgroundProperty, new Binding("Background") { RelativeSource = RelativeSource.TemplatedParent });
             border.SetBinding(System.Windows.Controls.Border.BorderBrushProperty, new Binding("BorderBrush") { RelativeSource = RelativeSource.TemplatedParent });
             border.SetBinding(System.Windows.Controls.Border.BorderThicknessProperty, new Binding("BorderThickness") { RelativeSource = RelativeSource.TemplatedParent });
@@ -257,7 +267,7 @@ namespace RED.UI.Wpf
             // hover/press feedback regardless of its base color.
             var overlay = new FrameworkElementFactory(typeof(System.Windows.Controls.Border));
             overlay.Name = "HoverOverlay";
-            overlay.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(4));
+            overlay.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(6));
             overlay.SetValue(System.Windows.Controls.Border.BackgroundProperty, Brushes.Transparent);
             overlay.SetValue(UIElement.IsHitTestVisibleProperty, false);
             layers.AppendChild(overlay);
@@ -266,7 +276,7 @@ namespace RED.UI.Wpf
             // button takes keyboard focus, so it is visible on any background.
             var focusRing = new FrameworkElementFactory(typeof(System.Windows.Controls.Border));
             focusRing.Name = "FocusRing";
-            focusRing.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(4));
+            focusRing.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(6));
             focusRing.SetValue(System.Windows.Controls.Border.BorderBrushProperty, Brushes.Transparent);
             focusRing.SetValue(System.Windows.Controls.Border.BorderThicknessProperty, new Thickness(2));
             focusRing.SetValue(UIElement.IsHitTestVisibleProperty, false);
@@ -288,6 +298,209 @@ namespace RED.UI.Wpf
             focus.Setters.Add(new Setter(System.Windows.Controls.Border.BorderBrushProperty, BlueLight, "FocusRing"));
             template.Triggers.Add(focus);
 
+            return template;
+        }
+
+        private static Style CreateCheckBoxStyle()
+        {
+            var style = new Style(typeof(WpfCheckBox));
+            style.Setters.Add(new Setter(Control.ForegroundProperty, Text));
+            style.Setters.Add(new Setter(Control.FontSizeProperty, 15d));
+            style.Setters.Add(new Setter(Control.VerticalContentAlignmentProperty, VerticalAlignment.Center));
+            style.Setters.Add(new Setter(Control.TemplateProperty, CreateCheckBoxTemplate()));
+
+            var disabled = new Trigger { Property = UIElement.IsEnabledProperty, Value = false };
+            disabled.Setters.Add(new Setter(UIElement.OpacityProperty, 0.46));
+            style.Triggers.Add(disabled);
+            return style;
+        }
+
+        private static ControlTemplate CreateCheckBoxTemplate()
+        {
+            var template = new ControlTemplate(typeof(WpfCheckBox));
+            var dock = new FrameworkElementFactory(typeof(DockPanel));
+            dock.SetValue(DockPanel.LastChildFillProperty, true);
+
+            var box = new FrameworkElementFactory(typeof(System.Windows.Controls.Border));
+            box.Name = "CheckBoxChrome";
+            box.SetValue(FrameworkElement.WidthProperty, 18d);
+            box.SetValue(FrameworkElement.HeightProperty, 18d);
+            box.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 1, 10, 0));
+            box.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(4));
+            box.SetValue(System.Windows.Controls.Border.BackgroundProperty, Surface);
+            box.SetValue(System.Windows.Controls.Border.BorderBrushProperty, BorderStrong);
+            box.SetValue(System.Windows.Controls.Border.BorderThicknessProperty, new Thickness(1));
+            box.SetValue(System.Windows.Controls.Border.SnapsToDevicePixelsProperty, true);
+            box.SetValue(DockPanel.DockProperty, Dock.Left);
+
+            var check = new FrameworkElementFactory(typeof(System.Windows.Shapes.Path));
+            check.Name = "CheckMark";
+            check.SetValue(System.Windows.Shapes.Path.DataProperty, IconCheck);
+            check.SetValue(System.Windows.Shapes.Path.StrokeProperty, Text);
+            check.SetValue(System.Windows.Shapes.Path.StrokeThicknessProperty, 3d);
+            check.SetValue(System.Windows.Shapes.Path.StrokeStartLineCapProperty, PenLineCap.Round);
+            check.SetValue(System.Windows.Shapes.Path.StrokeEndLineCapProperty, PenLineCap.Round);
+            check.SetValue(System.Windows.Shapes.Path.StrokeLineJoinProperty, PenLineJoin.Round);
+            check.SetValue(System.Windows.Shapes.Path.FillProperty, Brushes.Transparent);
+            check.SetValue(FrameworkElement.WidthProperty, 11d);
+            check.SetValue(FrameworkElement.HeightProperty, 11d);
+            check.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+            check.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+            check.SetValue(System.Windows.Shapes.Path.StretchProperty, Stretch.Uniform);
+            check.SetValue(UIElement.VisibilityProperty, Visibility.Collapsed);
+            box.AppendChild(check);
+
+            var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
+            presenter.SetValue(ContentPresenter.SnapsToDevicePixelsProperty, true);
+            presenter.SetValue(ContentPresenter.VerticalAlignmentProperty, VerticalAlignment.Center);
+            presenter.SetBinding(ContentPresenter.ContentProperty, new Binding("Content") { RelativeSource = RelativeSource.TemplatedParent });
+            presenter.SetBinding(ContentPresenter.ContentTemplateProperty, new Binding("ContentTemplate") { RelativeSource = RelativeSource.TemplatedParent });
+            presenter.SetBinding(ContentPresenter.ContentStringFormatProperty, new Binding("ContentStringFormat") { RelativeSource = RelativeSource.TemplatedParent });
+
+            dock.AppendChild(box);
+            dock.AppendChild(presenter);
+            template.VisualTree = dock;
+
+            var checkedTrigger = new Trigger { Property = ToggleButton.IsCheckedProperty, Value = true };
+            checkedTrigger.Setters.Add(new Setter(UIElement.VisibilityProperty, Visibility.Visible, "CheckMark"));
+            checkedTrigger.Setters.Add(new Setter(System.Windows.Controls.Border.BackgroundProperty, Blue, "CheckBoxChrome"));
+            checkedTrigger.Setters.Add(new Setter(System.Windows.Controls.Border.BorderBrushProperty, BlueLight, "CheckBoxChrome"));
+            template.Triggers.Add(checkedTrigger);
+
+            var hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
+            hover.Setters.Add(new Setter(System.Windows.Controls.Border.BorderBrushProperty, BlueLight, "CheckBoxChrome"));
+            template.Triggers.Add(hover);
+
+            var focus = new Trigger { Property = UIElement.IsKeyboardFocusWithinProperty, Value = true };
+            focus.Setters.Add(new Setter(System.Windows.Controls.Border.BorderBrushProperty, BlueLight, "CheckBoxChrome"));
+            focus.Setters.Add(new Setter(System.Windows.Controls.Border.BorderThicknessProperty, new Thickness(2), "CheckBoxChrome"));
+            template.Triggers.Add(focus);
+
+            return template;
+        }
+
+        private static Style CreateComboBoxStyle()
+        {
+            var style = new Style(typeof(WpfComboBox));
+            style.Setters.Add(new Setter(Control.BackgroundProperty, Surface));
+            style.Setters.Add(new Setter(Control.ForegroundProperty, Text));
+            style.Setters.Add(new Setter(Control.BorderBrushProperty, BorderStrong));
+            style.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(1)));
+            style.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(10, 0, 10, 0)));
+            style.Setters.Add(new Setter(Control.TemplateProperty, CreateComboBoxTemplate()));
+            return style;
+        }
+
+        private static ControlTemplate CreateComboBoxTemplate()
+        {
+            var template = new ControlTemplate(typeof(WpfComboBox));
+            var grid = new FrameworkElementFactory(typeof(Grid));
+
+            var toggle = new FrameworkElementFactory(typeof(ToggleButton));
+            toggle.Name = "ComboToggle";
+            toggle.SetValue(UIElement.FocusableProperty, false);
+            toggle.SetValue(Control.ForegroundProperty, Text);
+            toggle.SetValue(ButtonBase.ClickModeProperty, ClickMode.Press);
+            toggle.SetValue(Control.TemplateProperty, CreateContentOnlyToggleTemplate());
+            toggle.SetBinding(ToggleButton.IsCheckedProperty, new Binding("IsDropDownOpen")
+            {
+                RelativeSource = RelativeSource.TemplatedParent,
+                Mode = BindingMode.TwoWay
+            });
+
+            var chrome = new FrameworkElementFactory(typeof(System.Windows.Controls.Border));
+            chrome.Name = "ComboChrome";
+            chrome.SetValue(System.Windows.Controls.Border.BackgroundProperty, Surface);
+            chrome.SetValue(System.Windows.Controls.Border.BorderBrushProperty, BorderStrong);
+            chrome.SetValue(System.Windows.Controls.Border.BorderThicknessProperty, new Thickness(1));
+            chrome.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(6));
+            chrome.SetValue(System.Windows.Controls.Border.SnapsToDevicePixelsProperty, true);
+
+            var chromeGrid = new FrameworkElementFactory(typeof(Grid));
+            chromeGrid.SetValue(FrameworkElement.MarginProperty, new Thickness(0));
+            var content = new FrameworkElementFactory(typeof(ContentPresenter));
+            content.Name = "ContentSite";
+            content.SetValue(FrameworkElement.MarginProperty, new Thickness(12, 0, 36, 0));
+            content.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+            content.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Left);
+            content.SetValue(UIElement.IsHitTestVisibleProperty, false);
+            content.SetValue(System.Windows.Documents.TextElement.ForegroundProperty, Text);
+            content.SetBinding(ContentPresenter.ContentProperty, new Binding("SelectionBoxItem") { RelativeSource = RelativeSource.TemplatedParent });
+            content.SetBinding(ContentPresenter.ContentTemplateProperty, new Binding("SelectionBoxItemTemplate") { RelativeSource = RelativeSource.TemplatedParent });
+            content.SetBinding(ContentPresenter.ContentStringFormatProperty, new Binding("SelectionBoxItemStringFormat") { RelativeSource = RelativeSource.TemplatedParent });
+            chromeGrid.AppendChild(content);
+
+            var arrow = new FrameworkElementFactory(typeof(System.Windows.Shapes.Path));
+            arrow.SetValue(System.Windows.Shapes.Path.DataProperty, Glyph("M10,14 L18,22 L26,14"));
+            arrow.SetValue(System.Windows.Shapes.Path.StrokeProperty, Muted);
+            arrow.SetValue(System.Windows.Shapes.Path.StrokeThicknessProperty, 2.2d);
+            arrow.SetValue(System.Windows.Shapes.Path.StrokeStartLineCapProperty, PenLineCap.Round);
+            arrow.SetValue(System.Windows.Shapes.Path.StrokeEndLineCapProperty, PenLineCap.Round);
+            arrow.SetValue(System.Windows.Shapes.Path.StrokeLineJoinProperty, PenLineJoin.Round);
+            arrow.SetValue(System.Windows.Shapes.Path.FillProperty, Brushes.Transparent);
+            arrow.SetValue(FrameworkElement.WidthProperty, 16d);
+            arrow.SetValue(FrameworkElement.HeightProperty, 16d);
+            arrow.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Right);
+            arrow.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+            arrow.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 0, 12, 0));
+            arrow.SetValue(System.Windows.Shapes.Path.StretchProperty, Stretch.Uniform);
+            chromeGrid.AppendChild(arrow);
+
+            chrome.AppendChild(chromeGrid);
+            toggle.AppendChild(chrome);
+            grid.AppendChild(toggle);
+
+            var popup = new FrameworkElementFactory(typeof(Popup));
+            popup.Name = "Popup";
+            popup.SetValue(Popup.PlacementProperty, PlacementMode.Bottom);
+            popup.SetValue(Popup.AllowsTransparencyProperty, true);
+            popup.SetValue(UIElement.FocusableProperty, false);
+            popup.SetBinding(Popup.IsOpenProperty, new Binding("IsDropDownOpen") { RelativeSource = RelativeSource.TemplatedParent });
+
+            var dropBorder = new FrameworkElementFactory(typeof(System.Windows.Controls.Border));
+            dropBorder.SetValue(System.Windows.Controls.Border.BackgroundProperty, Panel2);
+            dropBorder.SetValue(System.Windows.Controls.Border.BorderBrushProperty, BorderStrong);
+            dropBorder.SetValue(System.Windows.Controls.Border.BorderThicknessProperty, new Thickness(1));
+            dropBorder.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(6));
+            dropBorder.SetBinding(FrameworkElement.MinWidthProperty, new Binding("ActualWidth") { RelativeSource = RelativeSource.TemplatedParent });
+            dropBorder.SetValue(FrameworkElement.MaxHeightProperty, 260d);
+
+            var scroll = new FrameworkElementFactory(typeof(ScrollViewer));
+            scroll.SetValue(ScrollViewer.CanContentScrollProperty, true);
+            scroll.SetValue(ScrollViewer.HorizontalScrollBarVisibilityProperty, ScrollBarVisibility.Disabled);
+            scroll.SetValue(ScrollViewer.VerticalScrollBarVisibilityProperty, ScrollBarVisibility.Auto);
+            var items = new FrameworkElementFactory(typeof(ItemsPresenter));
+            scroll.AppendChild(items);
+            dropBorder.AppendChild(scroll);
+            popup.AppendChild(dropBorder);
+            grid.AppendChild(popup);
+
+            template.VisualTree = grid;
+
+            var hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
+            hover.Setters.Add(new Setter(System.Windows.Controls.Border.BorderBrushProperty, BlueLight, "ComboChrome"));
+            template.Triggers.Add(hover);
+            var focus = new Trigger { Property = UIElement.IsKeyboardFocusWithinProperty, Value = true };
+            focus.Setters.Add(new Setter(System.Windows.Controls.Border.BorderBrushProperty, BlueLight, "ComboChrome"));
+            focus.Setters.Add(new Setter(System.Windows.Controls.Border.BorderThicknessProperty, new Thickness(2), "ComboChrome"));
+            template.Triggers.Add(focus);
+            var disabled = new Trigger { Property = UIElement.IsEnabledProperty, Value = false };
+            disabled.Setters.Add(new Setter(UIElement.OpacityProperty, 0.46));
+            template.Triggers.Add(disabled);
+
+            return template;
+        }
+
+        private static ControlTemplate CreateContentOnlyToggleTemplate()
+        {
+            var template = new ControlTemplate(typeof(ToggleButton));
+            var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
+            presenter.SetValue(ContentPresenter.SnapsToDevicePixelsProperty, true);
+            presenter.SetBinding(ContentPresenter.ContentProperty, new Binding("Content") { RelativeSource = RelativeSource.TemplatedParent });
+            presenter.SetBinding(ContentPresenter.ContentTemplateProperty, new Binding("ContentTemplate") { RelativeSource = RelativeSource.TemplatedParent });
+            presenter.SetBinding(ContentPresenter.HorizontalAlignmentProperty, new Binding("HorizontalContentAlignment") { RelativeSource = RelativeSource.TemplatedParent });
+            presenter.SetBinding(ContentPresenter.VerticalAlignmentProperty, new Binding("VerticalContentAlignment") { RelativeSource = RelativeSource.TemplatedParent });
+            template.VisualTree = presenter;
             return template;
         }
 
@@ -432,7 +645,7 @@ namespace RED.UI.Wpf
         {
             var bar = new Border
             {
-                Background = new LinearGradientBrush(ColorFrom("#101d2e"), ColorFrom("#07101b"), 0),
+                Background = new LinearGradientBrush(ColorFrom("#141d29"), ColorFrom("#0b1119"), 0),
                 BorderBrush = Border,
                 BorderThickness = new Thickness(0, 0, 0, 1)
             };
@@ -461,17 +674,26 @@ namespace RED.UI.Wpf
             title.Children.Add(new WpfImage
             {
                 Source = ToImageSource(Properties.Resources.x128_Project),
-                Width = 30,
-                Height = 30,
-                Margin = new Thickness(0, 0, 10, 0)
+                Width = 32,
+                Height = 32,
+                Margin = new Thickness(0, 0, 11, 0)
             });
-            title.Children.Add(new TextBlock
+            var titleText = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            titleText.Children.Add(new TextBlock
             {
-                Text = "RED++ - Remove Empty Directories+",
+                Text = "RED++",
                 Foreground = Text,
-                FontSize = 19,
-                VerticalAlignment = VerticalAlignment.Center
+                FontSize = 18,
+                FontWeight = FontWeights.SemiBold
             });
+            titleText.Children.Add(new TextBlock
+            {
+                Text = "Remove Empty Directories+",
+                Foreground = Muted,
+                FontSize = 12,
+                Margin = new Thickness(0, 1, 0, 0)
+            });
+            title.Children.Add(titleText);
             grid.Children.Add(title);
 
             var chrome = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
@@ -487,7 +709,7 @@ namespace RED.UI.Wpf
             var button = new WpfButton
             {
                 Content = IconPath(icon, Text, 18, 2.3),
-                Width = 66,
+                Width = 58,
                 Height = 50,
                 Background = Brushes.Transparent,
                 BorderBrush = Brushes.Transparent,
@@ -523,8 +745,8 @@ namespace RED.UI.Wpf
         {
             var button = new WpfButton
             {
-                Height = 58,
-                Width = 176,
+                Height = 54,
+                Width = 156,
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0, 0, 1, 0),
                 BorderBrush = Border,
@@ -534,15 +756,15 @@ namespace RED.UI.Wpf
             };
             SetAutomation(button, name + " tab");
             var grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(58) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(48) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            var path = IconPath(icon, Muted, 28, 2.35);
+            var path = IconPath(icon, Muted, 24, 2.25);
             grid.Children.Add(path);
             var text = new TextBlock
             {
                 Text = name,
                 Foreground = Muted,
-                FontSize = 18,
+                FontSize = 15,
                 VerticalAlignment = VerticalAlignment.Center
             };
             Grid.SetColumn(text, 1);
@@ -576,7 +798,7 @@ namespace RED.UI.Wpf
                 path.Stroke = selected ? Text : Muted;
                 text.Foreground = selected ? Text : Muted;
                 text.FontWeight = selected ? FontWeights.SemiBold : FontWeights.Normal;
-                tab.BorderThickness = selected ? new Thickness(1, 0, 1, 3) : new Thickness(0, 0, 1, 0);
+                tab.BorderThickness = selected ? new Thickness(1, 0, 1, 2) : new Thickness(0, 0, 1, 0);
                 tab.BorderBrush = selected ? Blue : Border;
             }
 
@@ -599,14 +821,15 @@ namespace RED.UI.Wpf
 
         private UIElement BuildSearchTab()
         {
-            var group = Frame("Select Directory To Be Searched");
-            var grid = new Grid { Margin = new Thickness(16, 20, 16, 14) };
+            var group = Frame("Scan Target");
+            var grid = new Grid { Margin = new Thickness(18, 18, 18, 16) };
             SetFrameContent(group, grid);
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 620 });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 560 });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(246) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(254) });
 
             var pathRow = new Grid();
             pathRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -618,15 +841,17 @@ namespace RED.UI.Wpf
             pathBox = new WpfTextBox
             {
                 Text = string.IsNullOrWhiteSpace(config.Volatile.LastUsedDirectory) ? @"C:\" : config.Volatile.LastUsedDirectory,
-                Height = 40,
-                FontSize = 17,
+                Height = 42,
+                FontSize = 16,
                 Foreground = Text,
-                Background = Bg,
+                Background = Surface,
                 BorderBrush = BorderStrong,
                 BorderThickness = new Thickness(1),
-                Padding = new Thickness(12, 7, 12, 7),
+                Padding = new Thickness(12, 8, 12, 8),
                 VerticalAlignment = VerticalAlignment.Top,
-                HorizontalAlignment = HorizontalAlignment.Stretch
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                CaretBrush = Text,
+                SelectionBrush = Blue
             };
             pathBox.FocusVisualStyle = FocusVisual;
             pathBox.KeyDown += (s, e) =>
@@ -637,7 +862,7 @@ namespace RED.UI.Wpf
             SetAutomation(pathBox, "Folder to scan", "Enter or paste the root folder RED++ should scan.");
             pathRow.Children.Add(pathBox);
 
-            var browse = OutlineButton("Browse...", 150, 40);
+            var browse = OutlineButton("Browse...", 150, 42, null, IconFolder);
             SetAutomation(browse, "Browse for folder", "Choose the root folder RED++ should scan.");
             browse.HorizontalAlignment = HorizontalAlignment.Stretch;
             browse.VerticalAlignment = VerticalAlignment.Top;
@@ -645,14 +870,27 @@ namespace RED.UI.Wpf
             browse.Click += Browse_Click;
             pathRow.Children.Add(browse);
 
+            var helper = new TextBlock
+            {
+                Text = "Local paths, UNC shares, and environment variables are supported. RED++ always reviews results before changing anything.",
+                Foreground = Muted,
+                FontSize = 13,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(2, 8, 0, 0)
+            };
+            Grid.SetRow(helper, 1);
+            Grid.SetColumnSpan(helper, 3);
+            grid.Children.Add(helper);
+
             resultSurface = new Border
             {
-                Background = new LinearGradientBrush(ColorFrom("#0c1624"), ColorFrom("#142237"), 45),
+                Background = new LinearGradientBrush(ColorFrom("#0d1219"), ColorFrom("#132033"), 45),
                 BorderBrush = BorderStrong,
                 BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
                 Margin = new Thickness(0, 14, 0, 0)
             };
-            Grid.SetRow(resultSurface, 1);
+            Grid.SetRow(resultSurface, 2);
             grid.Children.Add(resultSurface);
 
             var surfaceGrid = new Grid();
@@ -663,7 +901,7 @@ namespace RED.UI.Wpf
             surfaceGrid.Children.Add(emptyState);
 
             var legend = BuildLegend();
-            Grid.SetRow(legend, 1);
+            Grid.SetRow(legend, 2);
             Grid.SetColumn(legend, 2);
             grid.Children.Add(legend);
 
@@ -675,42 +913,44 @@ namespace RED.UI.Wpf
         {
             var outer = new Border
             {
-                Background = BrushFrom("#0b1420"),
+                Background = Surface,
                 BorderBrush = Border,
                 BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 VerticalAlignment = VerticalAlignment.Stretch,
                 Margin = new Thickness(0, 14, 0, 0),
                 Padding = new Thickness(14, 12, 14, 12)
             };
-            var scroll = new ScrollViewer
-            {
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
-            };
             var stack = new StackPanel();
-            scroll.Content = stack;
-            outer.Child = scroll;
+            outer.Child = stack;
             stack.Children.Add(new TextBlock
             {
-                Text = "Result Legend",
+                Text = "Review Guide",
                 Foreground = Text,
-                FontSize = 16,
-                Margin = new Thickness(0, 0, 0, 10)
+                FontSize = 15,
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 0, 0, 4)
             });
-            AddLegendRow(stack, IconHome, "Root", BrushFrom("#d7e6ff"));
-            AddLegendRow(stack, IconFolder, "Empty", BrushFrom("#f3c95f"));
-            AddLegendRow(stack, IconTrash, "Contains 'Trash'", BrushFrom("#79d59a"));
-            AddLegendRow(stack, IconHidden, "Hidden", BrushFrom("#d6b323"), new DoubleCollection(new[] { 3d, 3d }));
-            AddLegendRow(stack, IconLock, "Locked", BrushFrom("#d7b86a"));
-            AddLegendRow(stack, IconNeverEmpty, "Never Empty", BrushFrom("#f3c95f"));
-            AddLegendRow(stack, IconWarning, "Failed", BrushFrom("#ffca55"));
+            stack.Children.Add(new TextBlock
+            {
+                Text = "Status text is the source of truth. Color and icons reinforce it.",
+                Foreground = Muted,
+                FontSize = 12,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 11)
+            });
+            stack.Children.Add(Label("Outcomes", 12, Muted2, FontWeights.SemiBold, new Thickness(0, 0, 0, 7)));
+            AddLegendRow(stack, IconTrash, "Eligible", RedText);
+            AddLegendRow(stack, IconFolder, "Kept / skipped", Muted);
             AddLegendRow(stack, IconShield, "Protected", BlueLight);
             AddLegendRow(stack, IconCheck, "Deleted", Green);
+            AddLegendRow(stack, IconWarning, "Warning / failed", Amber);
             stack.Children.Add(new Border { Height = 1, Background = Border, Margin = new Thickness(0, 8, 0, 9) });
-            AddSwatch(stack, BrushFrom("#59677e"), "Will not be deleted");
-            AddSwatch(stack, Red, "Will be deleted");
-            AddSwatch(stack, Blue, "Protected");
+            stack.Children.Add(Label("Safety", 12, Muted2, FontWeights.SemiBold, new Thickness(0, 0, 0, 7)));
+            AddLegendRow(stack, IconHome, "Root protected", BlueLight);
+            AddLegendRow(stack, IconLock, "Locked unchanged", Amber);
+            stack.Children.Add(Label("RED++ re-checks every item immediately before deleting or moving it.", 12, Muted, FontWeights.Normal, new Thickness(0, 7, 0, 0)));
             return outer;
         }
 
@@ -743,7 +983,7 @@ namespace RED.UI.Wpf
             var grid = new Grid();
             var center = new StackPanel
             {
-                Width = 390,
+                Width = 430,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
             };
@@ -754,25 +994,27 @@ namespace RED.UI.Wpf
             {
                 Text = "Choose a folder to scan.",
                 Foreground = Text,
-                FontSize = 18,
+                FontSize = 19,
+                FontWeight = FontWeights.SemiBold,
                 TextAlignment = TextAlignment.Center,
                 Margin = new Thickness(0, 0, 0, 8)
             };
             center.Children.Add(emptyTitle);
             emptySubtitle = new TextBlock
             {
-                Text = "Review results before anything changes.",
+                Text = "Start with a local folder, network share, or path from the clipboard.",
                 Foreground = Muted,
                 FontSize = 14,
-                LineHeight = 18,
+                LineHeight = 19,
                 TextAlignment = TextAlignment.Center,
-                Margin = new Thickness(0, 0, 0, 10)
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 12)
             };
             center.Children.Add(emptySubtitle);
-            emptyTrust = new StackPanel();
+            emptyTrust = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
             emptyTrust.Children.Add(TrustRow(IconSearch, BlueLight, "Pick a root folder, then scan."));
-            emptyTrust.Children.Add(TrustRow(IconShield, Green, "Review eligible results."));
-            emptyTrust.Children.Add(TrustRow(IconTrash, Pink, "Confirm before changes."));
+            emptyTrust.Children.Add(TrustRow(IconShield, Green, "Review every eligible result."));
+            emptyTrust.Children.Add(TrustRow(IconTrash, Pink, "Confirm before any change is made."));
             center.Children.Add(emptyTrust);
             return grid;
         }
@@ -789,7 +1031,7 @@ namespace RED.UI.Wpf
                 emptyIcon.Stroke = Green;
                 emptyIcon.StrokeDashArray = null;
                 emptyTitle.Text = "No empty directories found.";
-                emptySubtitle.Text = "RED++ scanned this folder and found nothing to remove.";
+                emptySubtitle.Text = "The scan completed with the active filters and no filesystem changes were made.";
                 emptyTrust.Visibility = Visibility.Collapsed;
             }
             else
@@ -798,7 +1040,7 @@ namespace RED.UI.Wpf
                 emptyIcon.Stroke = Muted2;
                 emptyIcon.StrokeDashArray = new DoubleCollection(new[] { 5d, 4d });
                 emptyTitle.Text = "Choose a folder to scan.";
-                emptySubtitle.Text = "Review results before anything changes.";
+                emptySubtitle.Text = "Start with a local folder, network share, or path from the clipboard.";
                 emptyTrust.Visibility = Visibility.Visible;
             }
         }
@@ -809,7 +1051,7 @@ namespace RED.UI.Wpf
             {
                 Orientation = Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Left,
-                Margin = new Thickness(58, 0, 0, 5)
+                Margin = new Thickness(0, 0, 0, 6)
             };
             row.Children.Add(IconPath(icon, brush, 16, 2.05, null, new Thickness(0, 0, 10, 0)));
             row.Children.Add(new TextBlock { Text = text, Foreground = Muted, FontSize = 14, VerticalAlignment = VerticalAlignment.Center });
@@ -826,7 +1068,11 @@ namespace RED.UI.Wpf
                 Foreground = Text,
                 Margin = new Thickness(8)
             };
-            ScrollViewer.SetHorizontalScrollBarVisibility(list, ScrollBarVisibility.Auto);
+            list.Resources.Add(SystemColors.HighlightBrushKey, Panel2);
+            list.Resources.Add(SystemColors.HighlightTextBrushKey, Text);
+            list.Resources.Add(SystemColors.InactiveSelectionHighlightBrushKey, SurfaceRaised);
+            list.Resources.Add(SystemColors.InactiveSelectionHighlightTextBrushKey, Text);
+            ScrollViewer.SetHorizontalScrollBarVisibility(list, ScrollBarVisibility.Disabled);
             ScrollViewer.SetVerticalScrollBarVisibility(list, ScrollBarVisibility.Auto);
             // A whole-volume scan can return hundreds of thousands of rows. The ListView
             // virtualizes by default; tune it for that scale — recycle containers instead
@@ -839,14 +1085,10 @@ namespace RED.UI.Wpf
             SetAutomation(list, "Review results", "Empty directories and empty files found during the last scan.");
             list.FocusVisualStyle = FocusVisual;
 
-            // Comfortable, tappable rows for a destructive-review list.
-            var itemStyle = new Style(typeof(System.Windows.Controls.ListViewItem));
-            itemStyle.Setters.Add(new Setter(Control.MinHeightProperty, 28d));
-            itemStyle.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(4, 2, 4, 2)));
-            itemStyle.Setters.Add(new Setter(Control.VerticalContentAlignmentProperty, VerticalAlignment.Center));
-            list.ItemContainerStyle = itemStyle;
+            list.ItemContainerStyle = CreateResultItemStyle();
 
             var gridView = new GridView();
+            gridView.ColumnHeaderContainerStyle = CreateGridHeaderStyle();
             list.View = gridView;
 
             // Status as a coloured word (eligible = red, kept = muted, deleted =
@@ -858,19 +1100,97 @@ namespace RED.UI.Wpf
             statusText.SetBinding(TextBlock.TextProperty, new Binding("StatusLabel"));
             statusText.SetBinding(TextBlock.ForegroundProperty, new Binding("StatusBrush"));
             statusText.SetValue(TextBlock.FontWeightProperty, FontWeights.SemiBold);
+            statusText.SetValue(TextBlock.MarginProperty, new Thickness(8, 0, 8, 0));
+            statusText.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
             statusTemplate.VisualTree = statusText;
 
-            gridView.Columns.Add(new GridViewColumn { Header = "Status", Width = 96, CellTemplate = statusTemplate });
-            gridView.Columns.Add(new GridViewColumn { Header = "Name", Width = 170, DisplayMemberBinding = new Binding("Name") });
-            gridView.Columns.Add(new GridViewColumn { Header = "Reason", Width = 220, DisplayMemberBinding = new Binding("Reason") });
-            gridView.Columns.Add(new GridViewColumn { Header = "Path", Width = 460, DisplayMemberBinding = new Binding("FullPath") });
+            gridView.Columns.Add(new GridViewColumn { Header = "Status", Width = 90, CellTemplate = statusTemplate });
+            gridView.Columns.Add(new GridViewColumn { Header = "Item", Width = 150, CellTemplate = TextCell("Name", Text, FontWeights.SemiBold) });
+            gridView.Columns.Add(new GridViewColumn { Header = "Reason", Width = 214, CellTemplate = TextCell("Reason", Muted, FontWeights.Normal) });
+            gridView.Columns.Add(new GridViewColumn { Header = "Full path", Width = 318, CellTemplate = TextCell("FullPath", Text, FontWeights.Normal) });
             return list;
+        }
+
+        private static Style CreateGridHeaderStyle()
+        {
+            var style = new Style(typeof(GridViewColumnHeader));
+            style.Setters.Add(new Setter(Control.BackgroundProperty, Panel2));
+            style.Setters.Add(new Setter(Control.ForegroundProperty, Muted));
+            style.Setters.Add(new Setter(Control.BorderBrushProperty, Border));
+            style.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0, 0, 1, 1)));
+            style.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(10, 7, 10, 7)));
+            style.Setters.Add(new Setter(Control.FontSizeProperty, 12d));
+            style.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.SemiBold));
+            style.Setters.Add(new Setter(Control.HorizontalContentAlignmentProperty, HorizontalAlignment.Left));
+            return style;
+        }
+
+        private static Style CreateResultItemStyle()
+        {
+            var style = new Style(typeof(System.Windows.Controls.ListViewItem));
+            style.Setters.Add(new Setter(Control.MinHeightProperty, 32d));
+            style.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(6, 3, 6, 3)));
+            style.Setters.Add(new Setter(Control.VerticalContentAlignmentProperty, VerticalAlignment.Center));
+            style.Setters.Add(new Setter(Control.BackgroundProperty, Brushes.Transparent));
+            style.Setters.Add(new Setter(Control.BorderBrushProperty, Brushes.Transparent));
+            style.Setters.Add(new Setter(Control.ToolTipProperty, new Binding("FullPath")));
+            style.Setters.Add(new Setter(Control.TemplateProperty, CreateResultItemTemplate()));
+            return style;
+        }
+
+        private static ControlTemplate CreateResultItemTemplate()
+        {
+            var template = new ControlTemplate(typeof(System.Windows.Controls.ListViewItem));
+            var border = new FrameworkElementFactory(typeof(System.Windows.Controls.Border));
+            border.Name = "RowChrome";
+            border.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(3));
+            border.SetValue(System.Windows.Controls.Border.BorderThicknessProperty, new Thickness(1));
+            border.SetValue(System.Windows.Controls.Border.SnapsToDevicePixelsProperty, true);
+            border.SetBinding(System.Windows.Controls.Border.BackgroundProperty, new Binding("Background") { RelativeSource = RelativeSource.TemplatedParent });
+            border.SetBinding(System.Windows.Controls.Border.BorderBrushProperty, new Binding("BorderBrush") { RelativeSource = RelativeSource.TemplatedParent });
+            border.SetBinding(System.Windows.Controls.Border.PaddingProperty, new Binding("Padding") { RelativeSource = RelativeSource.TemplatedParent });
+
+            var presenter = new FrameworkElementFactory(typeof(GridViewRowPresenter));
+            presenter.SetBinding(GridViewRowPresenter.ContentProperty, new Binding("Content") { RelativeSource = RelativeSource.TemplatedParent });
+            presenter.SetBinding(GridViewRowPresenter.ColumnsProperty, new Binding("View.Columns") { RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(ListView), 1) });
+            presenter.SetBinding(GridViewRowPresenter.VerticalAlignmentProperty, new Binding("VerticalContentAlignment") { RelativeSource = RelativeSource.TemplatedParent });
+            border.AppendChild(presenter);
+            template.VisualTree = border;
+
+            var hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
+            hover.Setters.Add(new Setter(System.Windows.Controls.Border.BackgroundProperty, SurfaceRaised, "RowChrome"));
+            template.Triggers.Add(hover);
+
+            var selected = new Trigger { Property = ListBoxItem.IsSelectedProperty, Value = true };
+            selected.Setters.Add(new Setter(System.Windows.Controls.Border.BackgroundProperty, Panel2, "RowChrome"));
+            selected.Setters.Add(new Setter(System.Windows.Controls.Border.BorderBrushProperty, BorderStrong, "RowChrome"));
+            template.Triggers.Add(selected);
+
+            var focus = new Trigger { Property = UIElement.IsKeyboardFocusWithinProperty, Value = true };
+            focus.Setters.Add(new Setter(System.Windows.Controls.Border.BorderBrushProperty, BlueLight, "RowChrome"));
+            template.Triggers.Add(focus);
+
+            return template;
+        }
+
+        private static DataTemplate TextCell(string propertyName, Brush brush, FontWeight weight)
+        {
+            var template = new DataTemplate();
+            var text = new FrameworkElementFactory(typeof(TextBlock));
+            text.SetBinding(TextBlock.TextProperty, new Binding(propertyName));
+            text.SetBinding(FrameworkElement.ToolTipProperty, new Binding(propertyName));
+            text.SetValue(TextBlock.ForegroundProperty, brush);
+            text.SetValue(TextBlock.FontWeightProperty, weight);
+            text.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
+            text.SetValue(TextBlock.MarginProperty, new Thickness(8, 0, 8, 0));
+            template.VisualTree = text;
+            return template;
         }
 
         private UIElement BuildSettingsTab()
         {
             var group = Frame("Settings");
-            var grid = new Grid { Margin = new Thickness(20, 28, 20, 20) };
+            var grid = new Grid { Margin = new Thickness(22, 16, 22, 16) };
             var scroll = new ScrollViewer
             {
                 Content = grid,
@@ -880,36 +1200,51 @@ namespace RED.UI.Wpf
             SetFrameContent(group, scroll);
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            var left = new StackPanel { Margin = new Thickness(0, 0, 28, 0) };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            var left = new StackPanel { Margin = new Thickness(0, 0, 16, 0) };
             grid.Children.Add(left);
-            var right = new StackPanel { Margin = new Thickness(28, 0, 0, 0) };
-            Grid.SetColumn(right, 1);
+            var middle = new StackPanel { Margin = new Thickness(16, 0, 16, 0) };
+            Grid.SetColumn(middle, 1);
+            grid.Children.Add(middle);
+            var right = new StackPanel { Margin = new Thickness(16, 0, 0, 0) };
+            Grid.SetColumn(right, 2);
             grid.Children.Add(right);
 
-            ignoreEmptyFiles = SettingCheck(left, "Treat ignored files as removable trash", "Directories containing only configured ignored files can still be treated as empty.");
-            ignoreSystem = SettingCheck(left, "Ignore system directories (recommended)", null);
-            ignoreHidden = SettingCheck(left, "Ignore hidden directories", null);
-            hideDeletionErrors = SettingCheck(left, "Continue past deletion errors", null);
-            hideScanErrors = SettingCheck(left, "Hide scan errors in the result tree", null);
-            hideIgnored = SettingCheck(left, "Hide ignored directories from results", null);
-            protectRoot = SettingCheck(left, "Protect the starting directory", null);
-            fastRendering = SettingCheck(left, "Fast result rendering", "Keeps the interface responsive on very large directory trees.");
-            clipboardDetection = SettingCheck(left, "Detect folder paths in the clipboard", null);
+            AddSectionHeading(left, "Scan behavior", "Tune what RED++ treats as reviewable during a scan.");
+            ignoreEmptyFiles = SettingCheck(left, "Treat ignored files as removable trash", "Directories containing only ignored files can still be eligible.");
+            ignoreSystem = SettingCheck(left, "Ignore system directories", "Recommended for routine cleanup and safer defaults.");
+            ignoreHidden = SettingCheck(left, "Ignore hidden directories", "Skip hidden folders unless you explicitly want them reviewed.");
+            respectGitIgnore = SettingCheck(left, "Respect .gitignore rules", "Project build outputs and ignored folders stay out of the review list.");
+            deleteEmptyFiles = SettingCheck(left, "Include standalone zero-byte files", "Also review empty files that are not inside an empty directory.");
 
-            respectGitIgnore = SettingCheck(right, "Respect .gitignore rules during scans", null);
-            useMft = SettingCheck(right, "Use MFT turbo scan (administrator only)", "Standard scan is used when administrator-only scan is unavailable.");
-            deleteEmptyFiles = SettingCheck(right, "Include standalone zero-byte files", "Also review empty files that are not inside an empty directory.");
-            right.Children.Add(Label("Deletion mode", 16, Text, FontWeights.SemiBold, new Thickness(0, 34, 0, 8)));
+            AddSectionHeading(middle, "Display", "Keep result sets readable and focused.");
+            hideScanErrors = SettingCheck(middle, "Hide scan errors in results", "Errors are still logged even when hidden from the tree.");
+            hideIgnored = SettingCheck(middle, "Hide ignored directories", "Reduce noise when filters intentionally skip folders.");
+
+            AddSectionHeading(middle, "Performance", "Keep deep trees responsive without changing scan safety.");
+            fastRendering = SettingCheck(middle, "Fast result rendering", "Keeps the interface responsive on very large directory trees.");
+
+            AddSectionHeading(right, "Safety", "Prefer reversible operations and clear recovery paths.");
+            protectRoot = SettingCheck(right, "Protect the starting directory", "The selected root is never deleted even when it becomes empty.");
+            hideDeletionErrors = SettingCheck(right, "Continue past deletion errors", "Leave failed items unchanged and continue with the remaining queue.");
+            clipboardDetection = SettingCheck(right, "Detect folder paths in the clipboard", "Makes pasted Explorer paths easier to scan.");
+            useMft = SettingCheck(right, "Use MFT turbo scan", "Administrator-only acceleration; standard scan is used when unavailable.");
+
+            AddSectionHeading(right, "Deletion", "Choose the default action after review.");
+            right.Children.Add(Label("Deletion mode", 15, Text, FontWeights.SemiBold, new Thickness(0, 0, 0, 8)));
             deleteMode = new WpfComboBox
             {
                 Height = 42,
-                FontSize = 16,
+                Width = 310,
+                FontSize = 15,
                 Background = Panel,
                 Foreground = Text,
                 BorderBrush = BorderStrong,
-                BorderThickness = new Thickness(1)
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(8, 5, 8, 5)
             };
             deleteMode.FocusVisualStyle = FocusVisual;
+            deleteMode.Resources.Add(typeof(ComboBoxItem), CreateComboBoxItemStyle());
             SetAutomation(deleteMode, "Deletion mode", "Choose whether RED++ simulates, recycles, deletes directly, or moves eligible results.");
             foreach (DeleteModes mode in DeleteModeItem.GetList())
             {
@@ -919,14 +1254,40 @@ namespace RED.UI.Wpf
             return group;
         }
 
+        private static Style CreateComboBoxItemStyle()
+        {
+            var style = new Style(typeof(ComboBoxItem));
+            style.Setters.Add(new Setter(Control.BackgroundProperty, Panel2));
+            style.Setters.Add(new Setter(Control.ForegroundProperty, Text));
+            style.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(12, 8, 12, 8)));
+            var hover = new Trigger { Property = ComboBoxItem.IsHighlightedProperty, Value = true };
+            hover.Setters.Add(new Setter(Control.BackgroundProperty, SurfaceRaised));
+            style.Triggers.Add(hover);
+            var selected = new Trigger { Property = ComboBoxItem.IsSelectedProperty, Value = true };
+            selected.Setters.Add(new Setter(Control.BackgroundProperty, Blue));
+            selected.Setters.Add(new Setter(Control.ForegroundProperty, Text));
+            style.Triggers.Add(selected);
+            return style;
+        }
+
+        private void AddSectionHeading(StackPanel parent, string title, string helper)
+        {
+            if (parent.Children.Count > 0)
+            {
+                parent.Children.Add(new Border { Height = 1, Background = Border, Margin = new Thickness(0, 2, 0, 12) });
+            }
+            parent.Children.Add(Label(title, 17, Text, FontWeights.SemiBold, new Thickness(0, 0, 0, 4)));
+            parent.Children.Add(Label(helper, 13, Muted, FontWeights.Normal, new Thickness(0, 0, 0, 10)));
+        }
+
         private WpfCheckBox SettingCheck(StackPanel parent, string title, string helper)
         {
             var cb = new WpfCheckBox
             {
                 Content = title,
                 Foreground = Text,
-                FontSize = 16,
-                Margin = new Thickness(0, 0, 0, string.IsNullOrWhiteSpace(helper) ? 18 : 4)
+                FontSize = 15,
+                Margin = new Thickness(0, 0, 0, string.IsNullOrWhiteSpace(helper) ? 11 : 3)
             };
             SetAutomation(cb, title, helper);
             parent.Children.Add(cb);
@@ -936,8 +1297,9 @@ namespace RED.UI.Wpf
                 {
                     Text = helper,
                     Foreground = Muted,
-                    FontSize = 14,
-                    Margin = new Thickness(28, 0, 0, 18)
+                    FontSize = 13,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(28, 0, 0, 10)
                 });
             }
             return cb;
@@ -946,7 +1308,7 @@ namespace RED.UI.Wpf
         private UIElement BuildFiltersTab()
         {
             var group = Frame("Filters");
-            var grid = new Grid { Margin = new Thickness(20) };
+            var grid = new Grid { Margin = new Thickness(22, 20, 22, 20) };
             var scroll = new ScrollViewer
             {
                 Content = grid,
@@ -954,9 +1316,15 @@ namespace RED.UI.Wpf
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
             };
             SetFrameContent(group, scroll);
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            var helper = Label("These rules are applied during every scan. Use them to keep known-safe folders and ignored files out of destructive review.", 13, Muted, FontWeights.Normal, new Thickness(0, 0, 0, 16));
+            helper.TextWrapping = TextWrapping.Wrap;
+            Grid.SetColumnSpan(helper, 3);
+            grid.Children.Add(helper);
             AddFilterList(grid, 0, "Directories: Ignore", config.Filters.DirectoriesToIgnore);
             AddFilterList(grid, 1, "Directories: Never Empty", config.Filters.DirectoriesNeverEmpty);
             AddFilterList(grid, 2, "Files: Ignore", config.Filters.FilesToIgnore);
@@ -966,42 +1334,106 @@ namespace RED.UI.Wpf
         private void AddFilterList(Grid grid, int column, string title, List<string> rules)
         {
             var panel = new StackPanel { Margin = new Thickness(column == 0 ? 0 : 16, 0, column == 2 ? 0 : 16, 0) };
+            Grid.SetRow(panel, 1);
             Grid.SetColumn(panel, column);
             grid.Children.Add(panel);
-            panel.Children.Add(Label(title, 18, Text, FontWeights.SemiBold, new Thickness(0, 0, 0, 12)));
+            panel.Children.Add(Label(title, 16, Text, FontWeights.SemiBold, new Thickness(0, 0, 0, 4)));
+            int count = rules == null ? 0 : rules.Count;
+            panel.Children.Add(Label(CountLabel(count, "rule") + " active", 12, Muted2, FontWeights.Normal, new Thickness(0, 0, 0, 10)));
             var list = new ListBox
             {
                 ItemsSource = rules,
-                Background = Bg,
+                Background = Surface,
                 Foreground = Text,
                 BorderBrush = Border,
                 BorderThickness = new Thickness(1),
-                MinHeight = 420,
-                FontSize = 15
+                Padding = new Thickness(4),
+                MinHeight = 340,
+                FontSize = 14
             };
             list.FocusVisualStyle = FocusVisual;
+            list.ItemContainerStyle = CreateListBoxItemStyle();
+            SetAutomation(list, title, CountLabel(count, "filter rule") + " active.");
             panel.Children.Add(list);
+        }
+
+        private static Style CreateListBoxItemStyle()
+        {
+            var style = new Style(typeof(ListBoxItem));
+            style.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(8, 5, 8, 5)));
+            style.Setters.Add(new Setter(Control.BackgroundProperty, Brushes.Transparent));
+            style.Setters.Add(new Setter(Control.ForegroundProperty, Text));
+            var hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
+            hover.Setters.Add(new Setter(Control.BackgroundProperty, SurfaceRaised));
+            style.Triggers.Add(hover);
+            var selected = new Trigger { Property = ListBoxItem.IsSelectedProperty, Value = true };
+            selected.Setters.Add(new Setter(Control.BackgroundProperty, Panel2));
+            style.Triggers.Add(selected);
+            return style;
         }
 
         private UIElement BuildAboutTab()
         {
-            var group = Frame("About");
-            var stack = new StackPanel { Margin = new Thickness(28) };
+            var group = Frame("About RED++");
+            var stack = new StackPanel { Margin = new Thickness(28, 24, 28, 24) };
             SetFrameContent(group, stack);
             // Environment.ProcessPath (apphost exe) is single-file safe; Assembly.Location is empty in a bundle.
             FileVersionInfo vi = FileVersionInfo.GetVersionInfo(Environment.ProcessPath);
-            stack.Children.Add(Label("RED++", 28, Text, FontWeights.SemiBold, new Thickness(0, 0, 0, 8)));
-            stack.Children.Add(Label("Remove Empty Directories+ v" + vi.FileVersion, 18, Muted, FontWeights.Normal, new Thickness(0, 0, 0, 18)));
-            stack.Children.Add(Label("Modern WPF shell using the existing RED++ scanner and deletion engine.", 16, Muted, FontWeights.Normal, new Thickness(0, 0, 0, 18)));
-            stack.Children.Add(OutlineButton("Open project page", 180, 42, (s, e) => Process.Start(new ProcessStartInfo("https://github.com/SysAdminDoc/REDplusplus/") { UseShellExecute = true })));
+            var header = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 22) };
+            header.Children.Add(new WpfImage
+            {
+                Source = ToImageSource(Properties.Resources.x128_Project),
+                Width = 64,
+                Height = 64,
+                Margin = new Thickness(0, 0, 18, 0)
+            });
+            var headerText = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            headerText.Children.Add(Label("RED++", 30, Text, FontWeights.SemiBold, new Thickness(0, 0, 0, 4)));
+            headerText.Children.Add(Label("Remove Empty Directories+ v" + vi.FileVersion, 17, Muted, FontWeights.Normal, new Thickness(0)));
+            header.Children.Add(headerText);
+            stack.Children.Add(header);
+
+            stack.Children.Add(Label("A portable Windows utility for reviewing and removing empty directories with reversible defaults, filter controls, and headless automation.", 15, Muted, FontWeights.Normal, new Thickness(0, 0, 0, 22)));
+            AddInfoLine(stack, IconShield, BlueLight, "Recovery-first cleanup", "Recycle Bin, move mode, dry run, and protected undo manifests help keep cleanup reversible.");
+            AddInfoLine(stack, IconSearch, Green, "Built for large trees", "Virtualized review lists and optional MFT scan keep network and whole-volume scans responsive.");
+            AddInfoLine(stack, IconLock, Amber, "Private by design", "No telemetry. Logs and crash reports stay local unless you choose to share them.");
+
+            var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 22, 0, 0) };
+            actions.Children.Add(OutlineButton("Project page", 158, 42, (s, e) => OpenUrl("https://github.com/SysAdminDoc/REDplusplus/"), IconInfo));
+            var releases = OutlineButton("Releases", 134, 42, (s, e) => OpenUrl("https://github.com/SysAdminDoc/REDplusplus/releases"), IconCheck);
+            releases.Margin = new Thickness(10, 0, 0, 0);
+            actions.Children.Add(releases);
+            var issues = OutlineButton("Report issue", 152, 42, (s, e) => OpenUrl("https://github.com/SysAdminDoc/REDplusplus/issues"), IconWarning);
+            issues.Margin = new Thickness(10, 0, 0, 0);
+            actions.Children.Add(issues);
+            stack.Children.Add(actions);
             return group;
+        }
+
+        private void AddInfoLine(StackPanel parent, Geometry icon, Brush brush, string title, string body)
+        {
+            var row = new Grid { Margin = new Thickness(0, 0, 0, 14) };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(32) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.Children.Add(IconPath(icon, brush, 22, 2.25, null, new Thickness(0, 2, 10, 0)));
+            var text = new StackPanel();
+            Grid.SetColumn(text, 1);
+            text.Children.Add(Label(title, 15, Text, FontWeights.SemiBold, new Thickness(0, 0, 0, 2)));
+            text.Children.Add(Label(body, 13, Muted, FontWeights.Normal, new Thickness(0)));
+            row.Children.Add(text);
+            parent.Children.Add(row);
+        }
+
+        private static void OpenUrl(string url)
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
         }
 
         private void BuildCommandBar()
         {
             var bar = new Border
             {
-                Background = Panel,
+                Background = Bg2,
                 BorderBrush = Border,
                 BorderThickness = new Thickness(0, 1, 0, 1)
             };
@@ -1015,8 +1447,8 @@ namespace RED.UI.Wpf
             var primaryActions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left };
             grid.Children.Add(primaryActions);
 
-            scanButton = ActionButton("Scan", Blue, IconSearch, 150);
-            SetAutomation(scanButton, "Scan", "Scan the selected folder for empty directories and empty files.");
+            scanButton = ActionButton("Scan Folder", Blue, IconSearch, 168);
+            SetAutomation(scanButton, "Scan folder", "Scan the selected folder for empty directories and empty files.");
             scanButton.Click += (s, e) => StartScan();
             primaryActions.Children.Add(scanButton);
 
@@ -1026,7 +1458,7 @@ namespace RED.UI.Wpf
             deleteButton.Click += (s, e) => StartDelete();
             primaryActions.Children.Add(deleteButton);
 
-            cancelButton = ActionButton("Cancel", Panel2, IconCancel, 140);
+            cancelButton = ActionButton("Cancel", Panel2, IconCancel, 136);
             SetAutomation(cancelButton, "Cancel current operation", "Cancel the scan or deletion currently in progress.");
             cancelButton.Margin = new Thickness(12, 0, 0, 0);
             cancelButton.Click += (s, e) => core?.CancelCurrentProcess();
@@ -1036,14 +1468,14 @@ namespace RED.UI.Wpf
             Grid.SetColumn(secondaryActions, 1);
             grid.Children.Add(secondaryActions);
 
-            extrasButton = OutlineButton("Extras", 124, 54);
-            SetAutomation(extrasButton, "Extras menu", "Open session log and export options.");
+            extrasButton = OutlineButton("More", 118, 54, null, IconInfo);
+            SetAutomation(extrasButton, "More actions", "Open restore, import, log, and export options.");
             extrasButton.Margin = new Thickness(12, 0, 0, 0);
             extrasButton.Click += (s, e) => ShowExtrasMenu();
             secondaryActions.Children.Add(extrasButton);
 
-            exitButton = OutlineButton("Exit", 124, 54);
-            SetAutomation(exitButton, "Exit RED++");
+            exitButton = OutlineButton("Close", 118, 54, null, IconClose);
+            SetAutomation(exitButton, "Close RED++");
             exitButton.Margin = new Thickness(12, 0, 0, 0);
             exitButton.Click += (s, e) => Close();
             secondaryActions.Children.Add(exitButton);
@@ -1071,7 +1503,7 @@ namespace RED.UI.Wpf
         {
             var border = new Border
             {
-                Background = Bg2,
+                Background = Surface,
                 BorderBrush = Border,
                 BorderThickness = new Thickness(0, 1, 0, 0)
             };
@@ -1079,23 +1511,23 @@ namespace RED.UI.Wpf
             rootGrid.Children.Add(border);
 
             var grid = new Grid { Margin = new Thickness(20, 0, 22, 0) };
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(176) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(82) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(54) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(280) });
             border.Child = grid;
 
-            readyText = new TextBlock { Text = "●  Ready", Foreground = Text, FontSize = 15, VerticalAlignment = VerticalAlignment.Center };
+            readyText = new TextBlock { Text = "Ready", Foreground = Text, FontSize = 14, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
             Grid.SetColumn(readyText, 0);
             grid.Children.Add(readyText);
-            itemCountText = new TextBlock { Text = "0 items", Foreground = Text, FontSize = 14, VerticalAlignment = VerticalAlignment.Center };
+            itemCountText = new TextBlock { Text = "0 results", Foreground = Text, FontSize = 14, VerticalAlignment = VerticalAlignment.Center };
             Grid.SetColumn(itemCountText, 1);
             grid.Children.Add(itemCountText);
             detailStatusText = new TextBlock { Text = "Nothing to delete yet.", Foreground = Muted, FontSize = 14, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
             Grid.SetColumn(detailStatusText, 2);
             grid.Children.Add(detailStatusText);
-            progressText = new TextBlock { Text = "0%", Foreground = Text, FontSize = 14, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Right };
+            progressText = new TextBlock { Text = "", Foreground = Text, FontSize = 14, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Right };
             Grid.SetColumn(progressText, 3);
             grid.Children.Add(progressText);
             progressBar = new ProgressBar
@@ -1108,7 +1540,9 @@ namespace RED.UI.Wpf
                 Foreground = Blue,
                 BorderBrush = Border,
                 BorderThickness = new Thickness(1),
-                VerticalAlignment = VerticalAlignment.Center
+                ToolTip = "Current operation progress",
+                VerticalAlignment = VerticalAlignment.Center,
+                Visibility = Visibility.Hidden
             };
             SetAutomation(progressBar, "Operation progress");
             Grid.SetColumn(progressBar, 4);
@@ -1122,29 +1556,40 @@ namespace RED.UI.Wpf
                 Background = Panel,
                 BorderBrush = Border,
                 BorderThickness = new Thickness(1),
-                Padding = new Thickness(0)
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(0),
+                SnapsToDevicePixels = true
             };
             var grid = new Grid();
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             outer.Child = grid;
+            var header = new Border
+            {
+                Background = Panel2,
+                BorderBrush = Border,
+                BorderThickness = new Thickness(0, 0, 0, 1),
+                CornerRadius = new CornerRadius(8, 8, 0, 0),
+                Padding = new Thickness(18, 12, 18, 12)
+            };
             var titleBlock = new TextBlock
             {
                 Text = title,
                 Foreground = Text,
-                Background = Panel,
-                FontSize = 20,
-                Margin = new Thickness(20, 12, 0, 0),
-                Padding = new Thickness(4, 0, 10, 0),
+                FontSize = 18,
+                FontWeight = FontWeights.SemiBold,
                 HorizontalAlignment = HorizontalAlignment.Left,
-                VerticalAlignment = VerticalAlignment.Top
+                VerticalAlignment = VerticalAlignment.Center
             };
+            header.Child = titleBlock;
             var body = new Border
             {
-                BorderBrush = Border,
-                BorderThickness = new Thickness(1),
-                Margin = new Thickness(8, 28, 8, 8)
+                BorderThickness = new Thickness(0),
+                Margin = new Thickness(0)
             };
+            Grid.SetRow(body, 1);
+            grid.Children.Add(header);
             grid.Children.Add(body);
-            grid.Children.Add(titleBlock);
             outer.Tag = body;
             return outer;
         }
@@ -1160,7 +1605,7 @@ namespace RED.UI.Wpf
 
         private TextBlock Label(string text, double size, Brush brush, FontWeight weight, Thickness margin)
         {
-            return new TextBlock { Text = text, FontSize = size, Foreground = brush, FontWeight = weight, Margin = margin };
+            return new TextBlock { Text = text, FontSize = size, Foreground = brush, FontWeight = weight, Margin = margin, TextWrapping = TextWrapping.Wrap };
         }
 
         private static void SetAutomation(FrameworkElement element, string name, string helpText = null)
@@ -1178,11 +1623,26 @@ namespace RED.UI.Wpf
             }
         }
 
-        private WpfButton OutlineButton(string text, double width, double height, RoutedEventHandler click = null)
+        private WpfButton OutlineButton(string text, double width, double height, RoutedEventHandler click = null, Geometry icon = null)
         {
+            var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            if (icon != null)
+            {
+                row.Children.Add(IconPath(icon, Text, 18, 2.2, null, new Thickness(0, 0, 8, 0)));
+            }
+            row.Children.Add(new TextBlock
+            {
+                Text = text,
+                Foreground = Text,
+                FontSize = 15,
+                FontWeight = FontWeights.SemiBold,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+
             var button = new WpfButton
             {
-                Content = new TextBlock { Text = text, Foreground = Text, FontSize = 17, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
+                Content = row,
                 Width = width,
                 Height = height,
                 Background = Panel2,
@@ -1228,14 +1688,16 @@ namespace RED.UI.Wpf
             AttachCoreEvents(core);
             results.Clear();
             rowsByPath.Clear();
+            hasScanned = false;
+            itemCountText.Text = "0 results";
             RefreshResultsVisibility();
             runtimeWatch.Restart();
             runData.AddLogSpacer();
             runData.AddLogMessage("Scanning for empty directories...");
             UpdateUiState(true);
-            readyText.Text = "●  Busy";
             detailStatusText.Text = "Scanning for empty directories...";
             progressBar.IsIndeterminate = true;
+            progressText.Text = "";
             core.SearchingForEmptyDirectories();
         }
 
@@ -1246,6 +1708,7 @@ namespace RED.UI.Wpf
             rawPath = string.IsNullOrWhiteSpace(rawPath) ? string.Empty : rawPath.Trim().Trim('"');
             if (string.IsNullOrWhiteSpace(rawPath))
             {
+                detailStatusText.Text = "Choose an existing folder before scanning.";
                 WpfMessageBox.Show(this, "Choose an existing local, UNC, or network folder before scanning.", "RED++", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
@@ -1258,12 +1721,14 @@ namespace RED.UI.Wpf
             }
             catch (Exception ex) when (ex is ArgumentException || ex is NotSupportedException || ex is IOException || ex is UnauthorizedAccessException)
             {
+                detailStatusText.Text = "The folder path is not valid.";
                 WpfMessageBox.Show(this, "That folder path is not valid.\n\n" + ex.Message, "RED++", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 
             if (!selectedDirectory.Exists)
             {
+                detailStatusText.Text = "The selected folder does not exist.";
                 WpfMessageBox.Show(this, "Choose an existing local, UNC, or network folder before scanning.", "RED++", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
@@ -1309,31 +1774,41 @@ namespace RED.UI.Wpf
                 }
                 AddEmptyFileResults();
                 int total = e.EmptyFolderCount + e.EmptyFileCount;
+                string elapsed = FormatElapsed(runtimeWatch.Elapsed);
                 detailStatusText.Text = total == 0
-                    ? string.Format("Checked {0} {1} — no empty directories found.", e.FolderCount, e.FolderCount == 1 ? "directory" : "directories")
-                    : string.Format("{0} empty directories and {1} empty files eligible.", e.EmptyFolderCount, e.EmptyFileCount);
-                itemCountText.Text = total + " items";
+                    ? string.Format("Checked {0} in {1}. Nothing eligible.", CountLabel(e.FolderCount, "directory", "directories"), elapsed)
+                    : string.Format("Found {0} and {1} in {2}. Review before deleting.",
+                        CountLabel(e.EmptyFolderCount, "empty directory", "empty directories"),
+                        CountLabel(e.EmptyFileCount, "empty file", "empty files"),
+                        elapsed);
+                itemCountText.Text = CountLabel(results.Count, "result");
                 hasScanned = true;
                 UpdateUiState(false);
-                deleteButton.IsEnabled = total > 0;
                 progressBar.IsIndeterminate = false;
                 progressBar.Value = 0;
-                progressText.Text = "0%";
+                progressText.Text = "";
                 RefreshResultsVisibility();
             });
             activeCore.OnError += (s, e) => Dispatcher.BeginInvoke(() =>
             {
                 UpdateUiState(false);
+                progressBar.IsIndeterminate = false;
+                progressText.Text = "";
+                detailStatusText.Text = "Scan stopped after an error.";
                 WpfMessageBox.Show(this, e.Message, "RED++ Error", MessageBoxButton.OK, MessageBoxImage.Error);
             });
             activeCore.OnCancelled += (s, e) => Dispatcher.BeginInvoke(() =>
             {
                 UpdateUiState(false);
+                progressBar.IsIndeterminate = false;
+                progressText.Text = "";
                 detailStatusText.Text = "Canceled.";
             });
             activeCore.OnAborted += (s, e) => Dispatcher.BeginInvoke(() =>
             {
                 UpdateUiState(false);
+                progressBar.IsIndeterminate = false;
+                progressText.Text = "";
                 detailStatusText.Text = "Stopped after an error.";
             });
             activeCore.OnDeleteProcessChanged += (s, e) => Dispatcher.BeginInvoke(() =>
@@ -1374,7 +1849,7 @@ namespace RED.UI.Wpf
                 detailStatusText.Text = BuildCompletionMessage(e.DeletedFolderCount, e.DeletedFileCount);
                 progressBar.IsIndeterminate = false;
                 progressBar.Value = 0;
-                progressText.Text = "0%";
+                progressText.Text = "";
             });
         }
 
@@ -1397,7 +1872,7 @@ namespace RED.UI.Wpf
             row.Reason = item.StatusReason;
             row.StatusLabel = item.SearchStatus == DirectorySearchStatusTypes.Empty ? "Eligible" : "Kept";
             row.StatusBrush = StatusToBrush(row.StatusLabel);
-            itemCountText.Text = results.Count + " items";
+            itemCountText.Text = CountLabel(results.Count, "result");
             RefreshResultsVisibility();
         }
 
@@ -1540,20 +2015,44 @@ namespace RED.UI.Wpf
             }
         }
 
+        private static string FormatElapsed(TimeSpan elapsed)
+        {
+            if (elapsed.TotalSeconds < 1d)
+            {
+                return "under 1 second";
+            }
+            if (elapsed.TotalSeconds < 60d)
+            {
+                int seconds = Math.Max(1, (int)Math.Round(elapsed.TotalSeconds));
+                return CountLabel(seconds, "second");
+            }
+            return elapsed.ToString(@"m\:ss");
+        }
+
+        private static string CountLabel(int count, string singular, string plural = null)
+        {
+            return string.Format("{0} {1}", count, count == 1 ? singular : (plural ?? singular + "s"));
+        }
+
         private void UpdateUiState(bool busy)
         {
             scanButton.IsEnabled = !busy;
             cancelButton.IsEnabled = busy;
             extrasButton.IsEnabled = !busy;
-            readyText.Text = busy ? "●  Working…" : "●  Ready";
+            readyText.Text = busy ? "Working" : "Ready";
             readyText.Foreground = busy ? Amber : Green;
+            progressBar.Visibility = busy ? Visibility.Visible : Visibility.Hidden;
+            if (!busy)
+            {
+                progressText.Text = "";
+            }
             // Screen readers should hear the state word, not the decorative bullet.
             System.Windows.Automation.AutomationProperties.SetName(readyText, busy ? "Working" : "Ready");
-            if (!busy && deleteButton != null)
+            if (deleteButton != null)
             {
                 // Enable delete only when something is actually eligible — rows that
                 // were merely kept (protected/never-empty) must not arm the button.
-                deleteButton.IsEnabled = EligibleResultCount() > 0;
+                deleteButton.IsEnabled = !busy && core != null && runData != null && EligibleResultCount() > 0;
             }
         }
 
@@ -1639,29 +2138,50 @@ namespace RED.UI.Wpf
         private void ShowLog()
         {
             string log = core == null ? "No log entries for this session yet." : core.GetLogMessages();
+            var container = new Grid { Margin = new Thickness(18) };
+            container.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            container.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            container.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            var header = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
+            header.Children.Add(Label("Session Log", 18, Text, FontWeights.SemiBold, new Thickness(0, 0, 0, 4)));
+            header.Children.Add(Label("The log records scan, delete, restore, and export activity for this session.", 13, Muted, FontWeights.Normal, new Thickness(0)));
+            container.Children.Add(header);
+            var logBox = new WpfTextBox
+            {
+                Text = log,
+                IsReadOnly = true,
+                FontFamily = new FontFamily("Consolas"),
+                FontSize = 13,
+                Foreground = Text,
+                Background = Surface,
+                BorderBrush = BorderStrong,
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(10),
+                TextWrapping = TextWrapping.NoWrap,
+                AcceptsReturn = true,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto
+            };
+            Grid.SetRow(logBox, 1);
+            container.Children.Add(logBox);
             var win = new Window
             {
                 Owner = this,
                 Title = "RED++ Log",
                 Width = 780,
                 Height = 520,
+                MinWidth = 560,
+                MinHeight = 360,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 Background = Bg,
-                Content = new WpfTextBox
-                {
-                    Text = log,
-                    IsReadOnly = true,
-                    FontFamily = new FontFamily("Consolas"),
-                    FontSize = 14,
-                    Foreground = Text,
-                    Background = Bg,
-                    BorderBrush = Border,
-                    TextWrapping = TextWrapping.NoWrap,
-                    AcceptsReturn = true,
-                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                    HorizontalScrollBarVisibility = ScrollBarVisibility.Auto
-                }
+                FontFamily = UiFont,
+                Content = container
             };
+            var close = OutlineButton("Close", 112, 40, (s, e) => win.Close(), IconClose);
+            close.HorizontalAlignment = HorizontalAlignment.Right;
+            close.Margin = new Thickness(0, 14, 0, 0);
+            Grid.SetRow(close, 2);
+            container.Children.Add(close);
             win.ShowDialog();
         }
 
@@ -1673,19 +2193,33 @@ namespace RED.UI.Wpf
                 Placement = PlacementMode.Top,
                 Background = Panel2,
                 BorderBrush = Border,
-                Foreground = Text
+                Foreground = Text,
+                Padding = new Thickness(4)
             };
+            menu.Resources.Add(typeof(MenuItem), CreateMenuItemStyle());
 
             bool hasResults = results.Count > 0;
 
             menu.Items.Add(BuildRestoreMenu());
-            menu.Items.Add(ExtrasMenuItem("Import saved dry-run results...", true, (s, e) => ImportDryRunResults()));
+            menu.Items.Add(ExtrasMenuItem("Import dry-run results...", true, (s, e) => ImportDryRunResults()));
             menu.Items.Add(new Separator());
             menu.Items.Add(ExtrasMenuItem("View log", true, (s, e) => ShowLog()));
             menu.Items.Add(new Separator());
             menu.Items.Add(ExtrasMenuItem("Export results to file...", hasResults, (s, e) => ExportResultsToFile()));
             menu.Items.Add(ExtrasMenuItem("Copy results to clipboard", hasResults, (s, e) => ExportResultsToClipboard()));
             menu.IsOpen = true;
+        }
+
+        private static Style CreateMenuItemStyle()
+        {
+            var style = new Style(typeof(MenuItem));
+            style.Setters.Add(new Setter(Control.ForegroundProperty, Text));
+            style.Setters.Add(new Setter(Control.BackgroundProperty, Panel2));
+            style.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(14, 8, 18, 8)));
+            var disabled = new Trigger { Property = UIElement.IsEnabledProperty, Value = false };
+            disabled.Setters.Add(new Setter(UIElement.OpacityProperty, 0.5));
+            style.Triggers.Add(disabled);
+            return style;
         }
 
         // "Restore deletion" submenu: one entry per kept undo manifest (newest
@@ -1699,13 +2233,26 @@ namespace RED.UI.Wpf
 
             var parent = new MenuItem
             {
-                Header = "Restore deletion",
-                IsEnabled = manifests.Count > 0,
+                Header = "Restore deleted items",
+                IsEnabled = true,
                 Foreground = Text,
                 Background = Panel2,
                 Padding = new Thickness(14, 8, 18, 8)
             };
-            SetAutomation(parent, "Restore deletion", "Restore directories and empty files from a previous deletion run.");
+            SetAutomation(parent, "Restore deleted items", "Restore directories and empty files from a previous deletion run.");
+
+            if (manifests.Count == 0)
+            {
+                parent.Items.Add(new MenuItem
+                {
+                    Header = "No restore points found",
+                    IsEnabled = false,
+                    Foreground = Muted,
+                    Background = Panel2,
+                    Padding = new Thickness(14, 8, 18, 8)
+                });
+                return parent;
+            }
 
             foreach (UndoManager.ManifestInfo info in manifests)
             {
@@ -1817,10 +2364,17 @@ namespace RED.UI.Wpf
             }
 
             RefreshResultsVisibility();
+            hasScanned = true;
+            itemCountText.Text = CountLabel(results.Count, "result");
+            if (deleteButton != null)
+            {
+                deleteButton.IsEnabled = false;
+            }
             detailStatusText.Text = string.Format(
-                "Imported {0} record{1} from {2}. {3} eligible. Re-scan the folder to delete.",
-                imported.ReviewCount, imported.ReviewCount == 1 ? "" : "s",
-                Path.GetFileName(fileName), eligible);
+                "Imported {0} from {1}. {2} eligible. Re-scan the folder to enable deletion.",
+                CountLabel(imported.ReviewCount, "record"),
+                Path.GetFileName(fileName),
+                eligible);
         }
 
         private MenuItem ExtrasMenuItem(string label, bool enabled, RoutedEventHandler click)

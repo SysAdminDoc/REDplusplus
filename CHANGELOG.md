@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.6.1 (2026-06-26)
+
+### UX polish
+- Refine the modern WPF shell with a calmer dark palette, Segoe UI typography, layout rounding, tighter tab chrome, cleaner panel framing, and more consistent icon/text action buttons.
+- Replace default system checkboxes, combo boxes, grid headers, and selected result rows with dark-theme-aware templates so settings and review states no longer fall back to light or gray Windows chrome.
+- Improve the Search review workflow with clearer scan-target guidance, compact outcome-focused review legend, trimmed path cells with tooltips, hidden idle progress chrome, and more useful scan completion status copy.
+- Rebalance Settings into a three-column operational layout with clearer groups for scan behavior, display, performance, safety, and deletion defaults.
+- Polish Filters, About, More actions, restore, import, and log surfaces with clearer microcopy, compact layouts, and consistent dark controls.
+- Shorten deletion-mode labels so they fit cleanly in the modern and classic settings UIs.
+
+### Verification
+- Verified Release build, full xUnit suite, and WPF PrintWindow captures across Search, Settings, Filters, and About.
+
 ## 1.6.0 (2026-06-25)
 
 ### Safety & correctness (audit pass 4-5)
