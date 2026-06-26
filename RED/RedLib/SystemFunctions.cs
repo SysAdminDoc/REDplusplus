@@ -370,56 +370,6 @@ namespace RED
             DirectDeleteByHandle(path);
         }
 
-        public static bool IsDirLocked(string path)
-        {
-            try
-            {
-                // .NET (Core) removed the static Directory.GetAccessControl; the
-                // DirectoryInfo.GetAccessControl() extension is the 1:1 replacement
-                // (same default AccessControlSections: Access | Owner | Group).
-                var acl = new System.IO.DirectoryInfo(path).GetAccessControl();
-                var rules = acl.GetAccessRules(true, true, typeof(System.Security.Principal.SecurityIdentifier));
-                var identity = WindowsIdentity.GetCurrent();
-                var principal = new WindowsPrincipal(identity);
-
-                foreach (System.Security.AccessControl.FileSystemAccessRule rule in rules)
-                {
-                    if (rule.AccessControlType == System.Security.AccessControl.AccessControlType.Deny &&
-                        (rule.FileSystemRights & System.Security.AccessControl.FileSystemRights.Delete) != 0)
-                    {
-                        if (identity.User.Equals(rule.IdentityReference) ||
-                            principal.IsInRole((System.Security.Principal.SecurityIdentifier)rule.IdentityReference))
-                        {
-                            return true;
-                        }
-                    }
-                }
-
-                return false;
-            }
-            catch
-            {
-                return true;
-            }
-        }
-
-        public static bool IsFileLocked(FileInfo file)
-        {
-            try
-            {
-                using (file.Open(FileMode.Open, FileAccess.ReadWrite, FileShare.None))
-                {
-                    return false;
-                }
-            }
-            catch //(IOException)
-            {
-                // Could not open file -> probably we have no
-                // write access to the file
-                return true;
-            }
-        }
-
         public static void SecureDeleteDirectory(string path, DeleteModes deleteMode)
         {
             string ignored;

@@ -228,6 +228,14 @@ namespace RED.Helper
 			{
 				throw new InvalidDataException(TXT.Translate("Import paths must be absolute: {0}", path));
 			}
+			if (expanded.StartsWith(@"\\?\") || expanded.StartsWith(@"\\.\"))
+			{
+				throw new InvalidDataException(TXT.Translate("Import paths must not use device-path prefixes: {0}", path));
+			}
+			if (expanded.Contains(".."))
+			{
+				throw new InvalidDataException(TXT.Translate("Import paths must not contain traversal segments: {0}", path));
+			}
 
 			try
 			{
