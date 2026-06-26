@@ -144,6 +144,29 @@ namespace RED.Tests
         }
 
         [Fact]
+        public void GitIgnoreScan_IgnoredDirectories_AreNotFlaggedEmpty()
+        {
+            string scanPath = Path.Combine(_root, "repo");
+            Directory.CreateDirectory(Path.Combine(scanPath, "build"));
+            Directory.CreateDirectory(Path.Combine(scanPath, "src"));
+            File.WriteAllText(Path.Combine(scanPath, "src", "main.cs"), "code");
+            File.WriteAllText(Path.Combine(scanPath, ".gitignore"), "build/\n");
+            Directory.CreateDirectory(Path.Combine(scanPath, ".git"));
+
+            var rd = CreateRunData(scanPath);
+            rd.RespectGitIgnore = true;
+            var results = RunScan(rd);
+
+            var emptyPaths = results
+                .Where(r => r.SearchStatus == DirectorySearchStatusTypes.Empty)
+                .Select(r => r.FullPath)
+                .ToList();
+
+            Assert.DoesNotContain(emptyPaths,
+                p => p.EndsWith("build", StringComparison.OrdinalIgnoreCase));
+        }
+
+        [Fact]
         public void Lockout_ForcesDeletionToSimulate()
         {
             BuildTree();

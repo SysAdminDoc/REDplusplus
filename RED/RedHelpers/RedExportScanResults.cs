@@ -114,7 +114,7 @@ namespace RED.Helper
             WriteHtmlReport(v, filename);
         }
 
-        private void WriteCsv(RedScanResultItemList v, string filename)
+        internal void WriteCsv(RedScanResultItemList v, string filename)
         {
             var lines = new List<string> { "\"Kind\",\"Path\",\"Status\",\"Reason\"" };
             for (int i = 0; i < v.Count; i++)
@@ -160,7 +160,7 @@ namespace RED.Helper
             return c == '=' || c == '+' || c == '-' || c == '@';
         }
 
-        private void WriteJson(RedScanResultItemList v, string filename)
+        internal void WriteJson(RedScanResultItemList v, string filename)
         {
             var sb = new StringBuilder();
             sb.AppendLine("[");
@@ -177,7 +177,7 @@ namespace RED.Helper
             File.WriteAllText(filename, sb.ToString(), Encoding.UTF8);
         }
 
-        private static string EscapeJson(string value)
+        internal static string EscapeJson(string value)
         {
             if (value == null) return string.Empty;
             var sb = new StringBuilder(value.Length + 8);
@@ -208,7 +208,7 @@ namespace RED.Helper
         /// (Recycle Bin by default). The decision (this list) is decoupled from the
         /// action (running the script), which suits change-controlled / scheduled use.
         /// </summary>
-        private void WritePowerShellScript(RedScanResultItemList v, string filename)
+        internal void WritePowerShellScript(RedScanResultItemList v, string filename)
         {
             var dirs = new List<string>();
             for (int i = 0; i < v.Count; i++)
@@ -259,7 +259,7 @@ namespace RED.Helper
         /// Emits a single self-contained HTML audit report (no external assets) of the
         /// full result set with run metadata and each row's status reason.
         /// </summary>
-        private void WriteHtmlReport(RedScanResultItemList v, string filename)
+        internal void WriteHtmlReport(RedScanResultItemList v, string filename)
         {
             int eligible = 0, files = 0, dirs = 0;
             for (int i = 0; i < v.Count; i++)
