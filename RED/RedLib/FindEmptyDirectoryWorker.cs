@@ -471,6 +471,7 @@ namespace RED
 				bool isEmpty = ProcessOneSubdirectory(curDir, depth, gitIgnore);
 				if (!isEmpty) Interlocked.Increment(ref notEmptyCount);
 			});
+			if (CancellationPending) return false;
 			return notEmptyCount == 0;
 		}
 
