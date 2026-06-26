@@ -97,3 +97,20 @@ jobs:
             Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
             Remove-Item -LiteralPath $junctionTarget -Recurse -Force -ErrorAction SilentlyContinue
           }
+
+      - name: Dry-run exit code 11 smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Join-Path $PWD 'bin\Release\RED+.exe'
+          $root = Join-Path $env:RUNNER_TEMP ("redpp-dryrun-" + [guid]::NewGuid().ToString("N"))
+          $emptyDir = Join-Path $root 'should-survive'
+          New-Item -ItemType Directory -Path $emptyDir | Out-Null
+          try {
+            $p = Start-Process -FilePath $exe -ArgumentList '-silent','-path',$root,'-dryrun' -NoNewWindow -Wait -PassThru
+            if ($p.ExitCode -ne 11) { throw "Expected exit code 11 (found empties), got $($p.ExitCode)" }
+            if (!(Test-Path $emptyDir)) { throw 'Dry-run deleted the empty directory' }
+          }
+          finally {
+            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+          }
