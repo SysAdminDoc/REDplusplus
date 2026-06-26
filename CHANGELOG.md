@@ -1,6 +1,37 @@
 # Changelog
 
-## 1.6.0 (2026-06-20)
+## 1.6.0 (2026-06-25)
+
+### Security & data safety
+- Enable RedirectionGuard process mitigation (`SetProcessMitigationPolicy`) at startup to block junction-based redirection attacks at the OS kernel level on Windows 11 24H2+. Defense-in-depth on top of the existing handle-based reparse verification. Falls back silently on older Windows.
+- Include the user's SID in the single-instance forward-signal file path to prevent a cross-user symlink attack on multi-user systems (Terminal Server, shared workstations).
+- Strip `\r` and `\n` from directory paths in the PowerShell removal-script export (`.ps1`). A crafted folder name containing a newline could previously break out of the single-quoted string literal and inject arbitrary PowerShell commands.
+- Extend bidi/invisible-character sanitization to cover ZWNJ (U+200C), ZWJ (U+200D), BOM (U+FEFF), Word Joiner (U+2060), and invisible math operators (U+2061-2064). Previously only ZWSP, LRM, RLM, and the embedding/override/isolate blocks were sanitized.
+- Add a 1-second `MatchTimeout` to gitignore glob-to-regex compilation. A maliciously crafted `.gitignore` pattern in the scan tree could previously cause catastrophic regex backtracking (ReDoS). Timed-out patterns are silently skipped.
+- Escape the `status` enum field in JSON file exports for defense-in-depth (prevents future injection if the enum is ever refactored to a string).
+
+### Reliability
+- Fix potential deadlock in the WPF undo-restore path: replace `Dispatcher.Invoke` with `Dispatcher.BeginInvoke` inside `Task.Run` to avoid blocking when the UI thread is busy.
+- Guard against `NullReferenceException` in the config redirect loop when `Load` returns null for a malformed or empty config file.
+- Guard `OsCriticalPaths` static constructor against a null `SystemRoot` environment variable (could crash on stripped OS images with a `TypeInitializationException`).
+- Fix undo-manifest rotation sort: sort by filename (which contains the timestamp) instead of the full path, so manifests in directories with numeric prefixes are rotated in the correct chronological order.
+- Fix update-check ETag handling: use `EntityTagHeaderValue.TryParse` instead of the constructor, so a corrupt state file no longer permanently disables update checks with an unrecoverable `FormatException`.
+- Fix update-check date parsing: use `CultureInfo.InvariantCulture` with `DateTimeStyles.RoundtripKind` to parse the stored UTC timestamp, preventing unnecessary extra HTTP requests on machines with non-Gregorian calendar settings.
+
+### Performance
+- Enable ReadyToRun (R2R) ahead-of-time compilation for self-contained publish builds. Pre-compiles IL to native code, reducing JIT work and cold-start latency by ~30-40%. Size increase is absorbed by single-file compression.
+
+### Build / CI
+- Remove duplicate `Set SOURCE_DATE_EPOCH from git commit` step in CI workflow.
+
+### Documentation
+- Fix stale ".NET 9" references in README.md and CONTRIBUTING.md (project targets .NET 10 since the LTS retarget).
+- Deduplicate the CHANGELOG 1.6.0 section (6 repeated subsection blocks merged into single instances).
+
+### Developer / CI
+- Add gitignore-aware engine integration test: verifies `.gitignore` rules are respected during scans with `RespectGitIgnore=true`.
+- Add export format round-trip tests: CSV header/rows, JSON array validity, PS1 eligible-only filtering, HTML content completeness, plus `EscapeJson` unit tests.
+- Add config migration and defaults tests: old-schema migration preserves new-field values; `SetToDefaults` populates all expected defaults.
 
 ### Security & data safety
 - Add a non-overridable OS-critical empty-folder protection list: `C:\inetpub` (CVE-2025-21204 security mitigation), `C:\PerfLogs`, `C:\Config.Msi`, and `C:\Recovery` are never eligible for deletion regardless of user filter configuration. The check is path-rooted to the system drive — `D:\Projects\inetpub` is not blocked. Runs before `.redkeep` and NeverEmpty in both standard and MFT scan paths.
