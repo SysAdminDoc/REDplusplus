@@ -43,6 +43,8 @@ RED+.exe -silent -path "D:\Shares" -log cleanup.log
 - Can detect directories with empty files as empty
 - Detects OneDrive/cloud-only placeholder files as real content
 - Handle-based reparse-point safety (junctions, symlinks, mount points)
+- OS-level junction-redirection blocking via RedirectionGuard (Windows 11 24H2+; defense-in-depth)
+- Invisible-character sanitization in paths and log output (bidi overrides, zero-width joiners, BOM)
 - One-click restore from a protected per-user undo store (GUI button or `-undo`)
 - `.redkeep` marker file protects a folder (and its subtree) anywhere it travels
 - Opt-in MFT turbo scan for whole-volume scans in seconds — NTFS and ReFS/Dev Drive (admin required)
