@@ -15,7 +15,7 @@ dotnet build "RED/RED+.csproj" -c Release
 dotnet test "RED.Tests/RED.Tests.csproj" -c Release
 ```
 
-Requires the .NET 9 SDK (or later with `latestFeature` roll-forward via `global.json`). No Visual Studio or MSBuild required.
+Requires the .NET 10 SDK (or later with `latestFeature` roll-forward via `global.json`). No Visual Studio or MSBuild required.
 
 ## Pull Requests
 

@@ -9,6 +9,7 @@
 - Block undo restore through reparse-point (junction/symlink) ancestors: a planted junction along the restore path could previously redirect a recreated directory to an arbitrary location. The restore now checks all ancestor directories for reparse points before operating.
 - Empty-files pre-pass now honors the protected-folder list: zero-byte files inside a user-protected directory were previously deleted despite the protection.
 - Fix undo manifest duplication on error-continue: when a deletion error triggered `ContinueDeleteProcess`, `undoEntries` from the stopped run were written again on continuation, producing duplicate entries. Entries are now cleared after writing.
+- Fix two thread-safety bugs in the parallel scan (`-parallel N`): the infinite-loop detector's `PossibleEndlessLoop` counter used a non-atomic increment that could race, and `EmptyFileResults.Add` wrote to a `List<FileInfo>` from parallel threads without synchronization. Both are now guarded (`Interlocked.Increment` for the counter, `lock` for the file list).
 
 ### Reliability
 - Fix `Process.Start` URL crash in WPF and WinForms shells: on .NET 5+, `UseShellExecute` defaults to `false`, causing a `Win32Exception` when clicking the project page, releases, or issues links. All call sites now use `ProcessStartInfo` with `UseShellExecute = true`.
@@ -51,27 +52,6 @@
 - Add lockout enforcement and parallel-scan correctness integration tests: parallel scan produces identical results to serial; lockout forces Simulate mode; parallel scan with empty-files collects the same file set as serial.
 - Add 11 tests for the OS-critical path protection list (path-rooted matching, case insensitivity, cross-drive non-blocking, trailing separator handling).
 
-### Security & data safety
-- Add a non-overridable OS-critical empty-folder protection list: `C:\inetpub` (CVE-2025-21204 security mitigation), `C:\PerfLogs`, `C:\Config.Msi`, and `C:\Recovery` are never eligible for deletion regardless of user filter configuration. The check is path-rooted to the system drive — `D:\Projects\inetpub` is not blocked. Runs before `.redkeep` and NeverEmpty in both standard and MFT scan paths.
-- Fix two thread-safety bugs in the parallel scan (`-parallel N`): the infinite-loop detector's `PossibleEndlessLoop` counter used a non-atomic increment that could race, and `EmptyFileResults.Add` wrote to a `List<FileInfo>` from parallel threads without synchronization. Both are now guarded (`Interlocked.Increment` for the counter, `lock` for the file list).
-
-### Performance
-- Use a single-pass directory enumeration in the scan path: replace separate `GetFiles()` + `GetDirectories()` calls with one `GetFilesAndDirectories()` call per directory, halving `FindFirstFileExW` kernel transitions. Measurable on UNC/SMB where each call is a network round-trip.
-
-### Build / Runtime
-- Retarget from .NET 9 (STS, out of support since May 2026) to .NET 10 (LTS, supported through Nov 2028). Zero breaking changes; self-contained single-file bundles now ship a supported runtime.
-- Replace the hand-rolled regex JSON parser in the update check with `System.Text.Json.JsonDocument`. Handles escaped quotes, Unicode escapes, and other edge cases the regex missed.
-
-### Documentation
-- Sync bundled help pages with all shipped CLI flags and config keys. `rphCmdline.htm` now documents all 30+ CLI flags (was missing 12+: `-delete`/`-yes`, `-lockout`/`-no-lockout`, `-parallel`, `-profile`/`-saveprofile`/`-listprofiles`, `-exclude`, `-protect`, `-eventlog`, `-classic`). `rphConfig.htm` now documents the `DeletionLockout`, `CheckForUpdates`, `ParallelScanDegree`, `RespectGitIgnore`, `UseMftScan`, and `DeleteEmptyFiles` config keys.
-
-### Code quality
-- Fix `ExportToCliboard` method name typo (missing 'p') in the WinForms export path.
-
-### Developer / CI
-- Add scan-delete-undo round-trip integration tests: Direct mode (delete + restore) and Move mode (move + restore) exercise the full lifecycle through `SystemFunctions.SecureDeleteDirectory` and `UndoManager.WriteManifest`/`Restore`.
-- Add lockout enforcement and parallel-scan correctness integration tests: parallel scan produces identical results to serial; lockout forces Simulate mode; parallel scan with empty-files collects the same file set as serial.
-
 ### Reliability
 - Use a static `HttpClient` with `SocketsHttpHandler` and `PooledConnectionLifetime` for the opt-in update check instead of creating and disposing a new `HttpClient` per call. Avoids potential socket exhaustion in long-running processes per Microsoft guidance. Per-call headers (ETag, User-Agent) moved to `HttpRequestMessage`.
 
@@ -89,16 +69,6 @@
 
 ### Distribution
 - Ship a `win-arm64` self-contained single-file release artifact alongside the existing x64 build. Windows ARM laptops (Surface Pro, Snapdragon X Elite) now get a native binary instead of running under x64 emulation. Scoop and winget manifests include architecture-specific entries.
-
-### Build / CI
-- Enable reproducible builds: `<ContinuousIntegrationBuild>` is set in CI, `SOURCE_DATE_EPOCH` drives the build-time stamp from the git commit timestamp, and a `global.json` pins the SDK to 9.0.x (`latestFeature` roll-forward). Two CI builds of the same commit now produce byte-identical outputs.
-- Move the release build, safety smoke, packaging, attestation, and GitHub Release into a reusable workflow (`build-publish.yml`) called by `release.yml`, raising provenance from SLSA Build Level 2 to Build Level 3 (isolated, non-forgeable build in a trusted workflow).
-
-### Features
-- Distinguish "empty except ignored files" from truly-empty directories in the results grid, CLI NDJSON output, and all export formats (CSV, JSON, HTML, PS1). A folder containing only ignored junk (Thumbs.db, desktop.ini, etc.) now shows "Empty except N ignored file(s) (will be removed)" instead of the same "Empty - eligible for deletion" label as a truly-empty folder, so a reviewer can tell which directories will have trash files removed.
-- Deletion lockout mode for managed/report-only deployments: set `DeletionLockout=true` in the config or pass `-lockout` on the CLI to force every delete mode to Simulate. No path (GUI or CLI) can mutate the filesystem while the lockout is active. Override per-run with `-no-lockout`.
-- Opt-in update check: set `CheckForUpdates=true` in the config to make RED++ check the GitHub Releases API (at most once per day, ETag-cached) and report when a newer version is available. No telemetry, no auto-download, disabled by default. The CLI logs the newer version and release URL at the end of a headless run.
-- Bounded-parallel scan for UNC/SMB roots: set `ParallelScanDegree` in the config (2-16) or pass `-parallel <n>` on the CLI to enumerate subdirectories across multiple threads. Off by default (0 = serial). Intended for network shares where enumeration latency dominates; produces identical results to the serial walk with all safety guards (reparse-point, long-path, fail-closed) intact.
 
 ### Build / CI
 - Enable reproducible builds: `<ContinuousIntegrationBuild>` is set in CI, `SOURCE_DATE_EPOCH` drives the build-time stamp from the git commit timestamp, and a `global.json` pins the SDK to 9.0.x (`latestFeature` roll-forward). Two CI builds of the same commit now produce byte-identical outputs.

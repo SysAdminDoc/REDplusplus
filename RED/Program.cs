@@ -22,6 +22,20 @@ namespace RED
 		[System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
 		private static extern bool SetDllDirectoryW(string lpPathName);
 
+		[System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+		private static extern bool SetProcessMitigationPolicy(
+			int MitigationPolicy,
+			ref PROCESS_MITIGATION_REDIRECTION_TRUST_POLICY lpBuffer,
+			uint dwLength);
+
+		[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+		private struct PROCESS_MITIGATION_REDIRECTION_TRUST_POLICY
+		{
+			public uint Flags;
+		}
+
+		private const int ProcessRedirectionTrustPolicy = 9;
+
 		[System.Runtime.InteropServices.DllImport("user32.dll")]
 		private static extern bool SetForegroundWindow(IntPtr hWnd);
 
@@ -48,6 +62,26 @@ namespace RED
 			catch
 			{
 				// Hardening only — never block startup
+			}
+		}
+
+		/// <summary>
+		/// Enable RedirectionGuard: blocks the process from following filesystem
+		/// junctions created by non-admin users. Defense-in-depth on top of the
+		/// existing handle-based reparse verification in SystemFunctions.
+		/// Available on Windows 11 24H2+; silently ignored on older builds.
+		/// </summary>
+		private static void EnableRedirectionGuard()
+		{
+			try
+			{
+				var policy = new PROCESS_MITIGATION_REDIRECTION_TRUST_POLICY { Flags = 0x1 };
+				SetProcessMitigationPolicy(ProcessRedirectionTrustPolicy, ref policy,
+					(uint)System.Runtime.InteropServices.Marshal.SizeOf(policy));
+			}
+			catch
+			{
+				// Hardening only — never block startup on unsupported OS versions
 			}
 		}
 
@@ -110,6 +144,7 @@ namespace RED
 		private static void Main()
 		{
 			HardenDllSearchPath();
+			EnableRedirectionGuard();
 			WireGlobalExceptionHandlers();
 
 			string[] args = Environment.GetCommandLineArgs();
