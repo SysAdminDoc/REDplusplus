@@ -23,7 +23,7 @@
  <a href="rphCmdline.htm"  >Command Line</a>
  <a href="rphCredits.htm"  >Credits, License</a>
  <a href="rphChangelog.htm">Change Log</a> 
- <p class="nih">Hover Over Images to ENLARGE Them</p>
+ <p class="nih">Screenshots scale to fit this help window.</p>
  </div>
 </div>
 <!-- ======= ======= ======= ======= ======= ======= ======= -->
@@ -35,8 +35,11 @@
 <div>
 <figure><img class="imgx" src="img/screen-S01.png"><figcaption>Settings</figcaption></figure>
 <ul>
-<li><span class="sx">Directories With Empty Files Will Be Considered Empty</span>
-<div>If a directory contains nothing other than empty files it will be treated as an empty directory.</div>
+<li><span class="sx">Treat Zero-Byte Files as Empty</span>
+<div>If a directory contains nothing other than zero-byte files, it can be treated as an empty directory.</div>
+</li>
+<li><span class="sx">Include Standalone Zero-Byte Files</span>
+<div>Also review zero-byte files that are not inside an empty directory. They use the same deletion mode and restore path as directories.</div>
 </li>
 <li><span class="sx">Ignore System Directories</span>
 <div>If a directory has the SYSTEM attribute it will <b>not</b> be processed.
@@ -46,30 +49,30 @@
 <div>If a directory has the HIDDEN attribute it will <b>not</b> be processed.
 <br>Any sub-directories will also <b>not</b> be processed.</div>
 </li>
-<li><span class="sx">Hide Errors During Deletion</span>
-<div>Any errors that occur when attempting to delete folders will <b>not</b> be shown</div>
+<li><span class="sx">Continue Past Deletion Errors</span>
+<div>Failed items are left unchanged, logged, and skipped while the remaining deletion queue continues.</div>
 </li>
-<li><span class="sx">Hide Error During Search</span>
-<div>Any error sthat occur during the search for empty directories will <b>not</b> be shown</div>
+<li><span class="sx">Hide Scan Errors in Results</span>
+<div>Scan errors are still logged, but matching rows are hidden from the review list.</div>
 </li>
 <li><span class="sx">Hide Ignored Directories</span>
-<div>Directories matched by the <em>Directories: Ignored</em> filter will <b>not</b> be shown in the treeview results.
-<br>If not set then these directories show in the results as protected.</div>
+<div>Directories matched by the <em>Directories: Ignored</em> filter will <b>not</b> be shown in the review list.
+<br>If not set, these directories appear as protected results.</div>
 </li>
-<li><span class="sx">Automatically Protect the Starting Directory</span>
+<li><span class="sx">Protect the Starting Directory</span>
 <div>Prevents the starting directory specified for the search from being deleted, even if it is empty.</div>
 </li>
-<li><span class="sx">Fast Mode</span>
-<div>This option disables list updates during the find and delete processes and only shows you a final result at the end.
-You won't be able to see the progress but it will be much faster.
+<li><span class="sx">Fast Result Rendering</span>
+<div>This option defers result-list updates during scan and delete operations, then shows the final results when the operation completes.
+It is useful for very large scans where rendering every intermediate update would slow the run.
 </div>
 </li>
-<li><span class="sx">Detect Paths in the Clipboard</span>
-<div>Whenever you start the application <b>or</b> click on the <em>'Directory to be Searched'</em> textbox it will check if your clipboard contains a path to a directory <span class="eg">(e.g. C:\PATHNAME).</span> If it detects a directory it will prompt you to paste the value into the search directory textbox.</div>
+<li><span class="sx">Detect Folder Paths in the Clipboard</span>
+<div>When the application starts or the scan-target field receives focus, RED++ can detect a folder path from the clipboard and offer to use it as the scan target.</div>
 </li>
 </ul>
 <ul>
-<li><span class="sx">How Should Empty Directories Be Deleted?</span>
+<li><span class="sx">Deletion Mode</span>
 <div>Specifies how directories and contents should be deleted.</div>
 <div>
 <ul>
@@ -79,7 +82,7 @@ You won't be able to see the progress but it will be much faster.
 </div>
 </li>
 <li><span class="sx">Save Prompt</span>
-<div>Displays a prompt when the program exits if the settings have been updated. The prompt allows you to save or not save the settings.</div>
+<div>In the classic shell, displays a prompt on exit when settings have changed. The modern shell saves settings directly.</div>
 </li>
 </ul>
 </div>
@@ -92,11 +95,11 @@ You won't be able to see the progress but it will be much faster.
 <ul>
 <li><span class="sx">Max directory nesting depth</span>
 <div>Nested sub-directories will only be checked to the specified depth. If there are sub-directories below this depth the directory is considered <b>not</b> to be empty.
-<br> A depth of -1 will check check all possible sub-directories.
+<br>A depth of -1 checks all possible sub-directories.
 <br><span class="eg">eg For <em>X:\DIR1\DIR2\DIR3\DIR4\</em> starting at X:\DIR1 with a depth of 3 will not check beyond DIR3.</span></div>
 </li>
-<li><span class="sx">Pause between each deletion.</span>
-<div>This specifies a number of milliseconds to pause after each directory is deleted. This was in the original RED but isn't really of any practical use. Zero is the default and means there is no delay.</div>
+<li><span class="sx">Pause Between Deletion Steps</span>
+<div>Specifies a number of milliseconds to pause after each directory is deleted. Zero is the default and means there is no delay.</div>
 </li>
 <li><span class="sx">Skip directories less than N hours old</span>
 <div>This allows you to ignore recently created directories.
@@ -120,7 +123,7 @@ You won't be able to see the progress but it will be much faster.
 <div>The size and location of the <span class="red">RED++</span> window is saved in the configuration file when the program exits and is restored the next time the program starts.</div>
 </li>
 <li><span class="sx">Remember: Last Used Directory</span>
-<div>The name of the directory being search is saved in the configuration file when the program exits and is restored the next time the program starts.</div>
+<div>The last scan target is saved in the configuration file when the program exits and is restored the next time the program starts.</div>
 </li>
 <li><span class="sx">Remember: Deletion stats</span>
 <div>A running total of the number of deletions made is kept in the configuration file. Useful for the numerically obsessive.</div>
@@ -143,7 +146,7 @@ This copies details of your current settings and filters to the clipboard in a h
 <hr>
 <div id="opts2ei">
 <p><span class="sx">Windows Explorer Integration</span><br>
-This places a <span class="nbn">Remove Empty Directories ++</span> entry on the Explorer context menu which is available when you right-click on a directory in the Explorer navigation pane (left-hand side). From <b>v25.3.0.0</b> it is also on the context menu shown when right-clicking on the directory contents pane in (right hand side) in Explorer. This is a <b>Per User</b> setting.
+This places a <span class="nbn">Remove Empty Directories ++</span> entry on the Explorer context menu for folders in the navigation pane and the folder contents pane. This is a <b>Per User</b> setting.
 </p>
 <p>
 <figure><img class="imgx" src="img/screen-S02eil3.png"></figure>
@@ -154,7 +157,7 @@ Check the <span class="nbn">Auto Search</span> box to include the auto search co
 This option is <b>not</b> available if you are running <span class="red">RED++</span> from a removable drive. This option makes changes to the Windows Registry which point to a program which may no longer be available.
 </div>
 <div class="note">
-<b>NOTE:</b> Versions before <em>v25.3.0.0</em> used a slightly different integration method that required <b>admin</b> rights to change. This old method still works but only for the left-hand side navigation pane of Explorer. You can tell if you have the old method installed because the <em>Uninstall</em> button has a shield on it. You can run later versions as admin to uninstall this method and then install the new method if you want.
+<b>NOTE:</b> Older RED++ builds used an Explorer integration method that required <b>admin</b> rights to change and only appeared in the left-hand navigation pane. If the <em>Uninstall</em> button shows a shield, run RED++ as admin to remove the old method, then install the current per-user integration.
 <figure><img class="imgx" src="img/screen-S02eil1.png"><figcaption>Old Integration Method (As Shown by The Shield)</figcaption></figure>
 <figure><img class="imgx" src="img/screen-S02eil2.png"><figcaption>New Integration Method (No Shield)</figcaption></figure>
 </div>
@@ -164,7 +167,7 @@ This option is <b>not</b> available if you are running <span class="red">RED++</
 <!-- ======= ======= ======= ======= ======= ======= ======= -->
 <hr><p>&nbsp;</p>
 <div class="footer">
-<span class="fal">&nbsp;&nbsp;<small><span class="red">RED++</span> by Jonas John &amp; Robert 'NotBob' Bookerby</small></span><span class="far">&nbsp;&nbsp;<span class="moddate">mod: 2025-12</span>&nbsp;</span>
+<span class="fal">&nbsp;&nbsp;<small><span class="red">RED++</span> by Jonas John &amp; Robert 'NotBob' Bookerby</small></span><span class="far">&nbsp;&nbsp;<span class="moddate">mod: 2026-06</span>&nbsp;</span>
 </div>
 </div></body>
 </html>

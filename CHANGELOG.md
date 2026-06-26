@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.6.2 (2026-06-26)
+
+### UX polish
+- Redesign the bundled HTML help with the same dark palette, Segoe UI typography, responsive spacing, accessible focus states, modern sidebar navigation, and calmer content surfaces used by the WPF shell.
+- Update bundled help copy for the current modern workflow: Scan Folder, Review & Delete, More-menu import/restore actions, review-list language, and review-only imported dry-run results.
+- Refresh the bundled help changelog, support dates, Explorer integration notes, and system requirements for the self-contained .NET 10 release.
+- Tighten the WPF import status message so imported dry-run records are described as review-only until the folder is re-scanned.
+
+### Verification
+- Verified Release build and full xUnit suite.
+
 ## 1.6.1 (2026-06-26)
 
 ### UX polish

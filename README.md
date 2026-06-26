@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-1.6.1-blue)
+![Version](https://img.shields.io/badge/version-1.6.2-blue)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2B-lightgrey)
 
@@ -14,7 +14,7 @@
 **Portable** — download, unzip, run:
 
 ```
-curl -Lo RED++.zip https://github.com/SysAdminDoc/REDplusplus/releases/latest/download/RED++_v1.6.1.zip
+curl -Lo RED++.zip https://github.com/SysAdminDoc/REDplusplus/releases/latest/download/RED++_v1.6.2.zip
 tar -xf RED++.zip
 RED+.exe
 ```
@@ -83,7 +83,7 @@ RED+.exe -silent -path "D:\Shares" -log cleanup.log
 Every release ships a `SHA256SUMS` file, a CycloneDX software bill of materials (`bom.json`) that inventories every bundled dependency, and a signed build-provenance attestation. To verify the zip really came from this repository's CI:
 
 ```
-gh attestation verify RED++_v1.6.1.zip -R SysAdminDoc/REDplusplus
+gh attestation verify RED++_v1.6.2.zip -R SysAdminDoc/REDplusplus
 ```
 
 ## Code Signing & SmartScreen
@@ -107,7 +107,7 @@ If the config file (**RED+.cfg**) isn't found, you'll be prompted to create one:
 - **%APPDATA%** stores the config in a subfolder of Windows %APPDATA%
 - If RED++ is in a protected folder (Program Files, etc.), select %APPDATA% instead
 
-Dry-run JSON from the CLI can be reviewed later in the GUI with **Extras -> Import Saved Dry-Run Results**. Import shows every valid record in the tree, but only `Empty` records are eligible for deletion; destructive modes still re-check that directories are file-free and not reparse points before deleting or moving them.
+Dry-run JSON from the CLI can be reviewed later in the modern GUI with **More -> Import dry-run results**. Import shows every valid record in the review list for inspection and export; re-scan the folder before deleting so RED++ can perform current file-free and reparse-point safety checks.
 
 ### CLI / Headless Mode
 
@@ -172,7 +172,7 @@ RED+.exe -silent -path "\\server\share\folder" -log "cleanup.log"
 
 ### Undo
 
-Every deletion run writes a timestamped undo manifest under the current Windows user's protected LocalAppData store (`%LOCALAPPDATA%\NotBob\RemoveEmptyDirectories`). The last 5 manifests are kept so you can undo earlier runs, not just the most recent one. Restore via the GUI (Extras → Restore Deletion → pick a run) or headlessly:
+Every deletion run writes a timestamped undo manifest under the current Windows user's protected LocalAppData store (`%LOCALAPPDATA%\NotBob\RemoveEmptyDirectories`). The last 5 manifests are kept so you can undo earlier runs, not just the most recent one. Restore via the GUI (More → Restore deleted items → pick a run) or headlessly:
 
 ```
 RED+.exe -undo                              # restore the most recent run
