@@ -28,12 +28,6 @@ jobs:
           $epoch = git log -1 --format=%ct
           echo "SOURCE_DATE_EPOCH=$epoch" >> $env:GITHUB_ENV
 
-      - name: Set SOURCE_DATE_EPOCH from git commit
-        shell: pwsh
-        run: |
-          $epoch = git log -1 --format=%ct
-          echo "SOURCE_DATE_EPOCH=$epoch" >> $env:GITHUB_ENV
-
       - name: Build Release
         run: dotnet build "RED/RED+.csproj" -c Release
 
