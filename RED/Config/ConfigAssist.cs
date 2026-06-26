@@ -64,6 +64,8 @@ namespace NotBob.Config
                             string redirectTarget = config.RedirectTo;
                             if (!Path.IsPathFullyQualified(redirectTarget) ||
                                 redirectTarget.Contains("..") ||
+                                redirectTarget.StartsWith(@"\\?\") ||
+                                redirectTarget.StartsWith(@"\\.\") ||
                                 !Path.GetExtension(redirectTarget).Equals(".cfg", StringComparison.OrdinalIgnoreCase))
                             {
                                 string msg = "Config redirect to unsafe or non-.cfg path ignored: " + redirectTarget;
