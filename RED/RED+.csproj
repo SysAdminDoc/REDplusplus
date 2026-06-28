@@ -28,7 +28,7 @@
     <NoWarn>WFO0003</NoWarn>
 
     <!-- Keep the hand-maintained Properties\AssemblyInfo.cs as the single
-         version/metadata source (see CLAUDE.md "Version sync points"); the SDK
+         version/metadata source (single version source); the SDK
          must not also emit assembly attributes or it duplicates them. -->
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 
