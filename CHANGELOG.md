@@ -574,3 +574,16 @@
 
 ## 1.0.0 (2026-06-10)
 - Initial release of RED++, based on RED+ 25.3.0.0
+
+## Roadmap archive — 2026-08-10 — ROADMAP.md
+
+<details>
+<summary>Original roadmap snapshot</summary>
+
+```markdown
+# Roadmap — RED++
+
+Actionable items only. Blocked items live in `Roadmap_Blocked.md`.
+```
+
+</details>
